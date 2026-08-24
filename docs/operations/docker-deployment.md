@@ -22,7 +22,8 @@
 사내 사용자 또는 reverse proxy
   -> <host bind IP>:<host port>
   -> container 5173 / node server.mjs (static dist)
-       -> /appdata (host bind mount, read-only)
+       -> /appdata/abnormal_trend/pic/... (Parquet host bind mount, read-only)
+       -> /run/secrets/l0-spider-db-info (DB credential secret, read-only)
        -> sensor-exclusions.json (host bind mount, read-only)
        -> python3 -B scripts/*.py -> DB
 ```
@@ -44,13 +45,13 @@ Runtime에서는 `LIVE_RELOAD=0`, `BUILD_ON_START=0`을 고정하므로 containe
 - Docker Engine과 `docker compose` plugin
 - image build 시 base image, npm registry와 Python package index에 접근 가능한 network
 - 또는 다른 builder에서 만든 동일 CPU architecture의 image
-- host에서 읽을 수 있는 실제 L0 Spider `/appdata` root
-- DB 기능을 사용할 경우 `/appdata/l0_spider/db_info.pkl` 또는 대체 credential file
+- Parquet 서버의 NFS/CIFS 공유를 host에서 먼저 mount한 실제 L0 Spider `/appdata` root
+- `/appdata`와 분리된 신뢰 가능한 host 위치의 `db_info.pkl`
 - 사용할 host port, firewall, reverse proxy와 TLS에 대한 운영 승인
 
 Container는 base image의 non-root `node` 사용자로 실행된다. 실제 UID/GID는 사용하는
-base image에서 확인해야 하며, 대상 host의 `/appdata`와 credential file이 이 사용자에게
-읽히는지는 실제 환경에서 확인해야 한다.
+base image에서 확인해야 하며, 대상 host의 `/appdata`와 Compose secret으로 전달된
+credential file이 이 사용자에게 읽히는지는 실제 환경에서 확인해야 한다.
 권한 문제를 해결하려고 `/appdata` 전체에 과도한 권한을 부여하지 않는다.
 
 ## 4. 설정 파일 준비
@@ -70,12 +71,20 @@ cp .env.docker.example .env.docker
 | `L0_SPIDER_BIND_IP` | host listener 주소 | `127.0.0.1` |
 | `L0_SPIDER_HOST_PORT` | 사용자가 접속할 host port | `5173` |
 | `L0_SPIDER_TIMEZONE` | Node·Python runtime timezone | `Asia/Seoul` |
-| `L0_SPIDER_APPDATA_PATH` | host의 원본 appdata root | `/appdata` |
-| `L0_SPIDER_DB_INFO_CONTAINER_PATH` | `/appdata` mount 안의 credential 경로 | `/appdata/l0_spider/db_info.pkl` |
+| `L0_SPIDER_APPDATA_PATH` | Parquet 서버의 NFS/CIFS를 host에 mount한 root | `/appdata` |
+| `L0_SPIDER_DB_INFO_HOST_PATH` | host의 별도 DB credential pickle 파일 | `/etc/l0-spider/db_info.pkl` |
 | `L0_SPIDER_SENSOR_CONFIG_DIR` | host의 sensor 설정 directory | `./config` |
 
-`DB_INFO_PATH`는 credential 내용이 아니라 container 내부 파일 경로다. 실제 credential을
-`.env.docker`, Dockerfile, Compose, image 또는 Git에 복사하지 않는다.
+Parquet 서버의 주소·port·계정·비밀번호는 L0 Spider 환경변수가 아니라 Docker host의
+NFS/CIFS mount 설정에서 관리한다. `L0_SPIDER_APPDATA_PATH`에는 mount가 완료된 host
+directory만 지정하며, container 내부에서는 기존 L0 Spider와 동일한
+`/appdata/abnormal_trend/pic/...` 경로를 그대로 사용한다.
+
+`L0_SPIDER_DB_INFO_HOST_PATH`에는 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+key가 들어 있는 기존 형식의 `db_info.pkl` 파일 경로만 지정한다. Compose는 이 파일을
+별도 secret으로 읽어 container의 `/run/secrets/l0-spider-db-info`에 전달하고,
+`DB_INFO_PATH`는 이 고정 경로를 가리킨다. credential 값 자체를 `.env.docker`, Dockerfile,
+Compose, image, 문서 또는 Git에 복사하지 않는다.
 
 `L0_SPIDER_TIMEZONE`은 필수다. 예제의 `Asia/Seoul`을 그대로 사용하기 전에 기존 L0 Spider
 host, 업무 DB와 데이터 생산자의 timezone을 운영 담당자에게 확인한다. 값이 다르면 기존
@@ -88,10 +97,10 @@ host, 업무 DB와 데이터 생산자의 timezone을 운영 담당자에게 확
 
 ## 5. Build와 최초 실행
 
-Compose 설정을 확인하고 image를 build한 뒤 시작한다. Container entrypoint가 mount된 host
-sensor JSON을 매번 검증하며 실패하면 `node server.mjs`를 실행하지 않는다. 따라서 별도
-검증 명령을 건너뛰어도 잘못된 JSON으로 application이 기동되지 않는다. 대상 host에
-Node나 npm은 필요하지 않다.
+Compose 설정을 확인하고 image를 build한 뒤 시작한다. Container entrypoint는 DB secret의
+읽기 권한과 mount된 host sensor JSON을 매번 검증하며, 하나라도 실패하면
+`node server.mjs`를 실행하지 않는다. 따라서 별도 검증 명령을 건너뛰어도 필수 파일이
+읽히지 않는 상태로 application이 기동되지 않는다. 대상 host에 Node나 npm은 필요하지 않다.
 
 ```bash
 docker compose --env-file .env.docker config
@@ -109,8 +118,12 @@ docker compose --env-file .env.docker run --rm --no-deps \
   /opt/l0-spider/config/sensor-exclusions.json
 ```
 
-Compose의 bind mount는 `create_host_path: false`다. 잘못된 host path를 빈 directory로
-자동 생성하지 않고 시작을 실패시켜 실제 mount 누락을 드러낸다.
+Compose의 bind mount는 `create_host_path: false`다. 존재하지 않는 host source 경로를 빈
+directory로 자동 생성하지 않고 시작을 실패시킨다. 다만 NFS/CIFS 연결이 끊겨도 local
+mount-point directory가 남는 경우는 이 설정만으로 감지할 수 없으므로 원격 filesystem의
+mount 상태와 데이터 freshness는 별도 readiness 점검이 필요하다.
+`L0_SPIDER_DB_INFO_HOST_PATH`도 실제 파일이 없으면 Compose 기동이 실패한다. `/appdata`
+mount와 DB secret은 서로 다른 host 경로이며 어느 한쪽이 다른 쪽 아래에 있을 필요가 없다.
 Sensor 설정은 파일 하나가 아니라 host `config/` directory를 read-only mount한다. 따라서
 기존 운영 가이드처럼 검증된 임시 파일을 같은 directory에서 `mv`로 원자 교체할 수 있고,
 runtime cache는 inode·mtime·size 변경을 확인해 다음 API 요청에서 새 파일을 읽는다.
@@ -167,7 +180,7 @@ curl -fsS "http://<confirmed-bind-address>:<confirmed-host-port>/" >/dev/null
 배포 후 별도로 확인할 항목:
 
 1. 주요 UI route와 static asset
-2. read-only Dashboard와 파일 조회 API
+2. read-only Dashboard와 파일 조회 API가 기존 `/appdata/abnormal_trend/pic/...`를 읽는지
 3. `/api/current-user`가 실제 client IP를 올바르게 식별하는지
 4. reverse proxy가 `X-Forwarded-For` 또는 `X-Real-IP`를 신뢰 가능한 값으로 덮어쓰는지
 5. DB 등록·이력 기능은 운영 승인된 검증 절차가 있는 경우에만 확인
@@ -199,6 +212,7 @@ rollback으로 되돌아가지 않는다. 실제 rollback tag와 승인 절차�
 
 - container root filesystem read-only
 - `/appdata`와 sensor 설정 read-only bind mount
+- DB credential을 `/appdata`와 분리한 read-only Compose secret
 - non-root `node` 실행
 - Linux capability 전체 drop 및 `no-new-privileges`
 - `/tmp`만 64 MiB tmpfs

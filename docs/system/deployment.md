@@ -75,7 +75,7 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `COMMON_COMMONALITY_ROOT_PATH` | 프로세스 시작 | 기존 commonality/dashboard root의 형제 `path_common_commonality` 또는 코드 기본 root | 별도 mount면 명시적으로 설정하고 프로세스를 재시작 |
 | `SPIDER_DASHBOARD_PATH_ROOT` | API 요청 | 코드 기본 root | Dashboard detail·stats 범위 확인 |
 | `SENSOR_EXCLUSION_CONFIG_PATH` | 경로는 프로세스 시작; 동일 경로의 내용은 API 요청 | `config/sensor-exclusions.json` | 기본 파일 또는 override JSON은 application read-only, 개발자·배포 계정만 수정; 반영 전 validation |
-| `DB_INFO_PATH` | Python helper | 코드 기본 path | 값이 아니라 credential file 위치; 노출 금지 |
+| `DB_INFO_PATH` | Python helper | 코드 기본 path; Docker는 `/run/secrets/l0-spider-db-info` 고정 | 값이 아니라 credential file 위치; 노출 금지 |
 
 Docker용 비밀 없는 경로·port 예제는 `.env.docker.example`에 있다. systemd `EnvironmentFile`,
 secret manager와 실제 주입 우선순위는 `Unknown`이다.
@@ -86,8 +86,8 @@ secret manager와 실제 주입 우선순위는 `Unknown`이다.
 확인된 최소 애플리케이션 단위는 Node source, frontend artifact 또는 build 입력, Python helper와 각 dependency manifest다.
 다음 운영 의존성은 애플리케이션 artifact와 별도로 준비돼야 하지만 실제 배치 책임자는 `Unknown`이다.
 
-- 운영 mapping JSON, Parquet와 이미지의 읽기 가능한 mount
-- DB credential file과 Python DB network 접근
+- Parquet 서버의 NFS/CIFS를 Docker host에 먼저 연결하고 container `/appdata`로 읽기 전용 mount
+- `/appdata`와 분리된 DB credential file의 Compose secret 주입과 Python DB network 접근
 - 지원 Node.js·Python runtime 및 npm·Python dependency
 - 실제 service manager, reverse proxy, TLS, 방화벽과 log 수집
 - 외부 mail renderer·scheduler·sender가 있다면 그 별도 배포 단위
@@ -125,8 +125,8 @@ docker compose --env-file .env.docker up -d --no-build
 ```
 
 대상 서버에서 직접 image를 build하는 경우에만 `up` 전에
-`docker compose --env-file .env.docker build`를 실행한다. Container entrypoint는 mount된
-sensor 설정을 검증하고 실패 시 application 시작을 차단한다.
+`docker compose --env-file .env.docker build`를 실행한다. Container entrypoint는 DB
+secret 읽기 권한과 mount된 sensor 설정을 검증하고 실패 시 application 시작을 차단한다.
 
 `test:integration`은 현재 Core test가 운영 자원을 사용하지 않는지 확인한 뒤에만 실행한다.
 실제 운영 DB, `/appdata`, mail과 외부 API를 사용하는 검증은 release gate로 자동 실행하지 않는다.
@@ -136,10 +136,10 @@ sensor 설정을 검증하고 실패 시 application 시작을 차단한다.
 1. release commit과 변경 파일·계약·문서를 식별하고 `config/sensor-exclusions.json`과 전용 운영 가이드가 release source에 포함됐는지 확인한다.
 2. Node·Python 실제 버전과 지원 기준을 운영자에게 확인한다. 저장소에는 version 선언이 없다.
 3. 정적 mode이면 `dist/index.html`과 asset 생성 성공을 확인한다.
-4. runtime 환경변수 이름만 대조하고 실제 값은 출력하지 않는다.
-5. 대상 application user의 source·dist·Python script·credential·운영 file과 `config/sensor-exclusions.json` 읽기 권한을 확인한다. 실행 계정과 배포 계정을 분리하는 환경에서는 실행 계정의 설정 파일 쓰기 불가도 확인한다.
+4. runtime 환경변수 이름만 대조하고 실제 값은 출력하지 않는다. Docker에서는 host의 `L0_SPIDER_APPDATA_PATH`와 `L0_SPIDER_DB_INFO_HOST_PATH`가 서로 독립된 대상인지 확인한다.
+5. 대상 application user의 source·dist·Python script·`/run/secrets/l0-spider-db-info`·운영 file과 `config/sensor-exclusions.json` 읽기 권한을 확인한다. 실행 계정과 배포 계정을 분리하는 환경에서는 실행 계정의 설정 파일 쓰기 불가도 확인한다.
 6. 사용할 port와 service manager를 확인하고 기존 process 중복을 방지한다.
-7. DB schema·권한, `/appdata` mount와 데이터 freshness를 담당 owner에게 확인한다.
+7. DB schema·권한, host NFS/CIFS → container `/appdata` mount와 데이터 freshness를 담당 owner에게 확인한다.
 8. 실제 mail sender는 이 저장소와 분리해 발송 영향과 중복 방지 여부를 확인한다.
 
 ## 7. 권장 반영 순서

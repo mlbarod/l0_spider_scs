@@ -153,12 +153,15 @@ test("Docker image installs bounded Node and Python dependencies before runtime"
   assert.match(sensorConfigSource, /failureSignature = `\$\{normalizedPath\}\\u0000\$\{fileStat\.ino\}/)
   assert.match(
     containerEntrypoint,
-    /set -eu[\s\S]*node scripts\/validate_sensor_exclusions_runtime\.mjs[\s\S]*exec "\$@"/,
+    /set -eu[\s\S]*db_info_path="\$\{DB_INFO_PATH:-\/appdata\/l0_spider\/db_info\.pkl\}"[\s\S]*\[ ! -r "\$db_info_path" \][\s\S]*exit 1[\s\S]*node scripts\/validate_sensor_exclusions_runtime\.mjs[\s\S]*exec "\$@"/,
   )
 })
 
 test("Compose keeps runtime data read-only and host exposure explicit", async () => {
-  const compose = await readProjectFile("compose.yaml")
+  const [compose, dataPaths] = await Promise.all([
+    readProjectFile("compose.yaml"),
+    readProjectFile("src/config/spiderDataPaths.mjs"),
+  ])
 
   assert.match(compose, /^services:\n {2}l0-spider:/)
   assert.match(compose, /PORT: "5173"\n\s+LIVE_RELOAD: "0"\n\s+BUILD_ON_START: "0"\n\s+TZ: \$\{L0_SPIDER_TIMEZONE:\?/)
@@ -176,8 +179,14 @@ test("Compose keeps runtime data read-only and host exposure explicit", async ()
   assert.match(compose, /cap_drop:\n\s+- ALL/)
   assert.match(compose, /security_opt:\n\s+- no-new-privileges:true/)
   assert.match(compose, /restart: unless-stopped/)
-  assert.match(compose, /DB_INFO_PATH: \$\{L0_SPIDER_DB_INFO_CONTAINER_PATH:-\/appdata\/l0_spider\/db_info\.pkl\}/)
-  assert.doesNotMatch(compose, /DB_PASSWORD|password:/i)
+  assert.match(compose, /DB_INFO_PATH: \/run\/secrets\/l0-spider-db-info/)
+  assert.match(compose, /secrets:\n\s+- source: l0-spider-db-info\n\s+target: l0-spider-db-info/)
+  assert.match(
+    compose,
+    /l0-spider-db-info:\n\s+file: \$\{L0_SPIDER_DB_INFO_HOST_PATH:\?L0_SPIDER_DB_INFO_HOST_PATH must point to db_info\.pkl\}/,
+  )
+  assert.doesNotMatch(compose, /DB_HOST|DB_PORT|DB_NAME|DB_USER|DB_PASSWORD|password:/i)
+  assert.match(dataPaths, /const PIC_ROOT = "\/appdata\/abnormal_trend\/pic"/)
 })
 
 test("Docker build context, docs, and env example preserve the target-server contract", async () => {
@@ -221,11 +230,19 @@ test("Docker build context, docs, and env example preserve the target-server con
   }
   assert.doesNotMatch(envExample, /DB_PASSWORD|PASSWORD=|TOKEN=|SECRET=|PRIVATE_KEY=/i)
   assert.match(envExample, /^L0_SPIDER_TIMEZONE=Asia\/Seoul$/m)
+  assert.match(envExample, /^L0_SPIDER_APPDATA_PATH=\/appdata$/m)
+  assert.match(envExample, /^L0_SPIDER_DB_INFO_HOST_PATH=\/etc\/l0-spider\/db_info\.pkl$/m)
+  assert.doesNotMatch(envExample, /L0_SPIDER_DB_INFO_CONTAINER_PATH/)
   assert.match(envExample, /^L0_SPIDER_SENSOR_CONFIG_DIR=\.\/config$/m)
   assert.match(deploymentGuide, /config --images/)
   assert.match(deploymentGuide, /compose --env-file \.env\.docker port l0-spider 5173/)
   assert.doesNotMatch(deploymentGuide, /npm run sensor-exclusions:validate/)
-  assert.match(deploymentGuide, /entrypoint가 mount된 host\s+sensor JSON을 매번 검증/)
+  assert.match(
+    deploymentGuide,
+    /entrypoint는 DB secret의\s+읽기 권한과 mount된 host sensor JSON을 매번 검증/,
+  )
+  assert.match(deploymentGuide, /NFS\/CIFS/)
+  assert.match(deploymentGuide, /\/run\/secrets\/l0-spider-db-info/)
 
   const targetServerSection = systemDeployment
     .split("대상 Docker 서버에는")[1]

@@ -40,9 +40,12 @@ docker compose --env-file .env.docker up -d --build
 docker compose --env-file .env.docker ps
 ```
 
-기본 host 공개 주소는 `127.0.0.1:5173`이다. 실제 `/appdata` host 경로, 공개 port와
-bind IP는 `.env.docker`에서 설정한다. `/appdata`와 sensor 제외 설정은 컨테이너에
-읽기 전용으로 mount되며 DB credential 내용은 image나 `.env.docker`에 넣지 않는다.
+기본 host 공개 주소는 `127.0.0.1:5173`이다. Parquet 서버의 NFS/CIFS 공유는 Docker
+host에 먼저 mount하고 그 경로, 공개 port와 bind IP를 `.env.docker`에서 설정한다.
+컨테이너 내부 데이터 경로는 기존과 동일한 `/appdata/abnormal_trend/pic/...`를 유지한다.
+DB credential pickle은 `/appdata`와 분리해 `L0_SPIDER_DB_INFO_HOST_PATH`로 지정하며,
+Compose secret `/run/secrets/l0-spider-db-info`로 읽기 전용 전달된다. credential 내용은
+image나 `.env.docker`에 넣지 않는다.
 Container entrypoint가 시작할 때 sensor 제외 JSON을 검증하며, 유효하지 않으면
 `node server.mjs`를 실행하지 않고 종료한다. 대상 서버에는 host Node나 npm이 필요 없다.
 `.env.docker`의 `L0_SPIDER_TIMEZONE`은 기존 서버와 DB의 업무 timezone을 확인한 값으로

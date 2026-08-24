@@ -225,7 +225,7 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 
 | secret 또는 설정 | 환경변수 | 사용 주체 | 브라우저 노출 | 기본값 | 누락 처리 | Git 보호 | 상태 | 근거 |
 |---|---|---|---|---|---|---|---|---|
-| DB credential 파일 | `DB_INFO_PATH` | Python helper | 아니오 | server path 존재 | default path 사용 후 open 실패 | `.gitignore`에 파일명 | `Implemented` | Python helpers; `.gitignore:14` |
+| DB credential 파일 | `DB_INFO_PATH` | Python helper | 아니오 | server path 존재; Docker는 `/run/secrets/l0-spider-db-info` | default path 사용 후 open 실패 | `.gitignore`와 Docker build context에서 제외 | `Implemented` | Python helpers; `compose.yaml`; `.dockerignore` |
 | DB credential key | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | helper가 pickle에서 읽음 | 아니오 | 없음 | key/file error | 실제 파일 제외 | `Implemented` / 운영 권한 `Unknown` | helper loaders |
 | HMAC secret | 이름 미확인 | 생성·검증 주체 미확인 | 미확인 | 미확인 | 미확인 | 정책만 있음 | `Unknown` | STEP·environment docs |
 | mail credential | 이름 미확인 | sender 미확인 | 미확인 | 미확인 | 미확인 | 미확인 | `Unknown` | sender 부재 |
@@ -235,6 +235,9 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 | runtime mode | `BUILD_ON_START`, `LIVE_RELOAD` | Node | 동작에 간접 영향 | enabled unless `0` | default enabled | secret 아님 | `Confirmed` | `server.mjs:39-40` |
 
 `.env.example`과 `.env.mock.example`은 현재 `main`에서 확인되지 않았다.
+Docker Compose는 host의 `L0_SPIDER_DB_INFO_HOST_PATH` 파일을 read-only secret으로 전달하고,
+Parquet용 `/appdata` mount와 분리한다. `.env.docker`에는 credential 값이나 pickle 내용을
+넣지 않고 host 파일 경로만 둔다.
 `VITE_` 변수는 client-visible 영역으로 간주하여 secret, token, DB·mail credential과 HMAC key를 두지 않는 것이 `Policy`다.
 Hard-coded 내부 host 후보는 위치와 유형만 `Risk`로 기록하며 실제 값은 `<redacted>`로 취급한다.
 
@@ -243,7 +246,7 @@ Hard-coded 내부 host 후보는 위치와 유형만 `Risk`로 기록하며 실�
 | 항목 | 현재 구현 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|
 | driver | `PyMySQL>=1.1,<2` | dependency 취약점 미조회 | `Confirmed` | `scripts/requirements.txt` |
-| credential 주입 | server-side pickle을 helper가 로드 | pickle 변조·file permission | `Implemented` / `Needs Validation` | helper loaders |
+| credential 주입 | server-side pickle을 helper가 로드; Docker는 분리된 Compose secret 사용 | pickle 변조·host file permission | `Implemented` / `Needs Validation` | helper loaders; `compose.yaml` |
 | query parameterization | 대표 SELECT·INSERT·UPDATE·DELETE에 `%s` parameter 사용 | 동적 identifier 조립의 안전성 전수 검토 필요 | 대체로 `Implemented` | `scripts/*.py` |
 | dynamic SQL | 고정 column 목록·placeholder 수로 query 조립 | future input-derived identifier 금지 | 일부 `Implemented` | pass·My EQP helper |
 | read·write | user lookup·reference read, registration·history write·commit | 권한 범위 넓음 | `Confirmed` | Python helpers |
@@ -320,7 +323,7 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 | Node server | source·dist read, port bind, Python spawn | Docker는 non-root `node`; 그 밖의 실행 user·group 미확인 | root 또는 과권한 실행 | Docker 설정 `Confirmed`, 비-Docker·운영 적용 `Unknown` | `Dockerfile`, systemd 문서 |
 | Python helper | script·credential file read, DB network | Node user 상속 후보 | credential file 과다 접근 | `Inferred` / `Needs Validation` | `spawn` env·stdio |
 | `/appdata` | Parquet·image·mapping read | 실제 owner·mode·ACL 미확인 | write 가능·다른 데이터 접근 | `Unknown` | 운영 filesystem 미조사 |
-| credential pickle | Node child user read only 필요 | mode·owner 미확인 | 다른 user read·변조 | `Unknown` | `DB_INFO_PATH` |
+| credential pickle | Node child user read only 필요 | Docker의 secret 분리와 entrypoint 읽기 검사 확인; host mode·owner와 운영 적용 미확인 | 다른 user read·변조 | 설정 `Confirmed`, 운영 `Unknown` | `DB_INFO_PATH`, `compose.yaml`, `scripts/docker-entrypoint.sh` |
 | dist·public asset | server read, build process write | ownership 미확인 | build artifact 변조 | `Unknown` | server static code |
 | log destination | stdout/stderr write | rotation·retention·reader 미확인 | 민감 log 장기 보존 | `Unknown` | logging code |
 | port binding | configured port bind | privileged port 사용 여부 미확인 | root 필요 여부 | `Unknown` | env-driven port |
@@ -345,7 +348,7 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 | CI security scan | tracked CI workflow 미확인 | 자동 점검 공백 | `Not Implemented` in repository | file search |
 | client env secret | `VITE_*`가 build에 포함될 수 있음 | secret bundle 노출 | 금지 `Policy` | environment doc |
 | Docker build context | `.env*`, pickle, key·certificate 제외 | credential image 포함 | 제외 설정 `Confirmed` | `.dockerignore` |
-| Docker runtime | read-only root, capability drop, no-new-privileges, non-root | container escape·변조 범위 | 설정 `Confirmed`, host 적용 `Unknown` | `Dockerfile`, `compose.yaml` |
+| Docker runtime | read-only root, capability drop, no-new-privileges, non-root, 분리된 DB secret | container escape·변조 범위와 host secret 권한 | 설정 `Confirmed`, host 적용 `Unknown` | `Dockerfile`, `compose.yaml` |
 
 ## 21. 가용성과 장애 격리
 

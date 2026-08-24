@@ -75,7 +75,7 @@
 | 데이터 root 설정 | 아니오 | 예 | API 요청 처리 중 파일 탐색 위치를 결정한다. |
 | `SENSOR_EXCLUSION_CONFIG_PATH` | 아니오 | 예 | 기본 `config/sensor-exclusions.json` 대신 사용할 App별 sensor 제외 JSON 위치를 지정한다. Docker Compose는 container 내부 고정 경로를 사용한다. |
 | `TZ` | 아니오 | 예 | Node·Python local timezone 의존 처리를 명시한다. Docker Compose는 `.env.docker`의 `L0_SPIDER_TIMEZONE`에서 주입한다. |
-| `DB_INFO_PATH`, `REMOTE_ADDR` | 아니오 | 예 | Python DB helper가 credential 파일과 사용자 주소를 해석한다. |
+| `DB_INFO_PATH`, `REMOTE_ADDR` | 아니오 | 예 | Python DB helper가 credential 파일과 사용자 주소를 해석한다. Docker의 `DB_INFO_PATH`는 Compose secret 경로로 고정된다. |
 | `dist/` | build 결과 | 정적 모드 입력 | build 결과가 없으면 정적 모드 시작이 실패할 수 있다. |
 | `public/` 자산 | build 입력 | 정적 URL | Vite가 template, 이미지 등 공개 자산을 다룬다. |
 
@@ -109,7 +109,9 @@
 | 데이터 | `COMMON_COMMONALITY_ROOT_PATH` | 공통부 동일성 root override | 기존 commonality/dashboard root의 형제 `path_common_commonality`, 이후 코드 template | 선택 | 프로세스 시작 | `server/latestCommonCommonalityPath.mjs` | 경로 주의 | 기존 데이터 mount의 형제 경로 사용 | `Confirmed` |
 | 데이터 | `SPIDER_DASHBOARD_PATH_ROOT` | dashboard 통계 root override | dashboard template의 상위 경로 | 선택 | API 요청 | `server/dashboardData.mjs:20-22` | 경로 주의 | 코드 root 사용 | `Confirmed` |
 | 데이터 | `SENSOR_EXCLUSION_CONFIG_PATH` | 기본 sensor 제외 JSON 경로 override | `config/sensor-exclusions.json` | 선택 | 경로는 프로세스 시작; 내용은 API 요청 | `server/sensorExclusionConfig.mjs` | 경로 주의 | 기본 파일 사용 | `Confirmed` |
-| DB | `DB_INFO_PATH` | DB credential pickle 위치 | `/appdata/l0_spider/db_info.pkl` | DB 기능에 조건부 | helper 실행 | `scripts/*.py` | 값 자체는 아니나 민감 경로 | 코드 경로 사용 | `Confirmed` |
+| DB | `DB_INFO_PATH` | DB credential pickle 위치 | `/appdata/l0_spider/db_info.pkl`; Docker는 `/run/secrets/l0-spider-db-info` | DB 기능에 조건부 | helper 실행 | `scripts/*.py`, `compose.yaml` | 값 자체는 아니나 민감 경로 | 코드 경로 사용 | `Confirmed` |
+| Docker host | `L0_SPIDER_APPDATA_PATH` | host에 먼저 연결된 Parquet NFS/CIFS root | `/appdata` | Docker에 필수 | Compose 해석 | `compose.yaml` | 내부 경로 주의 | 기본 host path 사용 | `Confirmed` |
+| Docker host | `L0_SPIDER_DB_INFO_HOST_PATH` | 별도 host DB credential pickle 위치 | 예제 `/etc/l0-spider/db_info.pkl`, 실제 값 필수 | Docker에 필수 | Compose 해석 | `compose.yaml` | 민감 경로 | 누락 시 Compose 실패 | `Confirmed` |
 | DB | `REMOTE_ADDR` | 현재 사용자 식별용 주소 | 없음 | 현재 사용자 조회에 조건부 | 요청별 helper 실행 | `server/currentUser.mjs:42`, `scripts/current_user.py:15` | 개인정보 주의 | helper 오류 | `Confirmed` |
 | 메뉴얼 | `MANUAL_BASE_URL` | 기존 UI 서버 사용 여부 | 코드 기본 loopback URL, port `4173` | 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:11-12` | 아니오 | 자체 Vite 시작 | `Confirmed` |
 | 메뉴얼 | `PLAYWRIGHT_LD_LIBRARY_PATH` | Playwright 동적 library 경로 보완 | 없음 | 환경별 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:19-20` | 경로 주의 | 변경 없음 | `Confirmed` |
@@ -161,6 +163,8 @@
 | DB credential | `DB_INFO_PATH` 또는 코드 기본 경로 | pickle 읽기 | helper 오류 | `Confirmed` |
 
 - 경로 패턴은 `src/config/spiderDataPaths.mjs`가 중심 근거지만 모든 root가 환경변수로 분리된 것은 아니다.
+- Docker에서는 host의 NFS/CIFS mount root를 container `/appdata`에 읽기 전용으로 연결하므로 애플리케이션의 기존 `/appdata/abnormal_trend/pic/...` 계약은 바뀌지 않는다.
+- DB credential은 `/appdata` mount와 분리된 Compose secret `/run/secrets/l0-spider-db-info`에서 읽는다.
 - 실제 `/appdata`의 존재, 권한, owner, mount, 용량, 보존과 백업 정책은 조사하지 않아 `Unknown`이다.
 - Node 코드에서 운영 데이터 파일을 쓰거나 삭제하는 동작은 확인되지 않았다.
 - 일부 API 오류 응답이 내부 source path를 포함할 수 있어 정보 노출 `Risk`가 있다.
@@ -168,6 +172,7 @@
 ## 12. DB 환경
 
 - Python helper는 `DB_INFO_PATH`가 가리키는 pickle에서 `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` key를 읽는다.
+- Docker의 `.env.docker`에는 위 DB key나 값을 넣지 않고 host pickle 경로 `L0_SPIDER_DB_INFO_HOST_PATH`만 지정한다.
 - 실제 값과 실제 파일은 확인하지 않았으며 문서에도 기록하지 않는다.
 - 연결은 `PyMySQL`과 `charset="utf8"`을 사용하고 helper 호출마다 열고 닫는다.
 - connection pool, 명시적 connect/read/write timeout, TLS option은 확인되지 않았다.
@@ -243,7 +248,7 @@
 
 - `Dockerfile`, `compose.yaml`, `.env.docker.example`과 Docker 운영 가이드가 tracked 설정으로 존재한다.
 - Docker는 non-root `node`, read-only root filesystem, `/appdata` read-only bind mount,
-  `unless-stopped` restart와 log rotation을 선언한다. 실제 host 적용 여부는 `Unknown`이다.
+  분리된 DB credential secret, `unless-stopped` restart와 log rotation을 선언한다. 실제 host 적용 여부는 `Unknown`이다.
 - tracked systemd unit, reverse proxy 설정, Procfile과 CI workflow는 확인되지 않았다.
 - Docker 이외 실제 서비스 실행 user, working directory, environment injection, restart policy와 resource limit은 `Unknown`이다.
 - TLS 종료, domain, proxy header 정규화, log 수집과 health monitoring도 `Unknown`이다.
@@ -288,7 +293,7 @@
 - `VITE_*`는 client 노출 가능 영역이므로 비밀정보 저장소로 사용하지 않는다.
 - browser → proxy → Node의 주소 전달 경계에서 신뢰할 proxy와 forwarded header 정책이 필요하다.
 - Node → Python child process 경계에서는 필요한 환경만 전달하고 stderr·오류 응답의 민감정보를 제한해야 한다.
-- Node/Python → `/appdata`와 DB 경계에는 최소 파일권한과 최소 DB 권한이 필요하다.
+- Node/Python → `/appdata`, DB secret과 DB 경계에는 최소 파일권한과 최소 DB 권한이 필요하다.
 - secret manager, key rotation, credential 교체 절차와 접근 감사는 현재 `Unknown`이다.
 
 ## 21. Core Harness와 mock 브랜치 경계

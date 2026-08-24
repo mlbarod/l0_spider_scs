@@ -13,7 +13,7 @@ services:
       LIVE_RELOAD: "0"
       BUILD_ON_START: "0"
       TZ: ${L0_SPIDER_TIMEZONE:?L0_SPIDER_TIMEZONE must be set in .env.docker}
-      DB_INFO_PATH: ${L0_SPIDER_DB_INFO_CONTAINER_PATH:-/appdata/l0_spider/db_info.pkl}
+      DB_INFO_PATH: /run/secrets/l0-spider-db-info
       SENSOR_EXCLUSION_CONFIG_PATH: /opt/l0-spider/config/sensor-exclusions.json
     ports:
       - "${L0_SPIDER_BIND_IP:-127.0.0.1}:${L0_SPIDER_HOST_PORT:-5173}:5173"
@@ -30,6 +30,9 @@ services:
         read_only: true
         bind:
           create_host_path: false
+    secrets:
+      - source: l0-spider-db-info
+        target: l0-spider-db-info
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -44,3 +47,7 @@ services:
       options:
         max-size: 10m
         max-file: "3"
+
+secrets:
+  l0-spider-db-info:
+    file: ${L0_SPIDER_DB_INFO_HOST_PATH:?L0_SPIDER_DB_INFO_HOST_PATH must point to db_info.pkl}
