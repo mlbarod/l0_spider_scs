@@ -176,6 +176,7 @@ systemctl status <unit-name> --no-pager
 - `server.mjs:35-40,65-87,291-304` — cwd 기반 path, 환경변수, 종료·log
 - `docs/system/environment-definition.md` — service manager·환경 주입 `Unknown`
 - `docs/system/security.md` — 실행 user·filesystem·journal 권한 경계
-- `reports/audit/system-inventory.md` — tracked unit·Docker 설정 부재
+- `reports/audit/system-inventory.md` — 조사 당시 tracked unit·Docker 설정 부재를 기록한 historical audit;
+  현재 Docker 설정 기준은 `Dockerfile`, `compose.yaml`과 Docker 배포 가이드
 
 실제 systemd unit 조회·제어와 운영 server 접근은 수행하지 않았다.

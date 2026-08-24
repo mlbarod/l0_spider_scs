@@ -44,9 +44,11 @@
 | Python 의존성 | `PyMySQL>=1.1,<2` | `Confirmed` | `scripts/requirements.txt` |
 | 브라우저 | 사용자 UI 소비에 필요하며 서버 런타임 버전 정책은 없음 | `Confirmed` / 지원 범위 `Unknown` | `src/`, `package.json` |
 | Playwright | 사용자 메뉴얼 이미지 생성 도구에 사용 | `Confirmed` | `scripts/generate-user-manual-screenshots.mjs` |
-| OS 및 배포 image | 버전 선언 없음 | `Unknown` | 저장소 정적 조사 |
+| Docker build/runtime image | `node:22-bookworm-slim` 기본값, Python은 image의 Debian package | image 구조 `Confirmed`, patch digest `Unknown` | `Dockerfile` |
+| Docker runtime user | base image의 non-root `node` | `Confirmed` | `Dockerfile` |
 
-- `.nvmrc`, `.node-version`, `.python-version`, `runtime.txt`, `Dockerfile`은 현재 checkout에서 확인되지 않았다.
+- `.nvmrc`, `.node-version`, `.python-version`, `runtime.txt`는 현재 checkout에서 확인되지 않았다.
+- Docker 이외 실행 mode의 Node·Python version 제약은 여전히 `Unknown`이다.
 - 조사 시스템에 설치된 Node.js 또는 Python 버전은 프로젝트 요구 버전으로 사용하지 않았다.
 
 ## 5. 프로세스와 실행 진입점
@@ -60,7 +62,8 @@
 | 메일 발송 프로세스 | 해당 진입점 미확인 | 실제 메일 생성·발송 | 전체 동작 미확인 | `Unknown` |
 
 - Node 서버는 Python helper에 요청별 프로세스를 생성하며 현재 사용자 조회는 10초, 등록 계열은 주로 15초 timeout을 둔다.
-- health check, readiness probe, process restart 정책과 무중단 종료 처리는 확인되지 않았다.
+- Docker에는 liveness health check와 `unless-stopped` restart가 선언돼 있다. readiness,
+  비-Docker restart 정책과 무중단 종료 처리는 확인되지 않았다.
 
 ## 6. Build-time과 Runtime 구분
 
@@ -70,7 +73,8 @@
 | `PORT`, `HOST` | 아니오 | 예 | `server.mjs` listen 주소를 결정한다. |
 | `LIVE_RELOAD`, `BUILD_ON_START` | 아니오 | 예 | 통합 서버의 Vite 사용과 시작 build 여부를 결정한다. |
 | 데이터 root 설정 | 아니오 | 예 | API 요청 처리 중 파일 탐색 위치를 결정한다. |
-| `SENSOR_EXCLUSION_CONFIG_PATH` | 아니오 | 예 | 기본 `config/sensor-exclusions.json` 대신 사용할 App별 sensor 제외 JSON 위치를 지정한다. |
+| `SENSOR_EXCLUSION_CONFIG_PATH` | 아니오 | 예 | 기본 `config/sensor-exclusions.json` 대신 사용할 App별 sensor 제외 JSON 위치를 지정한다. Docker Compose는 container 내부 고정 경로를 사용한다. |
+| `TZ` | 아니오 | 예 | Node·Python local timezone 의존 처리를 명시한다. Docker Compose는 `.env.docker`의 `L0_SPIDER_TIMEZONE`에서 주입한다. |
 | `DB_INFO_PATH`, `REMOTE_ADDR` | 아니오 | 예 | Python DB helper가 credential 파일과 사용자 주소를 해석한다. |
 | `dist/` | build 결과 | 정적 모드 입력 | build 결과가 없으면 정적 모드 시작이 실패할 수 있다. |
 | `public/` 자산 | build 입력 | 정적 URL | Vite가 template, 이미지 등 공개 자산을 다룬다. |
@@ -86,7 +90,8 @@
 4. `DB_INFO_PATH`, `MAPPING_CONFIG_PATH`가 가리키는 파일 내용은 파일을 읽는 시점에 적용된다. `SENSOR_EXCLUSION_CONFIG_PATH`의 경로 값은 프로세스 시작 시, 동일 경로의 파일 내용은 API 요청 시 적용된다.
 5. 실제 서비스 관리자, shell 또는 배포 플랫폼이 환경변수를 주입하는 방식과 그 우선순위는 `Unknown`이다.
 
-- `.env` 계열은 `.gitignore`에 포함되지만 명시적인 `dotenv` 사용, `--env-file`, tracked 예제 파일은 확인되지 않았다.
+- Docker는 `.env.docker.example`과 Compose `--env-file` 절차가 있다. Docker 이외 mode에서는
+  명시적인 `dotenv` 사용, 전체 환경변수 예제와 service 주입 설정이 확인되지 않았다.
 - Vite 자체 환경 파일 로딩을 운영 설정 주입 방식으로 사용한다는 저장소 근거도 확인되지 않았다.
 - 설정 변경 후 hot reload, 프로세스 재시작 또는 재build 중 무엇이 필요한지는 항목별 표의 적용 시점을 따른다.
 
@@ -149,7 +154,7 @@
 |---|---|---|---|---|
 | dashboard 통계 | `SPIDER_DASHBOARD_PATH_ROOT` 또는 코드 template | directory·Parquet 읽기 | API 오류 또는 빈 구조는 함수별 상이 | `Confirmed` |
 | mapping 설정 | `MAPPING_CONFIG_PATH` 또는 코드 template | UTF-8 JSON 읽기 | 읽기·파싱 실패 시 API `500` | `Confirmed` |
-| sensor 제외 설정 | 기본 `config/sensor-exclusions.json`; `SENSOR_EXCLUSION_CONFIG_PATH`는 선택적 override | UTF-8 JSON 읽기·mtime/size cache | 최초 읽기 실패 시 오류 log와 빈 규칙; 정상 로드 후 잘못된 변경은 마지막 정상값 유지 | `Confirmed` |
+| sensor 제외 설정 | 기본 `config/sensor-exclusions.json`; `SENSOR_EXCLUSION_CONFIG_PATH`는 선택적 override | UTF-8 JSON 읽기·inode/mtime/size cache | 최초 읽기 실패 시 오류 log와 빈 규칙; 정상 로드 후 잘못된 변경은 마지막 정상값 유지 | `Confirmed` |
 | commonality image | `COMMONALITY_ROOT_PATH` 또는 코드 template | directory·PNG 읽기 | 최신 날짜 없음 `404`, 기타 오류 `500` | `Confirmed` |
 | common-commonality data·image | `COMMON_COMMONALITY_ROOT_PATH`, 기존 데이터 root의 형제 경로 또는 코드 template | directory·PNG 읽기 | data API의 최신 날짜·SDWT 없음 `404`; image API의 경로 탐색 오류 `500` | `Confirmed` |
 | self equipment | 코드에 정의된 ERD·backup·common root | Parquet·PNG 읽기 | endpoint별 오류 또는 빈 응답 | `Confirmed` |
@@ -218,7 +223,8 @@
 - 사용자 클릭 시각은 여러 화면에서 `new Date().toISOString()`으로 생성되어 UTC 형식이다.
 - My EQP 활성 조건은 DB `NOW()`를 사용하므로 DB timezone 설정의 영향을 받지만 실제 timezone은 `Unknown`이다.
 - zone 없는 날짜·시각 문자열을 `Date.parse` 또는 `Date`로 처리하는 위치는 runtime timezone 영향을 받을 수 있어 `Risk`이다.
-- 저장소에서 `TZ` 설정이나 서버·DB timezone 일치 규칙은 확인되지 않았다.
+- Docker Compose는 `L0_SPIDER_TIMEZONE`을 필수로 받아 `TZ`로 주입한다. 예제값은
+  `Asia/Seoul`이지만 실제 기존 서버·DB·producer와의 일치 여부는 운영 확인 전까지 `Unknown`이다.
 - 표시에는 `ko-KR`, `ko`, `en-US`가 명시된 위치와 기본 locale을 쓰는 위치가 함께 존재한다.
 - HTTP, template과 JSON은 UTF-8 사용 근거가 있으며 Python JSON은 `ensure_ascii=False`를 사용한다.
 - DB 연결 charset은 `utf8`이고 collation과 `utf8mb4` 적용 여부는 `Unknown`이다.
@@ -235,8 +241,11 @@
 
 ## 17. 프로세스 관리자와 배포
 
-- tracked systemd unit, Dockerfile, compose, reverse proxy 설정, Procfile, CI workflow는 확인되지 않았다.
-- 실제 서비스 실행 user, working directory, environment injection, restart policy와 resource limit은 `Unknown`이다.
+- `Dockerfile`, `compose.yaml`, `.env.docker.example`과 Docker 운영 가이드가 tracked 설정으로 존재한다.
+- Docker는 non-root `node`, read-only root filesystem, `/appdata` read-only bind mount,
+  `unless-stopped` restart와 log rotation을 선언한다. 실제 host 적용 여부는 `Unknown`이다.
+- tracked systemd unit, reverse proxy 설정, Procfile과 CI workflow는 확인되지 않았다.
+- Docker 이외 실제 서비스 실행 user, working directory, environment injection, restart policy와 resource limit은 `Unknown`이다.
 - TLS 종료, domain, proxy header 정규화, log 수집과 health monitoring도 `Unknown`이다.
 - `server.mjs`는 listen 오류를 처리하지만 `SIGTERM`/`SIGINT` graceful shutdown handler는 확인되지 않았다.
 
@@ -259,15 +268,15 @@
 
 ## 19. 환경 비교 행렬
 
-| 항목 | Vite 단독 | 통합 live reload | 통합 정적 제공 |
-|---|---|---|---|
-| 기본 port | `3000` | `5173` | `5173` |
-| 설정 위치 | `vite.config.mjs` | `server.mjs` | `server.mjs` |
-| 프론트엔드 제공 | Vite dev | Vite middleware | `dist/` |
-| full API | 아니오 | 예 | 예 |
-| 시작 build | 아니오 | 아니오 | 기본 예, `BUILD_ON_START=0`이면 생략 |
-| HMR | 예 | 예 | 아니오 |
-| 운영 적합성 | 확인하지 않음 | 확인하지 않음 | 확인하지 않음 |
+| 항목 | Vite 단독 | 통합 live reload | 통합 정적 제공 | Docker 정적 제공 |
+|---|---|---|---|---|
+| 기본 port | `3000` | `5173` | `5173` | host 설정 → container `5173` |
+| 설정 위치 | `vite.config.mjs` | `server.mjs` | `server.mjs` | `compose.yaml`, `Dockerfile` |
+| 프론트엔드 제공 | Vite dev | Vite middleware | `dist/` | image의 `dist/` |
+| full API | 아니오 | 예 | 예 | 예 |
+| 시작 build | 아니오 | 아니오 | 기본 예, `BUILD_ON_START=0`이면 생략 | image build에서 완료 |
+| HMR | 예 | 예 | 아니오 | 아니오 |
+| 운영 적합성 | 확인하지 않음 | 확인하지 않음 | 확인하지 않음 | 설정 제공, 실제 채택 `Unknown` |
 
 - 이 행렬은 현재 `main`에서 정적으로 확인한 모드만 비교하며 환경 이름을 임의로 부여하지 않는다.
 - `mock-agent` 실행 환경은 조사 범위 밖이므로 비교 행렬에 포함하지 않는다.
@@ -296,7 +305,7 @@
 
 | ID | 불일치 | 영향 | 근거 |
 |---|---|---|---|
-| ENV-M01 | 코드가 여러 환경변수를 소비하지만 tracked `.env.example`이 없다. | 설정 이름, 안전한 예시와 필수성 전달이 분산된다. | `.gitignore`, `server.mjs`, `server/*.mjs`, `scripts/*.py` |
+| ENV-M01 | Docker용 `.env.docker.example`은 있으나 Docker 이외 mode의 전체 환경변수 예제는 없다. | 비-Docker 배포의 설정 전달이 분산된다. | `.env.docker.example`, `server.mjs`, `server/*.mjs`, `scripts/*.py` |
 | ENV-M02 | Vite 단독 서버와 통합 Node 서버의 API route 범위가 다르다. | `npm run dev`에서 일부 화면 기능이 통합 모드와 다르게 동작할 수 있다. | `vite.config.mjs`, `server.mjs` |
 | ENV-M03 | 프로젝트 후보인 개별 STEP HMAC의 key·생성·검증 환경 계약이 현재 코드에서 확인되지 않는다. | 딥링크 보안과 환경 이관 조건을 정의할 수 없다. | `AGENTS.md`, STEP 관련 코드 검색 결과 |
 
@@ -307,7 +316,7 @@
 
 ### 주요 Unknown
 
-- 실제 운영 실행 모드, service manager, 실행 user, working directory와 환경 주입 방식
+- 실제 운영 실행 모드와 Docker 채택 여부, service manager, working directory와 환경 주입 방식
 - 요구 Node.js·Python·브라우저·OS 버전과 patch 정책
 - 실제 host, port, TLS, reverse proxy, network ACL과 health check
 - `/appdata` mount, owner, 권한, 용량, 보존, backup과 생성 주체
@@ -355,11 +364,13 @@
 | 8 | `package.json`, `package-lock.json` | 실행 script, build 도구와 package manager |
 | 9 | `scripts/requirements.txt` | Python 의존성 |
 | 10 | `scripts/generate-user-manual-screenshots.mjs` | 선택적 Playwright 도구 환경 |
-| 11 | `.gitignore` | 환경·credential·build·log 제외 정책 |
-| 12 | `public/mailing-report.html` | 메일 template 자산과 변수 |
-| 13 | `README.md`, `web_structure.md` | 기존 실행·환경 설명 비교 |
-| 14 | `reports/audit/system-inventory.md` | 현재 checkout의 근거 인덱스 |
-| 15 | `docs/system/overview.md`, `docs/system/architecture.md` | 시스템 범위와 구조 기준 |
+| 11 | `.gitignore`, `.dockerignore` | 환경·credential·build context 제외 정책 |
+| 12 | `Dockerfile`, `compose.yaml`, `.env.docker.example` | Docker build·runtime·mount 계약 |
+| 13 | `public/mailing-report.html` | 메일 template 자산과 변수 |
+| 14 | `README.md`, `web_structure.md` | 기존 실행·환경 설명 비교 |
+| 15 | `reports/audit/system-inventory.md` | 현재 checkout의 근거 인덱스 |
+| 16 | `docs/system/overview.md`, `docs/system/architecture.md` | 시스템 범위와 구조 기준 |
 
 - 근거는 현재 checkout의 정적 조사 결과이며 실제 운영 상태를 재현한 결과가 아니다.
-- 애플리케이션, build, test, DB, 메일, `/appdata`, systemd와 Docker는 실행하거나 접근하지 않았다.
+- 실제 운영 DB, 메일, `/appdata`, systemd와 사내 서버는 실행하거나 접근하지 않았다.
+  local build·test·Docker 검증 결과는 작업 보고에서 별도로 관리한다.

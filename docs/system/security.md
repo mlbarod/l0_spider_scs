@@ -317,14 +317,14 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 
 | 프로세스 또는 자원 | 필요한 권한 | 현재 확인 결과 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|
-| Node server | source·dist read, port bind, Python spawn | 실행 user·group 미확인 | root 또는 과권한 실행 | `Unknown` | systemd/Docker 설정 부재 |
+| Node server | source·dist read, port bind, Python spawn | Docker는 non-root `node`; 그 밖의 실행 user·group 미확인 | root 또는 과권한 실행 | Docker 설정 `Confirmed`, 비-Docker·운영 적용 `Unknown` | `Dockerfile`, systemd 문서 |
 | Python helper | script·credential file read, DB network | Node user 상속 후보 | credential file 과다 접근 | `Inferred` / `Needs Validation` | `spawn` env·stdio |
 | `/appdata` | Parquet·image·mapping read | 실제 owner·mode·ACL 미확인 | write 가능·다른 데이터 접근 | `Unknown` | 운영 filesystem 미조사 |
 | credential pickle | Node child user read only 필요 | mode·owner 미확인 | 다른 user read·변조 | `Unknown` | `DB_INFO_PATH` |
 | dist·public asset | server read, build process write | ownership 미확인 | build artifact 변조 | `Unknown` | server static code |
 | log destination | stdout/stderr write | rotation·retention·reader 미확인 | 민감 log 장기 보존 | `Unknown` | logging code |
 | port binding | configured port bind | privileged port 사용 여부 미확인 | root 필요 여부 | `Unknown` | env-driven port |
-| Docker user | container 설정 없음 | 해당 runtime 확인 불가 | root container 후보 | `Out of Scope` / `Unknown` | Dockerfile 부재 |
+| Docker user | base image의 `node` user | image 설정 확인, host UID/GID 접근은 미확인 | host mount 읽기 실패 또는 과도한 권한 | 설정 `Confirmed`, 운영 `Unknown` | `Dockerfile`, `compose.yaml` |
 | systemd fields | `User`, `Group`, `WorkingDirectory`, `EnvironmentFile` | tracked unit 없음 | 실행 경계 미정 | `Unknown` | repository search |
 
 최소 권한 원칙상 application user는 운영 파일 read, 필요한 credential read와 제한된 DB 작업만 가져야 한다.
@@ -344,6 +344,8 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 | vulnerability audit | 이번 단계에서 실행하지 않음 | 알려진 취약점 상태 미확인 | `Unknown` | `Not Run` |
 | CI security scan | tracked CI workflow 미확인 | 자동 점검 공백 | `Not Implemented` in repository | file search |
 | client env secret | `VITE_*`가 build에 포함될 수 있음 | secret bundle 노출 | 금지 `Policy` | environment doc |
+| Docker build context | `.env*`, pickle, key·certificate 제외 | credential image 포함 | 제외 설정 `Confirmed` | `.dockerignore` |
+| Docker runtime | read-only root, capability drop, no-new-privileges, non-root | container escape·변조 범위 | 설정 `Confirmed`, host 적용 `Unknown` | `Dockerfile`, `compose.yaml` |
 
 ## 21. 가용성과 장애 격리
 
@@ -358,8 +360,8 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 | 대용량 body | write APIs | route별 64 KiB~2 MiB 제한 | URL·GET·공통 limit | 일부 `Implemented` | `readJsonBody` |
 | 반복 고비용 요청 | file scan·DB process | rate limit 없음, 일부 bounded cache | proxy limit·load test | `Risk` | cache·server code |
 | child process hang | DB helper | 10~15초 후 SIGTERM 일부 | DB socket 종료·orphan 확인 | 일부 `Implemented` | server helper runners |
-| Node crash | 전체 service | server error 시 process exit | restart policy | `Unknown` | `server.mjs:291-299` |
-| health check | 전체 service | endpoint·config 미확인 | liveness·readiness | `Not Implemented` in repository | code search |
+| Node crash | 전체 service | server error 시 process exit; Compose `unless-stopped` | 실제 restart 적용·반복 crash | Docker 설정 `Confirmed`, 운영 `Unknown` | `server.mjs`, `compose.yaml` |
+| health check | 전체 service | Docker가 container 내부 `/` HTTP 응답 확인 | DB·`/appdata` readiness | liveness 설정 `Confirmed`, readiness 없음 | `Dockerfile` |
 
 ## 22. 보안 통제 매트릭스
 
@@ -421,7 +423,7 @@ Dashboard `lineDashboard.summary.mailingSummary` 후보와 실제 sibling `lineD
 | SEC-R11 | dependency | `Unknown` | dependency audit·CI scan 미실행 | 알려진 취약점 미확인 | `Medium` | 승인된 offline/CI audit |
 | SEC-R12 | availability | `Risk` | rate limit 없음, 요청마다 DB child process 후보 | resource exhaustion | `Medium` | load model·proxy limits·pool 정책 |
 | SEC-R13 | cookie | `Risk` / `Low` | sidebar cookie에 security attribute 없음 | UI 상태 변조·불필요한 전송 | `Low` | cookie 사용 제거 또는 attribute 검토 |
-| SEC-R14 | timezone | `Unknown` / `Risk` | DB `NOW()`와 zone 없는 date parsing | 기간·expiry 경계 오류 | `Medium` | runtime·DB timezone 계약 |
+| SEC-R14 | timezone | Docker 주입 `Confirmed`, 운영 일치 `Unknown` / `Risk` | DB `NOW()`와 zone 없는 date parsing | 기간·expiry 경계 오류 | `Medium` | `L0_SPIDER_TIMEZONE`과 runtime·DB timezone 대조 |
 | SEC-R15 | host constants | `Risk` | code에 내부 host 후보가 hard-coded | source·bundle 정보 노출 | `Low` | 공개 범위·설정 분리 검토 |
 
 위 항목은 침투 테스트로 확인한 취약점 목록이 아니다.

@@ -4,8 +4,8 @@
 |---|---|
 | 문서 목적 | `main`의 L0 Spider를 빌드·반영·검증·rollback할 때 지켜야 할 기준을 정의한다. |
 | 기준 브랜치 | `main` |
-| 기준 commit | `469ab96` |
-| 조사 방식 | 저장소 정적 조사만 수행했다. 실제 서버, systemd, Docker, DB와 `/appdata`는 확인하지 않았다. |
+| 기준 변경 전 commit | `51d7bdc` |
+| 조사 방식 | Docker 설정과 local 검증을 대상으로 한다. 실제 사내 서버, DB와 `/appdata`는 확인하지 않았다. |
 | Mock 범위 | `mock-agent`의 mock server·데이터·Playwright 절차는 운영 배포 범위가 아니다. |
 
 ## 1. 범위와 상태 기준
@@ -37,7 +37,8 @@
 | Vite 단독 개발 | `npm run dev`, port `3000` | `Confirmed` | `package.json`, `vite.config.mjs:126-142` |
 | Python helper | Node가 요청별로 `python3 -B scripts/*.py` 실행 | `Confirmed` | `server/*.mjs` |
 | Python 의존성 | `scripts/requirements.txt` | `Confirmed` | README, requirements file |
-| 실제 운영 mode | tracked 배포 설정 없음 | `Unknown` | repository search |
+| Docker 정적 mode | `Dockerfile` build 후 `node server.mjs` | `Confirmed` | `Dockerfile`, `compose.yaml` |
+| 실제 운영 mode | Docker 설정은 제공되지만 실제 채택 여부 미확인 | `Unknown` | 대상 서버 미조사 |
 
 `npm run preview`는 Vite preview가 아니라 `node server.mjs`다.
 Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 배포 기준으로 확정하지 않는다.
@@ -55,6 +56,7 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | sensor 제외 설정 | `config/sensor-exclusions.json` | 네 이상감지 App과 Mailing의 기본 runtime 설정 | runtime 배포 필수; application user 읽기 가능 여부 확인 |
 | static artifact | `dist/` | 정적 mode의 SPA | build 결과; Git 기준 여부 미확인 |
 | 문서·계약 | `docs/`, `harness/contracts/` | 운영·API 기준 | 코드 변경과 함께 검토 |
+| Docker 배포 | `Dockerfile`, `compose.yaml`, `.env.docker.example` | image build·runtime·mount 계약 | 실제 값과 비밀정보를 분리 |
 
 `public/mailing-report.html`은 build에 포함될 수 있지만 저장소 안의 실제 mail sender가 아니다.
 분석 Parquet·이미지, DB credential과 실제 `.env`는 build artifact에 포함하지 않는다.
@@ -75,7 +77,8 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `SENSOR_EXCLUSION_CONFIG_PATH` | 경로는 프로세스 시작; 동일 경로의 내용은 API 요청 | `config/sensor-exclusions.json` | 기본 파일 또는 override JSON은 application read-only, 개발자·배포 계정만 수정; 반영 전 validation |
 | `DB_INFO_PATH` | Python helper | 코드 기본 path | 값이 아니라 credential file 위치; 노출 금지 |
 
-tracked `.env.example`, `EnvironmentFile`, secret manager와 실제 주입 우선순위는 `Unknown`이다.
+Docker용 비밀 없는 경로·port 예제는 `.env.docker.example`에 있다. systemd `EnvironmentFile`,
+secret manager와 실제 주입 우선순위는 `Unknown`이다.
 실제 값은 배포 기록, 명령행, journal과 문서에 복사하지 않는다.
 
 ## 5. 배포 단위와 외부 의존성
@@ -89,14 +92,17 @@ tracked `.env.example`, `EnvironmentFile`, secret manager와 실제 주입 우�
 - 실제 service manager, reverse proxy, TLS, 방화벽과 log 수집
 - 외부 mail renderer·scheduler·sender가 있다면 그 별도 배포 단위
 
-Dockerfile, Compose, tracked systemd unit, CI workflow와 artifact registry는 현재 checkout에 없다.
+Dockerfile과 Compose는 현재 checkout에 있으며 상세 절차는
+[Docker 배포 가이드](../operations/docker-deployment.md)를 따른다. tracked systemd unit,
+CI workflow, 실제 artifact registry와 대상 서버 반영 여부는 현재 확인되지 않았다.
 
 ## 6. 배포 전 확인
 
-배포 담당자는 실제 대상 서버·service·경로를 먼저 확인하고 아래 명령의 placeholder를 확정한다.
+Release source를 검증하고 image를 만드는 builder에서는 저장소의 Node 개발 dependency를
+설치한 뒤 아래 source gate를 실행한다. 이 명령은 대상 Docker 서버의 전제조건이 아니다.
 
 ```bash
-# 실행하지 않은 운영자용 명령
+# release source 또는 builder에서 실행할 명령
 git branch --show-current
 git rev-parse --short HEAD
 git status --short
@@ -107,6 +113,20 @@ npm run test:unit
 npm run test:contract
 npm run build
 ```
+
+대상 Docker 서버에는 Docker Engine과 Compose plugin만 필요하다. 이미 검증·전달된 image를
+사용하는 서버에서는 host `node`, `npm`, Python package를 설치하거나 위 source gate를
+실행하지 않는다. 실제 mount 경로와 port를 확정한 뒤 다음 Docker gate를 사용한다.
+
+```bash
+# 대상 Docker 서버에서 실행할 명령
+docker compose --env-file .env.docker config
+docker compose --env-file .env.docker up -d --no-build
+```
+
+대상 서버에서 직접 image를 build하는 경우에만 `up` 전에
+`docker compose --env-file .env.docker build`를 실행한다. Container entrypoint는 mount된
+sensor 설정을 검증하고 실패 시 application 시작을 차단한다.
 
 `test:integration`은 현재 Core test가 운영 자원을 사용하지 않는지 확인한 뒤에만 실행한다.
 실제 운영 DB, `/appdata`, mail과 외부 API를 사용하는 검증은 release gate로 자동 실행하지 않는다.
@@ -154,8 +174,9 @@ npm run build
 | Mailing | 등록 기능과 template 자산만 현재 범위 | 실제 sender는 별도 owner로 escalation |
 | log | 새 반복 오류·비밀·절대 path 노출 없음 | 즉시 영향 격리·보안 escalation |
 
-전용 `/health` 또는 readiness endpoint는 확인되지 않았다.
-따라서 process active만으로 DB와 운영 file까지 준비됐다고 판단하지 않는다.
+전용 `/health` 또는 readiness endpoint는 확인되지 않았다. Docker image의 health check는
+container 내부 `/` HTTP 응답만 확인한다. 따라서 `healthy` 또는 process active만으로 DB와
+운영 file까지 준비됐다고 판단하지 않는다.
 
 ## 9. Rollback 경계
 
@@ -191,7 +212,7 @@ DB write나 runtime DDL이 발생한 뒤에는 application file만 되돌려 완
 ### Mismatch
 
 - Vite 단독 `npm run dev`는 `server.mjs`보다 API route 범위가 좁다.
-- 코드가 여러 환경변수를 소비하지만 tracked 환경변수 예제와 배포 주입 설정은 없다.
+- Docker 이외 실행 mode에는 전체 환경변수 예제와 배포 주입 설정이 없다.
 
 ### Unknown
 
@@ -199,7 +220,7 @@ DB write나 runtime DDL이 발생한 뒤에는 application file만 되돌려 완
 - 실제 `User`, `Group`, `WorkingDirectory`, `ExecStart`, Node path와 port
 - reverse proxy, TLS, firewall, health·readiness와 monitoring
 - artifact 보관·승격·rollback, release owner와 승인 절차
-- Node·Python 지원 version과 OS
+- Docker 이외 Node·Python 지원 version과 OS; Docker base image patch digest 정책
 
 ### Risk
 
@@ -215,9 +236,12 @@ DB write나 runtime DDL이 발생한 뒤에는 application file만 되돌려 완
 - `server.mjs:35-40,65-87,263-304` — build, static/live mode, listen·오류
 - `vite.config.mjs:118-145` — Vite port·allowed host·HMR
 - `scripts/requirements.txt`, `server/*.mjs` — Python dependency·child process
+- `Dockerfile`, `compose.yaml`, `.env.docker.example` — container build·runtime·mount 계약
+- `docs/operations/docker-deployment.md` — Docker 운영 절차와 미확인 경계
 - `docs/system/environment-definition.md` — 환경변수·외부 의존성
 - `docs/system/architecture.md`, `docs/system/data-flow.md` — runtime·데이터 경계
 - `docs/system/security.md` — 비밀·권한·log 정책
-- `reports/audit/system-inventory.md` — tracked 배포 자산 부재와 Mismatch
+- `reports/audit/system-inventory.md` — Docker 추가 전 historical inventory와 Mismatch
 
-실제 배포, build, test, server, systemd, Docker, DB, mail과 `/appdata` 접근은 수행하지 않았다.
+실제 사내 서버 배포, systemd, 운영 DB, mail과 `/appdata` 접근은 수행하지 않았다. local
+Docker·build·test 실행 결과는 작업 보고에서 별도로 관리한다.

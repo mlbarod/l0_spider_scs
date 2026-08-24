@@ -28,6 +28,29 @@ LIVE_RELOAD=0 PORT=5173 node server.mjs
 
 정적 모드에서 `BUILD_ON_START=0`을 설정하면 기존 `dist`를 재빌드하지 않고 제공한다.
 
+## Docker
+
+대상 서버에 Node·npm·Python package를 각각 설치하지 않고 Docker Engine과 Docker
+Compose만으로 정적 통합 서버를 실행할 수 있다.
+
+```bash
+cp .env.docker.example .env.docker
+docker compose --env-file .env.docker config
+docker compose --env-file .env.docker up -d --build
+docker compose --env-file .env.docker ps
+```
+
+기본 host 공개 주소는 `127.0.0.1:5173`이다. 실제 `/appdata` host 경로, 공개 port와
+bind IP는 `.env.docker`에서 설정한다. `/appdata`와 sensor 제외 설정은 컨테이너에
+읽기 전용으로 mount되며 DB credential 내용은 image나 `.env.docker`에 넣지 않는다.
+Container entrypoint가 시작할 때 sensor 제외 JSON을 검증하며, 유효하지 않으면
+`node server.mjs`를 실행하지 않고 종료한다. 대상 서버에는 host Node나 npm이 필요 없다.
+`.env.docker`의 `L0_SPIDER_TIMEZONE`은 기존 서버와 DB의 업무 timezone을 확인한 값으로
+설정해야 한다.
+
+사내 registry, image 파일 전달, 기동·확인·중지 절차와 운영 주의사항은
+[Docker 배포 가이드](docs/operations/docker-deployment.md)를 따른다.
+
 ## Defect SPIDER 접속자 `knox_id` 식별 구조
 
 참고 저장소: [`mlbarod/defect_spider_for_p3d`](https://github.com/mlbarod/defect_spider_for_p3d)<br>

@@ -66,7 +66,8 @@ systemctl show <unit-name> -p MainPID -p ActiveState -p SubState -p NRestarts
 ```
 
 systemd가 아니면 실제 manager의 승인된 상태 명령을 사용한다.
-저장소에 Docker·다른 process manager 명령은 확인되지 않았다.
+Docker 실행은 [Docker 배포 가이드](docker-deployment.md)에 정의되어 있다. 그 밖의 process
+manager와 실제 운영 topology는 확인되지 않았다.
 
 ### 4.2 Listener
 
@@ -122,7 +123,7 @@ npm run sensor-exclusions:validate -- config/sensor-exclusions.next.json
 ```
 
 활성 파일을 직접 편집하지 않고 같은 directory의 임시본을 검증한 뒤 기본 파일로 교체한다. 자세한 명령과 owner·mode 보존 절차는 전용 운영 가이드를 따른다.
-검증된 기본 파일로 교체하면 프로세스 재build·재시작은 필요하지 않으며 다음 관련 API 요청에서 mtime·size 변경을 확인해 새 규칙을 읽는다.
+검증된 기본 파일로 교체하면 프로세스 재build·재시작은 필요하지 않으며 다음 관련 API 요청에서 inode·mtime·size 변경을 확인해 새 규칙을 읽는다.
 최초 설정 읽기에 실패하면 server log에 고정 오류를 한 번 남기고 제외 없음으로 계속 동작한다. 정상 설정을 한 번 읽은 뒤 잘못된 JSON으로 바뀌면 마지막 정상 설정을 유지하며, 같은 파일 상태의 반복 오류 log는 억제한다.
 실제 경로, 제외 단어와 내부 sensor 이름을 ticket·journal 원문으로 공유하지 않는다.
 

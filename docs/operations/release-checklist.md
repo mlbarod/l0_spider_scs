@@ -208,12 +208,15 @@ recipient 격리, 발송 차단 또는 중복 방지 상태가 불명확한 mail
 
 data-changing release에 검증된 backup과 owner 승인 없이 진행하지 않는다.
 
-## 13. 배포·systemd 반영
+## 13. 배포·Docker·systemd 반영
 
 - [ ] [deployment](../system/deployment.md)의 사전 확인과 반영 순서를 검토했다.
 - [ ] 실제 service manager·unit·instance 수와 traffic 방식을 확인했다.
 - [ ] systemd 사용 시 [systemd](systemd.md)의 `FragmentPath`, `User`, `Group`, `WorkingDirectory`, `ExecStart`를 확인했다.
 - [ ] 실제 Node path·port·`EnvironmentFile`·restart policy를 확인했다.
+- [ ] Docker 사용 시 [Docker 배포 가이드](docker-deployment.md)의 appdata·sensor 설정
+      read-only mount, host bind IP·port와 `docker compose config`를 확인했다.
+- [ ] Docker image에 실제 `.env`, DB credential, pickle, key 또는 certificate가 포함되지 않았다.
 - [ ] `PORT=32640`, 특정 Node 절대 경로와 unit 경로 후보를 근거 없이 사용하지 않았다.
 - [ ] unit·drop-in 변경이 있을 때만 `daemon-reload` 절차를 적용한다.
 - [ ] source만 변경할 때 unit 변경으로 잘못 처리하지 않는다.

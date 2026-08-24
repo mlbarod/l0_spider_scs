@@ -4,8 +4,6 @@ import { readFile } from "node:fs/promises"
 import { createServer } from "node:http"
 import { extname, join, normalize } from "node:path"
 import { fileURLToPath, URL } from "node:url"
-import { createServer as createViteServer } from "vite"
-
 import { handleDashboardDataRequest } from "./server/dashboardData.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
 import { handleClickedCategoryHistoryRequest } from "./server/clickedCategoryHistory.mjs"
@@ -293,6 +291,7 @@ const server = createServer((req, res) => {
 let viteServer
 
 if (liveReload) {
+  const { createServer: createViteServer } = await import("vite")
   viteServer = await createViteServer({
     root: rootDir,
     server: {
