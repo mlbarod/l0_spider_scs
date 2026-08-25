@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { mkdtemp, readFile, rename, rm, stat, utimes, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
@@ -170,41 +170,6 @@ test("외부 JSON 변경을 다시 읽고 잘못된 변경에는 마지막 정�
   })
   assert.equal(reloadErrors, 1)
   assert.equal(retained, second)
-})
-
-test("같은 mtime과 크기로 원자 교체된 설정도 inode 변경으로 다시 읽는다", async (t) => {
-  resetSensorExclusionConfigCacheForTest()
-  const directory = await mkdtemp(join(tmpdir(), "l0-sensor-exclusions-atomic-"))
-  t.after(() => rm(directory, { recursive: true, force: true }))
-  const configPath = join(directory, "sensor-exclusions.json")
-  const nextPath = join(directory, "sensor-exclusions.next.json")
-  const firstPayload = JSON.stringify({
-    version: 1,
-    apps: { selfEquipment: { contains: ["TEMP"] } },
-  })
-  const nextPayload = JSON.stringify({
-    version: 1,
-    apps: { selfEquipment: { contains: ["FLOW"] } },
-  })
-  const fixedTimestamp = new Date("2026-01-02T03:04:05.000Z")
-  assert.equal(firstPayload.length, nextPayload.length)
-
-  await writeFile(configPath, firstPayload)
-  await utimes(configPath, fixedTimestamp, fixedTimestamp)
-  const firstStat = await stat(configPath)
-  const first = await readSensorExclusionConfig(configPath)
-  assert.deepEqual(first.apps.selfEquipment.contains, ["TEMP"])
-
-  await writeFile(nextPath, nextPayload)
-  await utimes(nextPath, fixedTimestamp, fixedTimestamp)
-  await rename(nextPath, configPath)
-  const nextStat = await stat(configPath)
-  assert.notEqual(nextStat.ino, firstStat.ino)
-  assert.equal(nextStat.size, firstStat.size)
-  assert.equal(nextStat.mtimeMs, firstStat.mtimeMs)
-
-  const reloaded = await readSensorExclusionConfig(configPath)
-  assert.deepEqual(reloaded.apps.selfEquipment.contains, ["FLOW"])
 })
 
 test("설정 경로가 없거나 최초 읽기에 실패하면 빈 규칙을 제공하고 같은 실패 log를 억제한다", async () => {

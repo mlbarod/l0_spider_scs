@@ -264,7 +264,7 @@ L0 Spider의 확인된 책임은 파일 결과를 선택·검증·읽기·집계
 | 동일성 | 최신 유효 `YYYY-MM-DD hh:mm:ss` directory | directory index 5분 TTL, latest path 포함 key | 기본 stale 60초 | 동일 latest directory 내부 변경은 최대 TTL 영향 가능 |
 | 공통부 동일성 | 최신 유효 `YYYY-MM-DD` directory | directory index 5분 TTL, latest path 포함 key | 기본 stale 60초 | 동일 latest directory 내부 변경은 최대 TTL 영향 가능 |
 | 공통부 index·chart | index row `file_path`가 가리키는 결과 | path 1개, scatter 1개; mtime·size 검사 | 기본 stale 60초, 일부 history 30초 | file 교체는 server mtime·size로 판정 |
-| sensor 제외 설정 | 기본 또는 override JSON의 App별 `contains` | 마지막 정상값; inode·mtime·size 검사 | 기존 query cache는 다음 refetch 전 유지 가능 | 다음 API 요청부터 새 규칙 적용 |
+| sensor 제외 설정 | 기본 또는 override JSON의 App별 `contains` | 마지막 정상값; mtime·size 검사 | 기존 query cache는 다음 refetch 전 유지 가능 | 다음 API 요청부터 새 규칙 적용 |
 | 이미지 HTTP | path가 직접 가리키는 file | 별도 memory cache 없음 | commonality/common `private,max-age=300`; ERD `no-cache` | endpoint별 정책 상이 |
 
 Dashboard의 날짜 연산은 UTC 기반 검증·증감을 사용하지만 filename이 표현하는 업무 timezone은 `Unknown`이다.
@@ -344,7 +344,7 @@ Self·공통부는 모든 root를 최신순으로 탐색하지 않고 upstream i
 - upstream publish가 원자적이지 않으면 index는 존재하지만 data/image가 아직 없는 부분 결과가 발생할 수 있다.
 - 동적 `${sensor}_${chStep}` column이 없거나 타입이 다르면 chart 전체가 실패할 수 있다.
 - `staleTime: Infinity` chart query는 같은 key의 file 내용 변경을 자동 감지하지 않는다.
-- Parquet·index의 mtime·size 기반 cache invalidation은 filesystem timestamp·동일 크기 overwrite 정책에 의존한다. Sensor 설정은 inode도 함께 비교한다.
+- mtime·size 기반 cache invalidation은 filesystem timestamp·동일 크기 overwrite 정책에 의존한다.
 - 파일 Schema version과 producer-consumer 호환 계약이 없어 drift가 request-time 오류로 나타날 수 있다.
 
 ## 16. 변경 영향과 보존 규칙

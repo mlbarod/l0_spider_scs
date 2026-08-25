@@ -190,7 +190,7 @@ mv config/sensor-exclusions.next.json config/sensor-exclusions.json
 `mv`는 validation이 성공한 경우에만 실행한다. 두 파일을 같은 `config/` directory에 두면 교체가 같은 filesystem 안에서 이뤄지고, `cp -p`는 기존 mode와 owner 보존을 시도한다.
 교체 후 `ls -l config/sensor-exclusions.json`으로 권한과 owner가 이전과 같은지 확인한다.
 
-같은 활성 경로의 파일을 교체하면 실행 중인 Node 서버가 다음 API 요청에서 inode·mtime·size 변경을 확인하고 다시 읽는다.
+같은 활성 경로의 파일을 교체하면 실행 중인 Node 서버가 다음 API 요청에서 mtime·size 변경을 확인하고 다시 읽는다.
 따라서 일반적인 sensor 추가·삭제에는 server 재시작이 필요하지 않다.
 
 React Query browser cache 때문에 이미 열린 화면은 이전 결과를 잠시 유지할 수 있다.

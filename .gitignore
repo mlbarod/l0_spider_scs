@@ -11,7 +11,6 @@
 .env.development.local
 .env.test.local
 .env.production.local
-.env.docker
 db_info.pkl
 
 # logs

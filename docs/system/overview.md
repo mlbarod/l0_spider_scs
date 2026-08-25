@@ -63,7 +63,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 |---|---|---|
 | L0 Spider 내부 | React SPA·브라우저 route·API 모듈, Node HTTP 서버·파일 처리, Python DB helper, 경로·메일 template과 실행 설정 | Confirmed |
 | 외부 의존성 | 브라우저·운영 네트워크, `/appdata`의 JSON·Parquet·이미지·DB credential 파일, 업무 DB, 실제 메일 전송 시스템 후보 | 파일·DB 참조는 Confirmed, 실제 메일 연동은 Unknown |
-| 범위 밖 또는 미확인 | upstream 데이터 생산, 실제 운영 network·proxy·TLS·systemd·Docker 적용·monitoring, `mock-agent` 구현 | Docker 설정은 Confirmed, 실제 적용은 Unknown, 나머지는 Unknown 또는 Out of Scope |
+| 범위 밖 또는 미확인 | upstream 데이터 생산, 운영 network·proxy·TLS·systemd·Docker·monitoring, `mock-agent` 구현 | Unknown 또는 Out of Scope |
 
 ## 7. 상위 구성요소
 
@@ -106,8 +106,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 - DB 기능은 Node가 `python3` helper를 실행하는 방식이며 PyMySQL 의존성이 선언돼 있다. (`Confirmed`)
 - `PORT`, `HOST`, `LIVE_RELOAD`, 데이터 root와 `DB_INFO_PATH` 등 환경변수 참조가 있다. (`Confirmed`)
 - Node.js·Python 지원 버전과 `.env.example`은 현재 확인되지 않았다. (`Unknown`)
-- Dockerfile과 Compose 설정은 저장소에 있다. 실제 대상 서버 적용은 확인되지 않았다.
-  systemd unit, CI, reverse proxy와 정식 log 수집 설정은 저장소에서 확인되지 않았다. (`Docker 설정 Confirmed`, 나머지 `Unknown`)
+- systemd, Docker, CI, reverse proxy와 정식 log 수집 설정은 저장소에서 확인되지 않았다. (`Unknown`)
 
 설치·배포·운영 절차는 [environment-definition.md](environment-definition.md), [deployment.md](deployment.md), [runbook.md](../operations/runbook.md), [systemd.md](../operations/systemd.md)에 존재한다. 실제 운영 topology와 unit 값은 여전히 `Unknown`이다.
 

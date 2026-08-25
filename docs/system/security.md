@@ -225,7 +225,7 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 
 | secret 또는 설정 | 환경변수 | 사용 주체 | 브라우저 노출 | 기본값 | 누락 처리 | Git 보호 | 상태 | 근거 |
 |---|---|---|---|---|---|---|---|---|
-| DB credential 파일 | `DB_INFO_PATH` | Python helper | 아니오 | server path 존재; Docker는 `/run/secrets/l0-spider-db-info` | default path 사용 후 open 실패 | `.gitignore`와 Docker build context에서 제외 | `Implemented` | Python helpers; `compose.yaml`; `.dockerignore` |
+| DB credential 파일 | `DB_INFO_PATH` | Python helper | 아니오 | server path 존재 | default path 사용 후 open 실패 | `.gitignore`에 파일명 | `Implemented` | Python helpers; `.gitignore:14` |
 | DB credential key | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | helper가 pickle에서 읽음 | 아니오 | 없음 | key/file error | 실제 파일 제외 | `Implemented` / 운영 권한 `Unknown` | helper loaders |
 | HMAC secret | 이름 미확인 | 생성·검증 주체 미확인 | 미확인 | 미확인 | 미확인 | 정책만 있음 | `Unknown` | STEP·environment docs |
 | mail credential | 이름 미확인 | sender 미확인 | 미확인 | 미확인 | 미확인 | 미확인 | `Unknown` | sender 부재 |
@@ -235,9 +235,6 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 | runtime mode | `BUILD_ON_START`, `LIVE_RELOAD` | Node | 동작에 간접 영향 | enabled unless `0` | default enabled | secret 아님 | `Confirmed` | `server.mjs:39-40` |
 
 `.env.example`과 `.env.mock.example`은 현재 `main`에서 확인되지 않았다.
-Docker Compose는 host의 `L0_SPIDER_DB_INFO_HOST_PATH` 파일을 read-only secret으로 전달하고,
-Parquet용 `/appdata` mount와 분리한다. `.env.docker`에는 credential 값이나 pickle 내용을
-넣지 않고 host 파일 경로만 둔다.
 `VITE_` 변수는 client-visible 영역으로 간주하여 secret, token, DB·mail credential과 HMAC key를 두지 않는 것이 `Policy`다.
 Hard-coded 내부 host 후보는 위치와 유형만 `Risk`로 기록하며 실제 값은 `<redacted>`로 취급한다.
 
@@ -246,7 +243,7 @@ Hard-coded 내부 host 후보는 위치와 유형만 `Risk`로 기록하며 실�
 | 항목 | 현재 구현 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|
 | driver | `PyMySQL>=1.1,<2` | dependency 취약점 미조회 | `Confirmed` | `scripts/requirements.txt` |
-| credential 주입 | server-side pickle을 helper가 로드; Docker는 분리된 Compose secret 사용 | pickle 변조·host file permission | `Implemented` / `Needs Validation` | helper loaders; `compose.yaml` |
+| credential 주입 | server-side pickle을 helper가 로드 | pickle 변조·file permission | `Implemented` / `Needs Validation` | helper loaders |
 | query parameterization | 대표 SELECT·INSERT·UPDATE·DELETE에 `%s` parameter 사용 | 동적 identifier 조립의 안전성 전수 검토 필요 | 대체로 `Implemented` | `scripts/*.py` |
 | dynamic SQL | 고정 column 목록·placeholder 수로 query 조립 | future input-derived identifier 금지 | 일부 `Implemented` | pass·My EQP helper |
 | read·write | user lookup·reference read, registration·history write·commit | 권한 범위 넓음 | `Confirmed` | Python helpers |
@@ -320,14 +317,14 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 
 | 프로세스 또는 자원 | 필요한 권한 | 현재 확인 결과 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|
-| Node server | source·dist read, port bind, Python spawn | Docker는 non-root `node`; 그 밖의 실행 user·group 미확인 | root 또는 과권한 실행 | Docker 설정 `Confirmed`, 비-Docker·운영 적용 `Unknown` | `Dockerfile`, systemd 문서 |
+| Node server | source·dist read, port bind, Python spawn | 실행 user·group 미확인 | root 또는 과권한 실행 | `Unknown` | systemd/Docker 설정 부재 |
 | Python helper | script·credential file read, DB network | Node user 상속 후보 | credential file 과다 접근 | `Inferred` / `Needs Validation` | `spawn` env·stdio |
 | `/appdata` | Parquet·image·mapping read | 실제 owner·mode·ACL 미확인 | write 가능·다른 데이터 접근 | `Unknown` | 운영 filesystem 미조사 |
-| credential pickle | Node child user read only 필요 | Docker의 secret 분리와 entrypoint 읽기 검사 확인; host mode·owner와 운영 적용 미확인 | 다른 user read·변조 | 설정 `Confirmed`, 운영 `Unknown` | `DB_INFO_PATH`, `compose.yaml`, `scripts/docker-entrypoint.sh` |
+| credential pickle | Node child user read only 필요 | mode·owner 미확인 | 다른 user read·변조 | `Unknown` | `DB_INFO_PATH` |
 | dist·public asset | server read, build process write | ownership 미확인 | build artifact 변조 | `Unknown` | server static code |
 | log destination | stdout/stderr write | rotation·retention·reader 미확인 | 민감 log 장기 보존 | `Unknown` | logging code |
 | port binding | configured port bind | privileged port 사용 여부 미확인 | root 필요 여부 | `Unknown` | env-driven port |
-| Docker user | base image의 `node` user | image 설정 확인, host UID/GID 접근은 미확인 | host mount 읽기 실패 또는 과도한 권한 | 설정 `Confirmed`, 운영 `Unknown` | `Dockerfile`, `compose.yaml` |
+| Docker user | container 설정 없음 | 해당 runtime 확인 불가 | root container 후보 | `Out of Scope` / `Unknown` | Dockerfile 부재 |
 | systemd fields | `User`, `Group`, `WorkingDirectory`, `EnvironmentFile` | tracked unit 없음 | 실행 경계 미정 | `Unknown` | repository search |
 
 최소 권한 원칙상 application user는 운영 파일 read, 필요한 credential read와 제한된 DB 작업만 가져야 한다.
@@ -347,8 +344,6 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 | vulnerability audit | 이번 단계에서 실행하지 않음 | 알려진 취약점 상태 미확인 | `Unknown` | `Not Run` |
 | CI security scan | tracked CI workflow 미확인 | 자동 점검 공백 | `Not Implemented` in repository | file search |
 | client env secret | `VITE_*`가 build에 포함될 수 있음 | secret bundle 노출 | 금지 `Policy` | environment doc |
-| Docker build context | `.env*`, pickle, key·certificate 제외 | credential image 포함 | 제외 설정 `Confirmed` | `.dockerignore` |
-| Docker runtime | read-only root, capability drop, no-new-privileges, non-root, 분리된 DB secret | container escape·변조 범위와 host secret 권한 | 설정 `Confirmed`, host 적용 `Unknown` | `Dockerfile`, `compose.yaml` |
 
 ## 21. 가용성과 장애 격리
 
@@ -363,8 +358,8 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 | 대용량 body | write APIs | route별 64 KiB~2 MiB 제한 | URL·GET·공통 limit | 일부 `Implemented` | `readJsonBody` |
 | 반복 고비용 요청 | file scan·DB process | rate limit 없음, 일부 bounded cache | proxy limit·load test | `Risk` | cache·server code |
 | child process hang | DB helper | 10~15초 후 SIGTERM 일부 | DB socket 종료·orphan 확인 | 일부 `Implemented` | server helper runners |
-| Node crash | 전체 service | server error 시 process exit; Compose `unless-stopped` | 실제 restart 적용·반복 crash | Docker 설정 `Confirmed`, 운영 `Unknown` | `server.mjs`, `compose.yaml` |
-| health check | 전체 service | Docker가 container 내부 `/` HTTP 응답 확인 | DB·`/appdata` readiness | liveness 설정 `Confirmed`, readiness 없음 | `Dockerfile` |
+| Node crash | 전체 service | server error 시 process exit | restart policy | `Unknown` | `server.mjs:291-299` |
+| health check | 전체 service | endpoint·config 미확인 | liveness·readiness | `Not Implemented` in repository | code search |
 
 ## 22. 보안 통제 매트릭스
 
@@ -426,7 +421,7 @@ Dashboard `lineDashboard.summary.mailingSummary` 후보와 실제 sibling `lineD
 | SEC-R11 | dependency | `Unknown` | dependency audit·CI scan 미실행 | 알려진 취약점 미확인 | `Medium` | 승인된 offline/CI audit |
 | SEC-R12 | availability | `Risk` | rate limit 없음, 요청마다 DB child process 후보 | resource exhaustion | `Medium` | load model·proxy limits·pool 정책 |
 | SEC-R13 | cookie | `Risk` / `Low` | sidebar cookie에 security attribute 없음 | UI 상태 변조·불필요한 전송 | `Low` | cookie 사용 제거 또는 attribute 검토 |
-| SEC-R14 | timezone | Docker 주입 `Confirmed`, 운영 일치 `Unknown` / `Risk` | DB `NOW()`와 zone 없는 date parsing | 기간·expiry 경계 오류 | `Medium` | `L0_SPIDER_TIMEZONE`과 runtime·DB timezone 대조 |
+| SEC-R14 | timezone | `Unknown` / `Risk` | DB `NOW()`와 zone 없는 date parsing | 기간·expiry 경계 오류 | `Medium` | runtime·DB timezone 계약 |
 | SEC-R15 | host constants | `Risk` | code에 내부 host 후보가 hard-coded | source·bundle 정보 노출 | `Low` | 공개 범위·설정 분리 검토 |
 
 위 항목은 침투 테스트로 확인한 취약점 목록이 아니다.

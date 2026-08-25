@@ -15,8 +15,6 @@
 - 이 문서는 주요 사용자 기능을 `화면 → 라우트 → 프론트엔드 조회 → API → 서버 처리 → 데이터 원천 → 응답 → 화면·메일`로 연결한다.
 - 현재 `main` 코드에서 확인되는 흐름만 As-Is 기준선으로 기록한다.
 - 실제 `/appdata` 파일 내용과 실제 DB 행은 조사하지 않고 코드의 경로 pattern, table과 접근 방식만 확인했다.
-- Docker에서도 Parquet·PNG 경로는 기존과 동일한 `/appdata/abnormal_trend/pic/...`다. 원격 파일 서버의 NFS/CIFS는 Docker host에 먼저 mount하고 container `/appdata`에 read-only로 연결한다.
-- 등록·SKIP·이력 기능의 DB credential은 Parquet mount와 분리된 Compose secret `/run/secrets/l0-spider-db-info`로 주입한다. 두 원천은 같은 서버나 filesystem일 필요가 없다.
 - API의 field·nullable·호환 계약과 기능별 business rule은 현재 기능 문서와 JSON Schema가 담당한다. 오류 응답과 일부 운영 계약은 `Partial` 또는 `Blocked`다.
 - 신뢰 경계의 상세 위협·비밀 관리 규칙은 [security.md](security.md)가 담당한다.
 - `mock-agent`의 mock 흐름은 현재 시스템 데이터 원천이 아니며 이 문서에 포함하지 않는다.

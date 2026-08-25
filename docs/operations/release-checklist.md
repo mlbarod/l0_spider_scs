@@ -126,8 +126,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 - [ ] `HOST`, `PORT`, `LIVE_RELOAD`, `BUILD_ON_START`의 이름과 적용 mode를 확인했다.
 - [ ] `VITE_SITE_URL`에 secret이 없고 host·HMR 영향이 검토됐다.
 - [ ] `MAPPING_CONFIG_PATH`, `COMMONALITY_ROOT_PATH`, `COMMON_COMMONALITY_ROOT_PATH`, `SPIDER_DASHBOARD_PATH_ROOT` 영향이 검토됐다.
-- [ ] Docker의 `L0_SPIDER_APPDATA_PATH`가 host에 먼저 mount된 NFS/CIFS root인지 확인했다.
-- [ ] Docker의 `L0_SPIDER_DB_INFO_HOST_PATH`와 container `DB_INFO_PATH=/run/secrets/l0-spider-db-info`의 read 권한을 값 노출 없이 확인했다.
+- [ ] `DB_INFO_PATH` 위치와 service user read 권한을 값 노출 없이 확인했다.
 - [ ] 실제 환경값을 CLI output, journal, ticket, 문서와 Git에 기록하지 않았다.
 - [ ] tracked `.env.example` 부재를 알고 실제 주입 source와 owner를 확인했다.
 - [ ] Node·Python version과 dependency 준비 상태를 확인했다. 저장소 지원 version은 `Unknown`이다.
@@ -209,15 +208,12 @@ recipient 격리, 발송 차단 또는 중복 방지 상태가 불명확한 mail
 
 data-changing release에 검증된 backup과 owner 승인 없이 진행하지 않는다.
 
-## 13. 배포·Docker·systemd 반영
+## 13. 배포·systemd 반영
 
 - [ ] [deployment](../system/deployment.md)의 사전 확인과 반영 순서를 검토했다.
 - [ ] 실제 service manager·unit·instance 수와 traffic 방식을 확인했다.
 - [ ] systemd 사용 시 [systemd](systemd.md)의 `FragmentPath`, `User`, `Group`, `WorkingDirectory`, `ExecStart`를 확인했다.
 - [ ] 실제 Node path·port·`EnvironmentFile`·restart policy를 확인했다.
-- [ ] Docker 사용 시 [Docker 배포 가이드](docker-deployment.md)의 appdata·sensor 설정
-      read-only mount, 분리된 DB secret, host bind IP·port와 `docker compose config`를 확인했다.
-- [ ] Docker image에 실제 `.env`, DB credential, pickle, key 또는 certificate가 포함되지 않았다.
 - [ ] `PORT=32640`, 특정 Node 절대 경로와 unit 경로 후보를 근거 없이 사용하지 않았다.
 - [ ] unit·drop-in 변경이 있을 때만 `daemon-reload` 절차를 적용한다.
 - [ ] source만 변경할 때 unit 변경으로 잘못 처리하지 않는다.

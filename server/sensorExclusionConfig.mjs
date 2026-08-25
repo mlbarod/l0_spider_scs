@@ -125,10 +125,9 @@ export async function readSensorExclusionConfig(
   let failureSignature = normalizedPath
   try {
     const fileStat = await stat(normalizedPath)
-    failureSignature = `${normalizedPath}\u0000${fileStat.ino}\u0000${fileStat.mtimeMs}\u0000${fileStat.size}`
+    failureSignature = `${normalizedPath}\u0000${fileStat.mtimeMs}\u0000${fileStat.size}`
     if (
       configCache?.path === normalizedPath
-      && configCache.ino === fileStat.ino
       && configCache.mtimeMs === fileStat.mtimeMs
       && configCache.size === fileStat.size
     ) return configCache.config
@@ -137,7 +136,6 @@ export async function readSensorExclusionConfig(
     const config = normalizeSensorExclusionConfig(payload)
     configCache = {
       path: normalizedPath,
-      ino: fileStat.ino,
       mtimeMs: fileStat.mtimeMs,
       size: fileStat.size,
       config,

@@ -36,7 +36,7 @@ Mailing 요약·등록 API·HTML template은 존재하지만 renderer·scheduler
 | 저장소 | 업무 DB | 사용자, 등록 조건과 이력 보관 | Python helper가 PyMySQL로 읽기·쓰기 | Confirmed | `scripts/*.py`, `scripts/requirements.txt` |
 | 외부 처리 | 데이터 생성 주체 | 운영 Parquet·이미지 생성 후보 | 생성 주체·주기·전달 계약 미확인 | Unknown | `reports/audit/system-inventory.md` |
 | 외부 처리 | 메일 전송 시스템 | template rendering과 실제 발송 후보 | 구현 위치와 연동 방식 미확인 | Unknown | `public/mailing-report.html`, `web_structure.md` |
-| 운영 | Docker 배포·proxy·monitoring | 실행, TLS, 접근과 관찰성 관리 후보 | Docker 설정 존재, 실제 적용·proxy·monitoring 미확인 | Docker 설정 Confirmed / 운영 Unknown | `Dockerfile`, `compose.yaml`, 배포 문서 |
+| 운영 | 배포·proxy·monitoring | 실행, TLS, 접근과 관찰성 관리 후보 | 저장소 내 구체 설정 미확인 | Unknown | `reports/audit/system-inventory.md` |
 
 ### 시스템 컨텍스트 다이어그램
 
@@ -202,9 +202,7 @@ Python helper는 요청 시 생성되는 자식 프로세스이며 미확인 STE
 - 확인된 상시 애플리케이션 진입점은 Node HTTP 서버 하나이며 DB helper는 요청별 자식 프로세스다. (`Confirmed`)
 - host·port·mode·데이터 root·DB credential 위치는 `process.env` 참조로 조정된다. (`Confirmed`)
 - log는 console과 Python stderr로 전달되지만 수집·rotation·보존 정책은 `Unknown`이다.
-- Docker 기본 image·runtime user·liveness 설정은 `Dockerfile`과 `compose.yaml`에서 확인된다.
-  Docker base image patch digest, 실제 host 적용, systemd, reverse proxy, TLS, readiness와
-  monitoring 구성은 `Unknown`이다.
+- Node.js·Python 버전, OS, systemd, Docker, reverse proxy, TLS, health check와 monitoring 구성은 `Unknown`이다.
 - Vite 단독 서버와 통합 서버의 API 범위가 다르므로 실행 mode에 따른 기능 차이가 있다. (`Mismatch`)
 
 구체적인 값과 절차는 `docs/system/environment-definition.md`, `docs/system/deployment.md`, `docs/operations/runbook.md`, `docs/operations/systemd.md`에서 후속 정의한다.
