@@ -349,6 +349,7 @@ My EQP 메일 count는 sender가 같은 고유건 규칙으로 별도 계산하�
 | 성공 | `200` | `{ok:true,...payload}` | 없음 | `Confirmed` |
 | 날짜·Line filter 오류 | `400` | `{ok:false,code,error,requestId}` | 없음 | `Confirmed` |
 | 유효한 Dashboard filename 없음 | `404` | `{ok:false,code,error,requestId}` | 없음 | `Confirmed` |
+| SCS 데이터 연결 비활성 | `503` | `{ok:false,code:"DATA_CONNECTIONS_DISABLED",error,requestId}` | 없음 | `Confirmed` |
 | 허용하지 않은 method | `405` | `{ok:false,error:"Method not allowed"}`, `Allow: GET, HEAD` | 해당 없음 | `Confirmed` |
 | success 응답 교차 불변조건 위반 | `500` | `{ok:false,code:"DASHBOARD_RESPONSE_INTEGRITY_ERROR",error,requestId}` | 없음 | `Confirmed` |
 | 파일·mapping·schema 등 기타 예외 | `500` | `{ok:false,code:"DASHBOARD_DATA_LOAD_FAILED",error,requestId}` | 없음 | `Confirmed` |

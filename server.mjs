@@ -6,6 +6,7 @@ import { extname, join, normalize } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 import { createServer as createViteServer } from "vite"
 
+import { blockDisabledDataRequest } from "./server/dataConnections.mjs"
 import { handleDashboardDataRequest } from "./server/dashboardData.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
 import { handleClickedCategoryHistoryRequest } from "./server/clickedCategoryHistory.mjs"
@@ -133,6 +134,8 @@ async function serveStatic(req, res) {
 }
 
 const server = createServer((req, res) => {
+  if (blockDisabledDataRequest(req, res)) return
+
   const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`)
 
   if (url.pathname === "/api/dashboard-data") {

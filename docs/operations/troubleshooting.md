@@ -188,6 +188,8 @@ host·TLS·WebSocket은 proxy/network owner, route 차이는 application owner�
 
 ## 7. DB 연결·현재 사용자·등록 기능 실패
 
+먼저 배포 mode를 확인한다. SCS UI shell에서 `/api` namespace의 `503 DATA_CONNECTIONS_DISABLED`는 정상이며 DB 장애가 아니다. `requestId`가 있는 이 응답을 해소하려고 `SCS_DATA_CONNECTIONS_ENABLED=1`을 설정하지 않는다. 데이터 연결 승인 배포로 확인된 경우에만 아래 DB 장애 절차를 적용한다.
+
 ### 증상
 
 - current-user, MY EQP·Mailing 등록, PASS·HIT·click 이력 API가 timeout 또는 `500`이다.
@@ -269,6 +271,8 @@ stat <expected-file>
 mount·ACL·보존은 filesystem owner, producer 지연·Schema는 data owner, path resolver는 application owner에게 전달한다.
 
 ## 9. Dashboard 빈 데이터·오래된 데이터
+
+SCS UI shell의 `503 DATA_CONNECTIONS_DISABLED`는 Dashboard 파일 누락·오래된 데이터가 아니라 의도된 전역 차단이다. 새 Parquet 경로와 owner 승인 없이 환경변수를 활성화하거나 기존 root로 우회하지 않는다. 데이터 연결 승인 배포에서만 아래 진단을 수행한다.
 
 ### 증상
 

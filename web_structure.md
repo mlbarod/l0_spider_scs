@@ -4,6 +4,8 @@
 > 기준일/브랜치: 2026-08-20 / `main`<br>
 > 기준 파일: `server.mjs`, `vite.config.mjs`, `src/`, `server/`, `scripts/`, `src/config/spiderDataPaths.mjs`
 
+현재 SCS 분리 checkout은 `SCS_DATA_CONNECTIONS_ENABLED=1`을 명시하지 않으면 `/api` namespace를 차단하는 UI shell이다. 아래 파일·DB 연결 구조는 gate 뒤에 보존된 재연결 기준선이며, UI shell 실행에서는 dormant 상태다. 실제 배포 환경의 변수 값은 `Unknown`이다.
+
 ## 0. 한 장 요약
 
 ```mermaid
@@ -61,7 +63,7 @@ flowchart TB
 | 메인 대시보드 | 통계·상세 Parquet를 집계해 Line별 이상 현황을 표시 |
 | 자설비/MY EQP | 경로 Parquet에서 대상을 찾고 ERD Parquet로 차트를 Drawing |
 | 동일성/공통부 | 디렉터리·경로 Parquet를 기준으로 이미지 또는 비교 차트를 표시 |
-| Mailing/My EQP 등록 | 수신 조건과 모니터링 설비를 DB에 저장·조회·삭제 |
+| My EQP 등록 | 수신 조건과 모니터링 설비를 DB에 저장·조회·삭제 |
 | 이력 기능 | SKIP, HIT, 마지막 필터 선택을 각 이력 테이블에 기록 |
 
 핵심적으로 **조회 데이터는 운영 파일**, **사용자·등록·이력 데이터는 DB**에 있으며, 두 저장소를 **Node 서버가 하나의 웹 응답으로 조합**하는 구조입니다.

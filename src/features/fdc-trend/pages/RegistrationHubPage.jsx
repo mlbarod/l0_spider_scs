@@ -98,8 +98,7 @@ export function RegistrationHubPage() {
             </span>
             <div className="min-w-0">
               <h1 className="text-lg font-semibold leading-tight tracking-tight">
-                <span className="block">Mailing Report 및</span>
-                <span className="block">My EQP 등록</span>
+                My EQP 등록
               </h1>
               <p className="mt-1 text-xs text-muted-foreground">
                 Mailing 수신 조건과 My EQP 모니터링 기준정보를 한 화면에서 관리합니다.

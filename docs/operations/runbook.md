@@ -34,6 +34,9 @@
 
 ## 3. 교대·작업 전 사전 점검
 
+SCS UI shell 운영 중에는 `SCS_DATA_CONNECTIONS_ENABLED`를 `1`로 설정하지 않는다. 실제 배포 값은 현재 `Unknown`이며, 새 Parquet·DB 연결정보와 owner 승인이 확정되기 전에는 `/api` namespace의 `503 DATA_CONNECTIONS_DISABLED`가 정상 기대 결과다.
+장애 시에도 gate 도입 이전 artifact로 rollback하지 않는다. shell-safe artifact가 없으면 service·traffic을 격리하고 owner 승인을 받은 뒤 다음 조치를 결정한다.
+
 1. 작업 ticket, 승인 범위, 대상 환경과 영향 시간을 확인한다.
 2. 현재 장애인지 planned change인지 구분한다.
 3. 실제 service manager·unit·instance 수·traffic 경로를 확인한다.

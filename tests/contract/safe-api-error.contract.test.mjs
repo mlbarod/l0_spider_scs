@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url"
 import Ajv2020 from "ajv/dist/2020.js"
 
 import { createSafeApiError } from "../../server/safeApiError.mjs"
+import { blockDisabledDataRequest } from "../../server/dataConnections.mjs"
 
 const testDirectory = dirname(fileURLToPath(import.meta.url))
 const schemaPath = resolve(testDirectory, "../../harness/contracts/safe-api-error.schema.json")
@@ -40,4 +41,22 @@ test("내부 진단정보가 추가된 오류 응답은 계약에서 거부한�
   ]) {
     assert.equal(validate({ ...payload, [key]: value }), false, `${key}가 허용되었습니다.`)
   }
+})
+
+test("SCS 데이터 연결 차단 응답도 보호 대상 오류 계약을 만족한다", () => {
+  let body = ""
+  const response = {
+    writeHead() {},
+    end(value = "") {
+      body = value
+    },
+  }
+
+  assert.equal(blockDisabledDataRequest(
+    { method: "GET", url: "/api/dashboard-data", headers: { host: "localhost" } },
+    response,
+    {},
+    () => {},
+  ), true)
+  assert.equal(validate(JSON.parse(body)), true, JSON.stringify(validate.errors))
 })

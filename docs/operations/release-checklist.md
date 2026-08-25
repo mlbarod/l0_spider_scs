@@ -201,6 +201,9 @@ recipient 격리, 발송 차단 또는 중복 방지 상태가 불명확한 mail
 - [ ] DB와 `/appdata`의 일관 시점과 producer publish 상태를 확인했다.
 - [ ] RPO·RTO·보존기간이 `Unknown`이면 risk와 승인자를 기록했다.
 - [ ] 이전 정상 source·artifact와 호환 가능한 환경설정이 존재한다.
+- [ ] SCS UI shell의 rollback artifact에도 API gate가 포함돼 있으며, gate 도입 이전 artifact를 rollback 대상으로 선택하지 않았다.
+- [ ] shell-safe rollback artifact가 없으면 이전 version 기동 대신 service·traffic 격리와 owner 승인을 사용한다.
+- [ ] UI shell rollback 후 `/api` namespace의 `503 DATA_CONNECTIONS_DISABLED`와 DB·Parquet 미접근을 재확인한다.
 - [ ] DB write·DDL, data migration과 mail 발송은 code rollback과 별도 복구가 필요함을 확인했다.
 - [ ] 부분 복구·전체 복구·서버 이전·release rollback 중 해당 유형을 선택했다.
 - [ ] rollback trigger, 의사결정자, traffic·service 절차를 기록했다.
@@ -225,14 +228,17 @@ service·unit·port가 확인되지 않으면 실제 배포 단계로 진행하�
 
 ## 14. 배포 후 검증
 
+- [ ] 이번 배포가 SCS UI shell인지 데이터 연결 승인 배포인지 release 기록에 명시했다.
+- [ ] UI shell이면 `SCS_DATA_CONNECTIONS_ENABLED`가 미설정 또는 `1`이 아님을 값 노출 없이 확인했다.
+- [ ] UI shell이면 `/api`와 `/api/*`의 `503 DATA_CONNECTIONS_DISABLED`, `requestId`, `HEAD` 무본문을 확인했다.
 - [ ] service가 active이고 restart count가 증가하지 않는다.
 - [ ] 승인된 port에 예상 process 하나가 listen한다.
 - [ ] `/` liveness가 정상이다.
 - [ ] 전용 health endpoint가 없으므로 dependency readiness를 별도로 확인했다.
-- [ ] Dashboard가 계약된 성공·빈 상태를 반환하고 latest 시각을 확인했다.
-- [ ] Self Equipment와 MY EQP의 filter·chart·등록 read 흐름을 확인했다.
-- [ ] 동일성·공통부 image·scatter의 정상·부분 결과를 확인했다.
-- [ ] DB current-user·등록 read가 timeout·permission 오류 없이 동작한다.
+- [ ] 데이터 연결 승인 배포인 경우에만 Dashboard 성공·빈 상태와 latest 시각을 확인했다.
+- [ ] 데이터 연결 승인 배포인 경우에만 Self Equipment와 MY EQP의 filter·chart·등록 read 흐름을 확인했다.
+- [ ] 데이터 연결 승인 배포인 경우에만 동일성·공통부 image·scatter의 정상·부분 결과를 확인했다.
+- [ ] 데이터 연결 승인 배포인 경우에만 DB current-user·등록 read 흐름을 확인했다.
 - [ ] `step=ALL`, `eqpCh` 기존 link가 정상이다.
 - [ ] Mailing 등록·template asset을 확인하고 실제 sender 상태는 외부 owner가 판정했다.
 - [ ] journal·log에 새 fatal·반복 `500`, secret·개인정보·내부 path 노출이 없다.
@@ -253,6 +259,7 @@ service·unit·port가 확인되지 않으면 실제 배포 단계로 진행하�
 - [ ] secret·credential·사용자·내부 path 노출
 - [ ] 예상하지 않은 DB DDL·write 또는 운영 file 변경
 - [ ] rollback 대상·owner·backup 무결성 미확인
+- [ ] SCS UI shell에 gate 없는 과거 artifact를 rollback 대상으로 선택함
 
 체크박스는 사고 발생 표시가 아니라 해당 중단 조건을 이해하고 감시했음을 기록한다.
 

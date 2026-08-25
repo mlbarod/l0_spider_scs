@@ -43,7 +43,7 @@ const spiderApps = [
     category: "Common Matching",
     href: "/common-commonality-anomaly",
     active: true,
-    status: "운영중",
+    status: "개발 예정",
   },
   {
     icon: Gauge,
@@ -53,7 +53,7 @@ const spiderApps = [
     href: "http://mem-etch-spider.samsungds.net:32603/",
     active: true,
     external: true,
-    status: "운영중",
+    status: "개발 예정",
     gridClassName: "2xl:col-start-1 2xl:row-start-2",
   },
   {
@@ -62,7 +62,7 @@ const spiderApps = [
   },
   {
     icon: Mail,
-    title: "Mailing Report 및\nMy EQP 등록",
+    title: "My EQP 등록",
     subtitle: "Mailing 수신 조건과 My EQP 모니터링 설비를 함께 등록합니다.",
     category: "Registration",
     href: "/registration",
@@ -89,7 +89,7 @@ const spiderSuites = [
     href: "https://go/defect-spider",
     active: true,
     external: true,
-    status: "운영중",
+    status: "개발 예정",
   },
   {
     icon: Radar,
@@ -99,7 +99,7 @@ const spiderSuites = [
     href: "https://go/spider1",
     active: true,
     external: true,
-    status: "운영중",
+    status: "개발 예정",
   },
   {
     icon: Network,
@@ -109,7 +109,7 @@ const spiderSuites = [
     href: "https://plane.samsungds.net/spider/l3",
     active: true,
     external: true,
-    status: "운영중",
+    status: "개발 예정",
   },
 ]
 
@@ -226,7 +226,7 @@ export function L0SpiderHomePage() {
           <div className="min-w-0 space-y-3">
             <Badge variant="outline">L0 Spider</Badge>
             <div>
-              <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">ETCH SPIDER</h1>
+              <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">SCS ETCH SPIDER</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
                 L0 공정 이상감지와 Hard Limit 추천 기능을 한 화면에서 시작합니다.
               </p>

@@ -93,6 +93,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | forwarded IP | request headers·socket | current user resolver | 첫 주소 정규화 | header spoofing·오식별 | `Needs Validation` | `server/currentUser.mjs:17-28` |
 | DB helper stdin | server-generated JSON | Python helper | application별 normalization | 과도한 DB 권한·원문 오류 | 일부 `Implemented` | `server/*.mjs`; `scripts/*.py` |
 | 환경변수·설정 파일 | path·host·runtime flag | process | 이름별 parsing | 잘못된 경로, secret 유출 | 일부 `Implemented` | server·Vite·Python |
+| SCS data gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite 선행 middleware | 정확히 `"1"`인 경우만 handler 활성 | 단일 변수 오설정으로 모든 file·DB read/write 재활성화 | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; server·Vite 진입점 |
 | 메일 link | Dashboard·Self URL | 외부 renderer 후보 | template `urlencode`; 실제 renderer 미확인 | 수신자 혼합·URL 노출 | `Policy` / `Needs Validation` | mail template |
 
 ## 7. 인증과 권한 경계
@@ -113,6 +114,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 
 저장소에 인증 코드가 없다는 사실만으로 운영 서비스가 인터넷에 익명 노출되었다고 단정하지 않는다.
 다만 application 자체의 write API 권한 경계는 외부 proxy가 제공하는 접근 제한과 별개로 명시적 검증이 부족하다.
+SCS UI shell에서는 전역 data gate가 모든 `/api` handler보다 먼저 적용되므로 write API도 비활성이다. `SCS_DATA_CONNECTIONS_ENABLED=1`은 Parquet·이미지·DB read뿐 아니라 등록·이력 write까지 함께 재활성화하므로 owner 승인과 새 연결정보 검증 없이는 설정하지 않는다.
 
 ## 8. 브라우저와 프론트엔드 보안
 
@@ -137,6 +139,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | API 또는 영역 | 입력 | 검증 위치 | 실패 결과 | 정보 노출 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | Dashboard | `startDate`, `endDate`, repeated `line` | strict date·range parsing | 보호 오류 `code`·`requestId` | 성공 `sourcePaths` | `Implemented` / `Risk` | `dashboardData.mjs`; `safeApiError.mjs` |
+| SCS UI shell gate | `/api` namespace | handler dispatch 전 strict opt-in | `503 DATA_CONNECTIONS_DISABLED`, UUID `requestId`; HEAD 무본문 | 운영자가 정상 차단을 장애로 오판할 위험 | `Implemented` / 운영 적용 `Unknown` | `dataConnections.mjs`; safe error contract |
 | Self Equipment | `line`, `pathSdwt`, `sdwt`, filters | 필수값·path segment·option matching | 400·500 | 성공 `sourcePath` | 일부 `Implemented` | `selfEquipmentData.mjs:62-65,321-353` |
 | ERD scatter | `path`, `eqp`, `sensor`, `chStep`, `days` | root·segment·0~30 integer | 400·보호 오류 500 | 성공 `sourcePath` | 일부 `Implemented` / `Risk` | `selfEquipmentData.mjs`; `safeApiError.mjs` |
 | image | absolute `path` | root·extension·file 존재 | 403·보호 오류 404/500 | 성공 요청 계약에 path 사용 | 일부 `Implemented` | file handlers |
@@ -233,10 +236,12 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 | file roots | `SPIDER_DASHBOARD_PATH_ROOT`, `COMMONALITY_ROOT_PATH`, `COMMON_COMMONALITY_ROOT_PATH`, `MAPPING_CONFIG_PATH` | Node | response·error에 간접 노출 가능 | code path | fallback path | secret 아님 | `Confirmed` | server modules |
 | process bind | `HOST`, `PORT` | Node | service endpoint로 관찰 가능 | code default | fallback | secret 아님 | `Confirmed` | `server.mjs:37-38` |
 | runtime mode | `BUILD_ON_START`, `LIVE_RELOAD` | Node | 동작에 간접 영향 | enabled unless `0` | default enabled | secret 아님 | `Confirmed` | `server.mjs:39-40` |
+| data connection gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite | API 응답에 간접 영향 | 비활성 | 정확히 `1`이 아니면 `/api` 차단 | secret 아님; owner 승인 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 
 `.env.example`과 `.env.mock.example`은 현재 `main`에서 확인되지 않았다.
 `VITE_` 변수는 client-visible 영역으로 간주하여 secret, token, DB·mail credential과 HMAC key를 두지 않는 것이 `Policy`다.
 Hard-coded 내부 host 후보는 위치와 유형만 `Risk`로 기록하며 실제 값은 `<redacted>`로 취급한다.
+`SCS_DATA_CONNECTIONS_ENABLED`는 비밀값은 아니지만 영향도가 큰 운영 통제다. 값을 로그·문서에 복사하기보다 `1` 여부와 승인 상태만 확인하며, UI shell에서는 gate 없는 과거 artifact로 rollback하지 않는다.
 
 ## 15. DB 보안 경계
 

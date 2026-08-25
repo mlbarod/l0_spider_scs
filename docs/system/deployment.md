@@ -67,6 +67,7 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `PORT` | server 시작 | `5173` | 운영 값은 `Unknown`; `32640` 근거 없음 |
 | `LIVE_RELOAD` | server 시작 | `0` 외 live reload | 운영 mode를 명시적으로 결정 |
 | `BUILD_ON_START` | 정적 server 시작 | `0` 외 build | 운영 시작과 build를 결합하는 `Risk` |
+| `SCS_DATA_CONNECTIONS_ENABLED` | 모든 `/api` namespace 요청 | 비활성 | 새 Parquet·DB 연결 승인 전에는 미설정; `1`은 기존 file·DB handler를 다시 활성화하므로 shell 배포에서 금지 |
 | `VITE_SITE_URL` | Vite 시작·build | 빈 값 | client-visible 설정에 secret 금지 |
 | `MAPPING_CONFIG_PATH` | API 요청 | 코드 기본 path | 실제 file 접근 사전 확인 |
 | `COMMONALITY_ROOT_PATH` | API 요청 | 코드 기본 root | 운영 root 변경 영향 검토 |
@@ -117,6 +118,7 @@ npm run build
 2. Node·Python 실제 버전과 지원 기준을 운영자에게 확인한다. 저장소에는 version 선언이 없다.
 3. 정적 mode이면 `dist/index.html`과 asset 생성 성공을 확인한다.
 4. runtime 환경변수 이름만 대조하고 실제 값은 출력하지 않는다.
+   - SCS UI shell 배포는 `SCS_DATA_CONNECTIONS_ENABLED`가 미설정 또는 `1`이 아님을 비밀값 출력 없이 확인한다.
 5. 대상 application user의 source·dist·Python script·credential·운영 file과 `config/sensor-exclusions.json` 읽기 권한을 확인한다. 실행 계정과 배포 계정을 분리하는 환경에서는 실행 계정의 설정 파일 쓰기 불가도 확인한다.
 6. 사용할 port와 service manager를 확인하고 기존 process 중복을 방지한다.
 7. DB schema·권한, `/appdata` mount와 데이터 freshness를 담당 owner에게 확인한다.
@@ -133,9 +135,10 @@ npm run build
 5. traffic 처리: proxy·무중단 전환 방식은 `Unknown`이므로 운영 승인 없이 변경하지 않는다.
 6. service 반영: 확인된 manager 절차로 한 instance씩 반영한다. 실제 instance 수는 `Unknown`이다.
 7. liveness 확인: `/`가 정상 HTTP 응답을 반환하는지 확인한다.
-8. read-only 기능 확인: Dashboard와 주요 화면 API를 승인된 방식으로 확인한다.
-9. DB write·mail 기능은 실제 데이터를 생성하지 않고 담당자 확인과 기존 운영 증거로 판정한다.
-10. log·오류·resource 상태를 확인한 뒤 release를 종료한다.
+8. SCS UI shell이면 정적 화면 route가 유지되고 `/api`와 `/api/*`가 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환하는지 확인한다. 이 단계에서 file·DB 성공을 요구하지 않는다.
+9. 데이터 연결을 별도 승인해 활성화한 배포만 Dashboard와 주요 화면 API의 read-only 흐름을 확인한다.
+10. DB write·mail 기능은 실제 데이터를 생성하지 않고 담당자 확인과 기존 운영 증거로 판정한다.
+11. log·오류·resource 상태를 확인한 뒤 release를 종료한다.
 
 정적 mode에서 시작 중 build를 피하려면 사전 build 후 `BUILD_ON_START=0`을 사용할 수 있다.
 이는 코드가 지원하는 mode이지만 실제 운영 정책으로 채택됐는지는 `Unknown`이다.
@@ -147,9 +150,10 @@ npm run build
 | process | 확인된 service manager에서 active·안정 상태 | [runbook](../operations/runbook.md)·[systemd](../operations/systemd.md) |
 | listener | 승인된 host·port에서 예상 process가 listen | port 충돌·설정 확인 |
 | UI | `/`와 주요 route의 static asset 응답 | `dist`, Vite mode, proxy 확인 |
-| Dashboard | read-only 조회가 정상 또는 계약된 빈 상태 | data root·latest file 확인 |
-| Self·abnormal | mapping·index·image/scatter read 경계 정상 | `/appdata`와 path 권한 확인 |
-| DB 연계 | current-user·등록 조회의 기존 read 흐름 정상 | credential·network·helper log 확인 |
+| API gate | UI shell은 `/api`와 `/api/*`가 안전한 `503 DATA_CONNECTIONS_DISABLED`; 연결 승인 배포만 성공 계약 확인 | 변수 값과 승인된 연결정보 확인 |
+| Dashboard | 연결 승인 배포에서 read-only 조회가 정상 또는 계약된 빈 상태 | data root·latest file 확인 |
+| Self·abnormal | 연결 승인 배포에서 mapping·index·image/scatter read 경계 정상 | `/appdata`와 path 권한 확인 |
+| DB 연계 | 연결 승인 배포에서 current-user·등록 조회의 기존 read 흐름 정상 | credential·network·helper log 확인 |
 | STEP | `step=ALL` MY EQP 호환 유지 | 비-ALL HMAC은 현재 구현 `Unknown` |
 | Mailing | 등록 기능과 template 자산만 현재 범위 | 실제 sender는 별도 owner로 escalation |
 | log | 새 반복 오류·비밀·절대 path 노출 없음 | 즉시 영향 격리·보안 escalation |
@@ -164,6 +168,7 @@ npm run build
 
 Rollback 전에 확인할 경계:
 
+- SCS UI shell의 rollback 대상 artifact에도 `SCS_DATA_CONNECTIONS_ENABLED` gate가 포함돼 있는가
 - 이전 정상 commit·artifact가 실제로 존재하고 동일 환경 계약을 갖는가
 - 이번 release가 DB row·DDL 또는 외부 mail에 이미 영향을 줬는가
 - frontend artifact와 server source를 함께 되돌릴 수 있는가
@@ -172,6 +177,7 @@ Rollback 전에 확인할 경계:
 
 DB write나 runtime DDL이 발생한 뒤에는 application file만 되돌려 완전 복구됐다고 판단하지 않는다.
 운영 데이터·메일·DB의 되돌리기는 각 owner 승인과 별도 복구 절차가 필요하다.
+UI shell에서 gate 도입 이전 artifact로 되돌리면 환경변수와 관계없이 기존 Parquet·DB API가 다시 활성화되므로 이를 rollback 대상으로 사용하지 않는다. gate가 포함된 shell-safe artifact가 없으면 이전 version을 기동하지 말고 service 또는 traffic을 격리한 상태에서 owner 승인을 받는다. rollback 후에는 `/` UI와 `/api` namespace의 `503 DATA_CONNECTIONS_DISABLED`, DB·Parquet·Python helper 미호출을 다시 확인한다.
 
 ## 10. 책임 경계
 
@@ -192,6 +198,7 @@ DB write나 runtime DDL이 발생한 뒤에는 application file만 되돌려 완
 
 - Vite 단독 `npm run dev`는 `server.mjs`보다 API route 범위가 좁다.
 - 코드가 여러 환경변수를 소비하지만 tracked 환경변수 예제와 배포 주입 설정은 없다.
+- 기존 배포 환경의 `SCS_DATA_CONNECTIONS_ENABLED` 실제 값은 확인되지 않아 UI shell 적용 여부가 `Unknown`이다.
 
 ### Unknown
 

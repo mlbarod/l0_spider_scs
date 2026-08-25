@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react"
 import path from "node:path"
 import process from "node:process"
 
+import { blockDisabledDataRequest } from "./server/dataConnections.mjs"
 import { handleDashboardDataRequest } from "./server/dashboardData.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
 import {
@@ -42,6 +43,8 @@ function mappingConfigApi() {
     name: "l0-spider-mapping-config-api",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
+        if (blockDisabledDataRequest(req, res)) return
+
         const url = new URL(req.url ?? "/", "http://localhost")
         if (url.pathname === "/api/dashboard-data") {
           handleDashboardDataRequest(req, res)

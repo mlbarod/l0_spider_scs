@@ -69,6 +69,7 @@
 | `VITE_SITE_URL` | 예 | Vite 시작 시 | `vite.config.mjs`가 host 허용과 HMR 조건을 계산한다. |
 | `PORT`, `HOST` | 아니오 | 예 | `server.mjs` listen 주소를 결정한다. |
 | `LIVE_RELOAD`, `BUILD_ON_START` | 아니오 | 예 | 통합 서버의 Vite 사용과 시작 build 여부를 결정한다. |
+| `SCS_DATA_CONNECTIONS_ENABLED` | 아니오 | 예 | 명시적으로 `1`인 경우에만 `/api` namespace의 파일·DB handler 진입을 허용한다. |
 | 데이터 root 설정 | 아니오 | 예 | API 요청 처리 중 파일 탐색 위치를 결정한다. |
 | `SENSOR_EXCLUSION_CONFIG_PATH` | 아니오 | 예 | 기본 `config/sensor-exclusions.json` 대신 사용할 App별 sensor 제외 JSON 위치를 지정한다. |
 | `DB_INFO_PATH`, `REMOTE_ADDR` | 아니오 | 예 | Python DB helper가 credential 파일과 사용자 주소를 해석한다. |
@@ -80,11 +81,12 @@
 
 ## 7. 설정 로딩과 우선순위
 
-1. Node 프로세스에 주입된 환경변수가 해당 코드 기본값보다 우선한다.
-2. Node가 Python child process를 만들 때 기존 환경을 전달하고 `REMOTE_ADDR`를 요청 정보로 덮어쓴다.
-3. 환경변수가 없으면 각 모듈의 코드 기본값 또는 `SPIDER_DATA_PATH_TEMPLATES`가 사용된다.
-4. `DB_INFO_PATH`, `MAPPING_CONFIG_PATH`가 가리키는 파일 내용은 파일을 읽는 시점에 적용된다. `SENSOR_EXCLUSION_CONFIG_PATH`의 경로 값은 프로세스 시작 시, 동일 경로의 파일 내용은 API 요청 시 적용된다.
-5. 실제 서비스 관리자, shell 또는 배포 플랫폼이 환경변수를 주입하는 방식과 그 우선순위는 `Unknown`이다.
+1. `SCS_DATA_CONNECTIONS_ENABLED`가 정확히 `1`이 아니면 `/api` namespace 요청은 `503 DATA_CONNECTIONS_DISABLED`로 종료되고 파일·DB handler에 진입하지 않는다.
+2. 연결이 활성화된 경우 Node 프로세스에 주입된 환경변수가 해당 코드 기본값보다 우선한다.
+3. Node가 Python child process를 만들 때 기존 환경을 전달하고 `REMOTE_ADDR`를 요청 정보로 덮어쓴다.
+4. 환경변수가 없으면 각 모듈의 코드 기본값 또는 `SPIDER_DATA_PATH_TEMPLATES`가 사용된다.
+5. `DB_INFO_PATH`, `MAPPING_CONFIG_PATH`가 가리키는 파일 내용은 파일을 읽는 시점에 적용된다. `SENSOR_EXCLUSION_CONFIG_PATH`의 경로 값은 프로세스 시작 시, 동일 경로의 파일 내용은 API 요청 시 적용된다.
+6. 실제 서비스 관리자, shell 또는 배포 플랫폼이 환경변수를 주입하는 방식과 그 우선순위는 `Unknown`이다.
 
 - `.env` 계열은 `.gitignore`에 포함되지만 명시적인 `dotenv` 사용, `--env-file`, tracked 예제 파일은 확인되지 않았다.
 - Vite 자체 환경 파일 로딩을 운영 설정 주입 방식으로 사용한다는 저장소 근거도 확인되지 않았다.
@@ -98,6 +100,7 @@
 | 서버 | `HOST` | 통합 서버 bind host | `0.0.0.0` | 선택 | 프로세스 시작 | `server.mjs:38` | 아니오 | 기본값 사용 | `Confirmed` |
 | 서버 | `LIVE_RELOAD` | Vite middleware 사용 | `"0"` 외 활성 | 선택 | 프로세스 시작 | `server.mjs:40` | 아니오 | 활성 | `Confirmed` |
 | 서버 | `BUILD_ON_START` | 정적 모드 시작 build | `"0"` 외 활성 | 조건부 | 프로세스 시작 | `server.mjs:39,65-75` | 아니오 | 활성 | `Confirmed` |
+| 서버 | `SCS_DATA_CONNECTIONS_ENABLED` | Parquet·이미지·DB API handler 활성화 gate | 비활성 | 새 데이터 연결 전에는 설정 금지 | API 요청 | `server/dataConnections.mjs`, `server.mjs`, `vite.config.mjs` | 아니오 | `/api` namespace에 `503 DATA_CONNECTIONS_DISABLED` 반환 | `Confirmed` |
 | Vite | `VITE_SITE_URL` | 허용 host와 HMR 조건 | 빈 값 | 선택 | Vite 시작/build | `vite.config.mjs:29-30,129-140` | 아니오 | 조건부 설정 미적용 | `Confirmed` |
 | 데이터 | `MAPPING_CONFIG_PATH` | mapping 설정 파일 override | `SPIDER_DATA_PATH_TEMPLATES.mappingConfig` | 선택 | API 요청 | `server/mappingConfig.mjs:5-7` | 경로 주의 | 코드 경로 사용 | `Confirmed` |
 | 데이터 | `COMMONALITY_ROOT_PATH` | commonality root override | 코드 경로 template | 선택 | API 요청 | `server/latestCommonalityPath.mjs:9-11` | 경로 주의 | 코드 root 사용 | `Confirmed` |
@@ -175,6 +178,7 @@
 
 ### 13.1 데이터 경로와 화면 연결
 
+- 현재 코드는 `SCS_DATA_CONNECTIONS_ENABLED`를 설정하지 않으면 UI shell로 fail-closed한다. 실제 배포 환경의 변수 존재·값은 `Unknown`이며, 새 Parquet root와 DB 정보가 확정되기 전에는 이 값을 `1`로 설정하지 않는다.
 - 화면의 상대 `/api/*` 요청은 Node 또는 Vite handler를 거쳐 코드 경로 template과 네 data-root override를 사용한다.
 - mapping, dashboard, commonality는 일부 override가 가능하지만 self equipment의 주요 root는 코드에 고정되어 있다.
 - 읽기 권한, mount 준비, 데이터 생성 주체와 운영별 경로 차이는 `Unknown`이다.

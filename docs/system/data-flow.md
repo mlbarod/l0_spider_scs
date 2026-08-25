@@ -10,6 +10,8 @@
 > 조사 제한: 실제 운영 데이터, DB, `.env`, 비밀키와 메일 전송 시스템은 열거나 실행하지 않았다.
 > 브랜치 범위: `mock-agent`의 mock 서버·데이터·E2E 흐름은 `Out of Scope`이다.
 
+> SCS 분리 상태: 현재 `SCS_DATA_CONNECTIONS_ENABLED=1`을 명시하지 않으면 `server.mjs`와 Vite 개발 서버가 `/api` namespace를 handler 진입 전에 `503 DATA_CONNECTIONS_DISABLED`로 차단한다. 아래 As-Is 데이터 흐름은 새 Parquet·DB 연결정보가 확정된 뒤 gate를 활성화할 때 검토할 기준선이며, 현재 UI shell 실행에서는 `Blocked`다.
+
 ## 1. 문서 목적과 범위
 
 - 이 문서는 주요 사용자 기능을 `화면 → 라우트 → 프론트엔드 조회 → API → 서버 처리 → 데이터 원천 → 응답 → 화면·메일`로 연결한다.

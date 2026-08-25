@@ -11,6 +11,8 @@ npm run dev
 
 The app opens directly at `/`.
 
+현재 SCS 분리 checkout은 UI shell이 기본값이다. `SCS_DATA_CONNECTIONS_ENABLED`가 정확히 `1`이 아니면 `/api` namespace는 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환하고 기존 Parquet·이미지·DB handler 및 Python helper에는 진입하지 않는다. 새 Parquet·DB 연결정보와 owner 승인이 확정되기 전에는 이 변수를 `1`로 설정하지 않는다.
+
 ## Server
 
 ```bash
@@ -95,6 +97,8 @@ node server.mjs
 ```
 
 ## Database References
+
+이하 데이터·DB 설명은 UI shell의 gate 뒤에 보존된 재연결 기준선이다. 기본 shell 실행에서는 활성 데이터 흐름이 아니며, 실제 배포 환경의 `SCS_DATA_CONNECTIONS_ENABLED` 값은 저장소만으로 확인할 수 없어 `Unknown`이다.
 
 ### 메인 대시보드 데이터
 
