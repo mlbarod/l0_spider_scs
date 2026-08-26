@@ -10,6 +10,7 @@ import {
   isSelfEquipmentDbEnabled,
   validateLineMappingPayload,
 } from "../../src/features/fdc-trend/api/mappingContract.mjs"
+import { SPIDER_DATA_PATH_TEMPLATES } from "../../src/config/spiderDataPaths.mjs"
 import { buildMappingConfigResponse } from "../../server/mappingConfig.mjs"
 
 const testDirectory = dirname(fileURLToPath(import.meta.url))
@@ -21,6 +22,13 @@ const validMapping = {
   line_mapping: { TEAM_A: "LINE_A" },
   sdwt_mapping: { TEAM_A: "SDWT_A" },
 }
+
+test("SCS mapping 기본 경로는 SCS 전용 appdata를 사용한다", () => {
+  assert.equal(
+    SPIDER_DATA_PATH_TEMPLATES.mappingConfig,
+    "/appdata/l0_spider_scs/mapping_config.json",
+  )
+})
 
 test("synthetic mapping success payload가 Schema와 runtime 계약을 만족한다", () => {
   assert.equal(validate(validMapping), true, JSON.stringify(validate.errors))

@@ -150,7 +150,7 @@ node server.mjs
 | `LIVE_RELOAD` | 활성 | 활성 시 Vite middleware/HMR, `0`이면 `dist` 정적 제공 |
 | `BUILD_ON_START` | 활성 | 정적 모드 시작 시 클라이언트 빌드, `0`이면 기존 `dist` 사용 |
 | `DB_INFO_PATH` | `/appdata/l0_spider/db_info.pkl` | Python helper의 DB 접속정보 |
-| `MAPPING_CONFIG_PATH` | `/appdata/l0_spider/mapping_config.json` | Line/SDWT 매핑 파일 override |
+| `MAPPING_CONFIG_PATH` | `/appdata/l0_spider_scs/mapping_config.json` | Line/SDWT 매핑 파일 override |
 | `COMMONALITY_ROOT_PATH` | `/appdata/abnormal_trend/pic/erd_commonality` | 동일성 데이터 루트 override |
 | `COMMON_COMMONALITY_ROOT_PATH` | 기존 데이터 root의 형제 `path_common_commonality` | 공통부 동일성 데이터 루트 override |
 | `SPIDER_DASHBOARD_PATH_ROOT` | `/appdata/abnormal_trend/pic/path` | 대시보드 일시별 상세파일 루트 override |
@@ -492,7 +492,7 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 
 | 파일/경로 | 주요 컬럼·내용 | 읽는 서버 | 사용 화면 |
 | --- | --- | --- | --- |
-| `/appdata/l0_spider/mapping_config.json` | `line_mapping`, `sdwt_mapping` | `mappingConfig.mjs`, `dashboardData.mjs`, `selfEquipmentData.mjs` | 전체 필터, 대시보드, MY EQP |
+| `/appdata/l0_spider_scs/mapping_config.json` | `line_mapping`, `sdwt_mapping` | `mappingConfig.mjs`, `dashboardData.mjs`, `selfEquipmentData.mjs` | 전체 필터, 대시보드, MY EQP |
 | `/appdata/l0_spider/db_info.pkl` | DB host/port/name/user/password | 모든 DB Python helper | DB 기능 전체 |
 | `pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | `selfEquipmentData.mjs` | 자설비 index |
 | `pic/path_common/{line}/{sdwt}/df_path.parquet` | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | `commonAnomalyData.mjs` | 공통부 |

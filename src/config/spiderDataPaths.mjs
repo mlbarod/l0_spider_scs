@@ -18,7 +18,7 @@ export const SPIDER_DATA_PATH_TEMPLATES = Object.freeze({
   commonAnomalyPath: `${PIC_ROOT}/path_common/{line}/{sdwt}/df_path.parquet`,
   commonAnomalyData: `${PIC_ROOT}/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/data.parquet`,
   commonAnomalyImage: `${PIC_ROOT}/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/{eqp_cb}.png`,
-  mappingConfig: "/appdata/l0_spider/mapping_config.json",
+  mappingConfig: "/appdata/l0_spider_scs/mapping_config.json",
 })
 
 export const SPIDER_DASHBOARD_COLUMNS = Object.freeze({

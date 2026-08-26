@@ -127,7 +127,7 @@ SPIDER 메인 하단의 라인별 이상 현황 대시보드는
 | 전체 통계 | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | `exec_date`, `recipe_id`, `priority`, `ng`, `total` |
 | 세부 통계 | `/appdata/abnormal_trend/pic/path/{latest_date}` | `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` |
 
-라인별 이상 1건은 세부 통계의 `sdwt`를 `/appdata/l0_spider/mapping_config.json`의
+라인별 이상 1건은 세부 통계의 `sdwt`를 `/appdata/l0_spider_scs/mapping_config.json`의
 `line_mapping`과 `sdwt_mapping`으로 라인에 매핑한 뒤, 같은 날짜와 라인 안에서
 `desc`, `recipe_id`, `priority`, `sensor`, `eqp` 조합이 같은 행을 중복 제거하여 계산한다.
 매핑할 수 없거나 비어 있는 `sdwt` 행은 라인 집계에서 제외한다.

@@ -71,7 +71,7 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | mapping GET/HEAD와 자설비 index·chart GET allowlist | 활성 | UI shell이 필요할 때 `0`; 미설정 또는 `1`이면 image, 다른 App과 DB API를 제외한 자설비 read만 허용 |
 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 index root | `/appdata/abnormal_trend/pic/path_xian` | 다른 mount 경로를 사용할 때만 명시하고 read-only 권한 확인 |
 | `VITE_SITE_URL` | Vite 시작·build | 빈 값 | client-visible 설정에 secret 금지 |
-| `MAPPING_CONFIG_PATH` | API 요청 | 코드 기본 path | 실제 file 접근 사전 확인 |
+| `MAPPING_CONFIG_PATH` | API 요청 | `/appdata/l0_spider_scs/mapping_config.json` | 실제 file 접근 사전 확인; 기본 경로와 다를 때만 override |
 | `COMMONALITY_ROOT_PATH` | API 요청 | 코드 기본 root | 운영 root 변경 영향 검토 |
 | `COMMON_COMMONALITY_ROOT_PATH` | 프로세스 시작 | 기존 commonality/dashboard root의 형제 `path_common_commonality` 또는 코드 기본 root | 별도 mount면 명시적으로 설정하고 프로세스를 재시작 |
 | `SPIDER_DASHBOARD_PATH_ROOT` | API 요청 | 코드 기본 root | Dashboard detail·stats 범위 확인 |

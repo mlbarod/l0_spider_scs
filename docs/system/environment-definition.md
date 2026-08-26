@@ -104,7 +104,7 @@
 | 서버 | `SCS_DATA_CONNECTIONS_ENABLED` | Parquet·이미지·DB API handler 활성화 gate | 비활성 | 새 데이터 연결 전에는 설정 금지 | API 요청 | `server/dataConnections.mjs`, `server.mjs`, `vite.config.mjs` | 아니오 | 기본 자설비 read allowlist 외 `/api`에 `503 DATA_CONNECTIONS_DISABLED` 반환 | `Confirmed` |
 | 서버 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 자설비 mapping·Parquet read API override | 활성 | UI shell 전환 시 선택 | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | 자설비 read allowlist 통과 | 코드 `Confirmed`; 운영값 `Unknown` |
 | Vite | `VITE_SITE_URL` | 허용 host와 HMR 조건 | 빈 값 | 선택 | Vite 시작/build | `vite.config.mjs:29-30,129-140` | 아니오 | 조건부 설정 미적용 | `Confirmed` |
-| 데이터 | `MAPPING_CONFIG_PATH` | mapping 설정 파일 override | `SPIDER_DATA_PATH_TEMPLATES.mappingConfig` | 선택 | API 요청 | `server/mappingConfig.mjs:5-7` | 경로 주의 | 코드 경로 사용 | `Confirmed` |
+| 데이터 | `MAPPING_CONFIG_PATH` | mapping 설정 파일 override | `/appdata/l0_spider_scs/mapping_config.json` | 선택 | API 요청 | `server/mappingConfig.mjs:5-7` | 경로 주의 | SCS 코드 기본 경로 사용 | `Confirmed` |
 | 데이터 | `COMMONALITY_ROOT_PATH` | commonality root override | 코드 경로 template | 선택 | API 요청 | `server/latestCommonalityPath.mjs:9-11` | 경로 주의 | 코드 root 사용 | `Confirmed` |
 | 데이터 | `COMMON_COMMONALITY_ROOT_PATH` | 공통부 동일성 root override | 기존 commonality/dashboard root의 형제 `path_common_commonality`, 이후 코드 template | 선택 | 프로세스 시작 | `server/latestCommonCommonalityPath.mjs` | 경로 주의 | 기존 데이터 mount의 형제 경로 사용 | `Confirmed` |
 | 데이터 | `SPIDER_DASHBOARD_PATH_ROOT` | dashboard 통계 root override | dashboard template의 상위 경로 | 선택 | API 요청 | `server/dashboardData.mjs:20-22` | 경로 주의 | 코드 root 사용 | `Confirmed` |
