@@ -70,6 +70,7 @@
 | `PORT`, `HOST` | 아니오 | 예 | `server.mjs` listen 주소를 결정한다. |
 | `LIVE_RELOAD`, `BUILD_ON_START` | 아니오 | 예 | 통합 서버의 Vite 사용과 시작 build 여부를 결정한다. |
 | `SCS_DATA_CONNECTIONS_ENABLED` | 아니오 | 예 | 명시적으로 `1`인 경우에만 `/api` namespace의 파일·DB handler 진입을 허용한다. |
+| `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 아니오 | 예 | 명시적으로 `1`인 경우 mapping GET/HEAD와 자설비 index·chart GET allowlist만 허용한다. |
 | 데이터 root 설정 | 아니오 | 예 | API 요청 처리 중 파일 탐색 위치를 결정한다. |
 | `SENSOR_EXCLUSION_CONFIG_PATH` | 아니오 | 예 | 기본 `config/sensor-exclusions.json` 대신 사용할 App별 sensor 제외 JSON 위치를 지정한다. |
 | `DB_INFO_PATH`, `REMOTE_ADDR` | 아니오 | 예 | Python DB helper가 credential 파일과 사용자 주소를 해석한다. |
@@ -81,7 +82,7 @@
 
 ## 7. 설정 로딩과 우선순위
 
-1. `SCS_DATA_CONNECTIONS_ENABLED`가 정확히 `1`이 아니면 `/api` namespace 요청은 `503 DATA_CONNECTIONS_DISABLED`로 종료되고 파일·DB handler에 진입하지 않는다.
+1. `SCS_DATA_CONNECTIONS_ENABLED=1`이면 전체 API가 활성화된다. 그렇지 않은 상태에서 `SCS_SELF_EQUIPMENT_DATA_ENABLED=1`이면 자설비 file read allowlist만 통과하고 나머지 `/api` 요청은 `503 DATA_CONNECTIONS_DISABLED`로 종료된다.
 2. 연결이 활성화된 경우 Node 프로세스에 주입된 환경변수가 해당 코드 기본값보다 우선한다.
 3. Node가 Python child process를 만들 때 기존 환경을 전달하고 `REMOTE_ADDR`를 요청 정보로 덮어쓴다.
 4. 환경변수가 없으면 각 모듈의 코드 기본값 또는 `SPIDER_DATA_PATH_TEMPLATES`가 사용된다.
@@ -101,12 +102,14 @@
 | 서버 | `LIVE_RELOAD` | Vite middleware 사용 | `"0"` 외 활성 | 선택 | 프로세스 시작 | `server.mjs:40` | 아니오 | 활성 | `Confirmed` |
 | 서버 | `BUILD_ON_START` | 정적 모드 시작 build | `"0"` 외 활성 | 조건부 | 프로세스 시작 | `server.mjs:39,65-75` | 아니오 | 활성 | `Confirmed` |
 | 서버 | `SCS_DATA_CONNECTIONS_ENABLED` | Parquet·이미지·DB API handler 활성화 gate | 비활성 | 새 데이터 연결 전에는 설정 금지 | API 요청 | `server/dataConnections.mjs`, `server.mjs`, `vite.config.mjs` | 아니오 | `/api` namespace에 `503 DATA_CONNECTIONS_DISABLED` 반환 | `Confirmed` |
+| 서버 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 자설비 mapping·Parquet read API 활성화 gate | 비활성 | 자설비 연결 배포에 조건부 | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | 자설비 read도 `503 DATA_CONNECTIONS_DISABLED` | 코드 `Confirmed`; 운영값 `Unknown` |
 | Vite | `VITE_SITE_URL` | 허용 host와 HMR 조건 | 빈 값 | 선택 | Vite 시작/build | `vite.config.mjs:29-30,129-140` | 아니오 | 조건부 설정 미적용 | `Confirmed` |
 | 데이터 | `MAPPING_CONFIG_PATH` | mapping 설정 파일 override | `SPIDER_DATA_PATH_TEMPLATES.mappingConfig` | 선택 | API 요청 | `server/mappingConfig.mjs:5-7` | 경로 주의 | 코드 경로 사용 | `Confirmed` |
 | 데이터 | `COMMONALITY_ROOT_PATH` | commonality root override | 코드 경로 template | 선택 | API 요청 | `server/latestCommonalityPath.mjs:9-11` | 경로 주의 | 코드 root 사용 | `Confirmed` |
 | 데이터 | `COMMON_COMMONALITY_ROOT_PATH` | 공통부 동일성 root override | 기존 commonality/dashboard root의 형제 `path_common_commonality`, 이후 코드 template | 선택 | 프로세스 시작 | `server/latestCommonCommonalityPath.mjs` | 경로 주의 | 기존 데이터 mount의 형제 경로 사용 | `Confirmed` |
 | 데이터 | `SPIDER_DASHBOARD_PATH_ROOT` | dashboard 통계 root override | dashboard template의 상위 경로 | 선택 | API 요청 | `server/dashboardData.mjs:20-22` | 경로 주의 | 코드 root 사용 | `Confirmed` |
 | 데이터 | `SENSOR_EXCLUSION_CONFIG_PATH` | 기본 sensor 제외 JSON 경로 override | `config/sensor-exclusions.json` | 선택 | 경로는 프로세스 시작; 내용은 API 요청 | `server/sensorExclusionConfig.mjs` | 경로 주의 | 기본 파일 사용 | `Confirmed` |
+| 데이터 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 `path_xian` root override | `/appdata/abnormal_trend/pic/path_xian` | 선택 | 프로세스 시작 | `server/selfEquipmentData.mjs` | 경로 주의 | 코드 기본 root 사용 | 코드 `Confirmed`; 운영값 `Unknown` |
 | DB | `DB_INFO_PATH` | DB credential pickle 위치 | `/appdata/l0_spider/db_info.pkl` | DB 기능에 조건부 | helper 실행 | `scripts/*.py` | 값 자체는 아니나 민감 경로 | 코드 경로 사용 | `Confirmed` |
 | DB | `REMOTE_ADDR` | 현재 사용자 식별용 주소 | 없음 | 현재 사용자 조회에 조건부 | 요청별 helper 실행 | `server/currentUser.mjs:42`, `scripts/current_user.py:15` | 개인정보 주의 | helper 오류 | `Confirmed` |
 | 메뉴얼 | `MANUAL_BASE_URL` | 기존 UI 서버 사용 여부 | 코드 기본 loopback URL, port `4173` | 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:11-12` | 아니오 | 자체 Vite 시작 | `Confirmed` |
@@ -122,7 +125,7 @@
 |---|---|---|---|
 | 서버 listen 설정 | `PORT`, `HOST` 사용 | README에 `PORT` 예시 일부 존재 | `Confirmed` |
 | 정적 모드 설정 | `LIVE_RELOAD`, `BUILD_ON_START` 사용 | README에 두 설정 설명 존재 | `Confirmed` |
-| 데이터 경로 override | 네 환경변수 사용 | 구조 문서에 이름 기록 | `Confirmed` |
+| 데이터 경로 override | root 4개와 file/config 2개 환경변수 사용 | 구조 문서에 이름 기록 | `Confirmed` |
 | DB credential 경로 | `DB_INFO_PATH` 사용 | README에 이름 기록 | `Confirmed` |
 | 전체 환경변수 예제 | 여러 변수를 코드가 소비 | tracked `.env.example` 없음 | `Mismatch` |
 | HMAC 설정 예제 | 구현과 변수 이름 미확인 | 후보 요구만 문서화 | `Unknown` |
@@ -178,9 +181,9 @@
 
 ### 13.1 데이터 경로와 화면 연결
 
-- 현재 코드는 `SCS_DATA_CONNECTIONS_ENABLED`를 설정하지 않으면 UI shell로 fail-closed한다. 실제 배포 환경의 변수 존재·값은 `Unknown`이며, 새 Parquet root와 DB 정보가 확정되기 전에는 이 값을 `1`로 설정하지 않는다.
-- 화면의 상대 `/api/*` 요청은 Node 또는 Vite handler를 거쳐 코드 경로 template과 네 data-root override를 사용한다.
-- mapping, dashboard, commonality는 일부 override가 가능하지만 self equipment의 주요 root는 코드에 고정되어 있다.
+- 현재 코드는 두 gate가 모두 비활성이면 UI shell로 fail-closed한다. 자설비 파일 연결은 `SCS_SELF_EQUIPMENT_DATA_ENABLED=1`만 사용하며 다른 App과 DB는 계속 차단한다. 실제 배포 환경의 변수 존재·값과 target mount는 `Unknown`이다.
+- 화면의 상대 `/api/*` 요청은 Node 또는 Vite handler를 거쳐 코드 경로 template, root override 4개와 file/config override 2개를 사용한다.
+- Self Equipment의 `path_xian` root는 `SCS_SELF_EQUIPMENT_PATH_ROOT`로 선택적으로 override하며 기본값은 코드 template이다.
 - 읽기 권한, mount 준비, 데이터 생성 주체와 운영별 경로 차이는 `Unknown`이다.
 
 ### 13.2 대시보드 API

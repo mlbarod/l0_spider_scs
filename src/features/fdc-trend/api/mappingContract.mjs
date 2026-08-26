@@ -42,3 +42,20 @@ export function isLineMappingQueryReady(mappingQuery) {
     return false
   }
 }
+
+export function isSelfEquipmentDbEnabled(mappingPayload) {
+  return mappingPayload?.capabilities?.selfEquipmentDb === true
+}
+
+export function getSelfEquipmentFileConnectionState(mappingQuery) {
+  if (mappingQuery?.isError) return "error"
+  if (!mappingQuery?.isSuccess) return "loading"
+  try {
+    validateLineMappingPayload(mappingQuery.data)
+  } catch {
+    return "error"
+  }
+  return mappingQuery.data?.capabilities?.selfEquipmentFileRead === true
+    ? "enabled"
+    : "disabled"
+}

@@ -4,7 +4,12 @@
 > 기준일/브랜치: 2026-08-20 / `main`<br>
 > 기준 파일: `server.mjs`, `vite.config.mjs`, `src/`, `server/`, `scripts/`, `src/config/spiderDataPaths.mjs`
 
-현재 SCS 분리 checkout은 `SCS_DATA_CONNECTIONS_ENABLED=1`을 명시하지 않으면 `/api` namespace를 차단하는 UI shell이다. 아래 파일·DB 연결 구조는 gate 뒤에 보존된 재연결 기준선이며, UI shell 실행에서는 dormant 상태다. 실제 배포 환경의 변수 값은 `Unknown`이다.
+현재 SCS 분리 checkout은 기본적으로 `/api` namespace를 차단하는 UI shell이다.
+`SCS_SELF_EQUIPMENT_DATA_ENABLED=1`은 mapping과 자설비 index/chart read allowlist만 열고,
+`SCS_DATA_CONNECTIONS_ENABLED=1`은 다른 App API를 포함한 전역 gate를 연다. 다만 새 Self
+`path_xian` 7-column 계약에는 기존 DB 식별자 `ver`가 없어 두 mode 모두
+`capabilities.selfEquipmentDb=false`이며 Self의 MY EQP·SKIP·이력 UI는 dormant다. 실제 배포
+환경의 변수 값과 target file은 `Unknown`이다.
 
 ## 0. 한 장 요약
 
@@ -149,6 +154,8 @@ node server.mjs
 | `COMMONALITY_ROOT_PATH` | `/appdata/abnormal_trend/pic/erd_commonality` | 동일성 데이터 루트 override |
 | `COMMON_COMMONALITY_ROOT_PATH` | 기존 데이터 root의 형제 `path_common_commonality` | 공통부 동일성 데이터 루트 override |
 | `SPIDER_DASHBOARD_PATH_ROOT` | `/appdata/abnormal_trend/pic/path` | 대시보드 일시별 상세파일 루트 override |
+| `SCS_SELF_EQUIPMENT_PATH_ROOT` | `/appdata/abnormal_trend/pic/path_xian` | 자설비 index 루트 override |
+| `SENSOR_EXCLUSION_CONFIG_PATH` | `config/sensor-exclusions.json` | App별 sensor 제외 설정 파일 override |
 
 `LIVE_RELOAD=0`에서는 존재하는 정적 파일을 `dist`에서 제공하고, 그 외 브라우저 경로는 `dist/index.html`로 돌려 SPA 라우팅을 유지합니다.
 
@@ -238,7 +245,7 @@ flowchart TD
 | URL | 화면 파일 | 주요 역할 | 실제 데이터 상태 |
 | --- | --- | --- | --- |
 | `/` | `L0SpiderHomePage.jsx` | 앱 메뉴, 최신 수행시각, 라인별 대시보드 | 운영 파일 API 사용 |
-| `/self-equipment` | `FdcTrendPage.jsx` | 자설비·MY EQP·SKIP LIST 필터, Scatter/동일성 차트, SKIP/HIT/클릭이력 | 운영 파일 + DB |
+| `/self-equipment` | `FdcTrendPage.jsx` | 일반 자설비 필터, Scatter/동일성·변경점 차트; MY EQP·SKIP/HIT/클릭이력은 dormant | `path_xian`·data/history Parquet; Self DB 미호출 |
 | `/matching-anomaly` | `CommonalityAnomalyPage.jsx` | 동일성 디렉터리 기반 필터와 `img.png` 카드 | 운영 파일 |
 | `/common-anomaly` | `CommonAnomalyPage.jsx` | 공통부 이미지, 동일성 차트, SKIP LIST | 운영 파일 + DB |
 | `/common-commonality-anomaly` | `CommonalityAnomalyPage.jsx` | 공통부 동일성 EQP_MODEL 필터와 `img.png` 카드 | 운영 파일 |
@@ -288,14 +295,12 @@ flowchart LR
     PAGE["FdcTrendPage"]
     LISTAPI["GET /api/self-equipment-data"]
     LISTNODE["selfEquipmentData.mjs"]
-    PATHFILE["path/{line}/{sdwt}/df_path.parquet"]
-    PASS[("pass_history")]
+    PATHFILE["path_xian/{latest_date}"]
     CHARTAPI["GET /api/erd-scatter-data"]
     ERDDATA["erd/.../data.parquet"]
     HISTORY["erd/.../{eqp}.parquet"]
 
     PAGE --> LISTAPI --> LISTNODE --> PATHFILE
-    LISTNODE --> PASS
     PAGE --> CHARTAPI --> LISTNODE
     LISTNODE --> ERDDATA
     LISTNODE --> HISTORY
@@ -304,13 +309,16 @@ flowchart LR
 자설비 상세 흐름:
 
 1. `mapping_config.json`으로 Line과 SDWT 선택지를 만듭니다.
-2. `df_path.parquet`에서 STEP → `eqp_ch` → sensor → `ch_step` 필터와 차트 경로를 만듭니다.
+2. 최신 `path_xian/{latest_date}` 파일에서 STEP → `eqp_ch` → sensor → `ch_step` 필터와 차트 경로를 만듭니다. STEP과 `ch_step`은 모두 index의 `step` 컬럼을 사용합니다.
 3. sensor 목록이 있으면 `ALL`을 항상 제공하며, sensor가 `ALL`이면 `ch_step`은 `ALL`만 선택할 수 있습니다. 서버도 같은 규칙으로 필터 조합을 정규화합니다.
-4. `pass_history`의 활성 SKIP과 같은 이상건은 72시간 동안 일반 결과에서 제외합니다.
-5. 선택한 이미지 경로의 파일명을 `data.parquet`으로 바꿔 Scatter 원본을 읽습니다.
-6. y축 컬럼은 `{sensor}_{ch_step}`, EQP 필터는 `eqp_cb`입니다.
-7. 같은 디렉터리의 `{eqp}.parquet`를 변경점 이력으로 읽습니다.
-8. EQP 그룹 순서를 유지하면서 실제 마운트되는 차트를 페이지당 최대 20개로 나눕니다.
+4. index의 `file_path`에서 `/pic_server2/`를 `/pic/`로 정규화한 뒤 같은 디렉터리의 `data.parquet`을 읽습니다.
+5. 단일설비와 동일성 모두 y축 컬럼은 `{sensor}*{ch_step}`이고 차트별 `eqp` 컬럼으로 필터합니다. 동일성 series 분리는 `eqp_cb`를 사용합니다.
+6. 같은 디렉터리의 `{eqp}.parquet`를 변경점 이력으로 읽습니다.
+7. EQP 그룹 순서를 유지하면서 실제 마운트되는 차트를 페이지당 최대 20개로 나눕니다.
+
+현재 SCS `path_xian` 7-column 계약에는 기존 Self SKIP 식별자 `ver`가 없다. 따라서
+`capabilities.selfEquipmentDb=false`로 MY EQP·SKIP LIST·SKIP/HIT/클릭 이력을 숨기며,
+전역 gate가 켜져도 Self 화면에서는 DB 기능을 fail-close한다.
 
 `/api/erd-file`은 허용된 ERD 이미지 파일을 stream하는 endpoint지만 현재 주 Scatter 차트는 이미지 대신 `/api/erd-scatter-data`의 Parquet payload를 렌더링합니다.
 
@@ -321,7 +329,7 @@ flowchart LR
 - 페이지 밖 EQP 차트 컴포넌트와 데이터 query는 렌더링하지 않습니다.
 - 필터 또는 모아보기 범위가 바뀌면 첫 페이지로 돌아가고, 현재 페이지가 범위를 벗어나면 유효한 마지막 페이지로 보정합니다.
 
-### 5.3 MY EQP 조회
+### 5.3 MY EQP 조회 — dormant legacy
 
 ```mermaid
 flowchart LR
@@ -331,7 +339,7 @@ flowchart LR
     IP["접속 IP → current_user.py"]
     REG[("myeqp_regist")]
     MAP["mapping_config.json"]
-    PATHS["각 SDWT의 df_path.parquet"]
+    PATHS["최신 path_xian index"]
     SKIP[("pass_history")]
 
     PAGE --> API --> NODE
@@ -342,12 +350,10 @@ flowchart LR
     NODE --> SKIP
 ```
 
-- 현재 사용자 기준의 활성 `myeqp_regist` 행과 `is_public = 1` 행을 읽습니다.
-- 등록 SDWT를 `mapping_config.json`의 실제 `pathSdwt`에 연결합니다.
-- 연결된 여러 `df_path.parquet`를 읽고 등록 EQP만 남깁니다.
-- `pass_history`를 적용한 후 일반 자설비와 같은 필터 payload를 만듭니다.
-- MY EQP의 `EQP ALL SKIP` 대상 재조회도 이 전용 API를 사용합니다.
-- 현재 사용자 DB 조회가 실패하면 My EQP 등록 모듈은 예외적으로 정규화된 접속 IP를 사용자 식별값 fallback으로 사용합니다.
+- handler는 현재 사용자와 `myeqp_regist`를 최신 `path_xian` index에 결합하는 legacy 구현을 보존한다.
+- 새 index에는 기존 Self PASS/SKIP 식별자 `ver`가 없으므로 UI capability는 항상
+  `selfEquipmentDb=false`이며 이 흐름을 호출하지 않는다.
+- 새 DB 식별 계약이 정의되기 전까지 MY EQP·EQP ALL SKIP의 화면 동작은 `Blocked`다.
 
 ### 5.4 동일성 이상감지
 
@@ -457,15 +463,15 @@ flowchart LR
 | `/api/dashboard-data` | GET, HEAD | `dashboardApi.js` / 메인 대시보드 | `dashboardData.mjs` | `path/{date time}`, `stats`, mapping JSON |
 | `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | `current_user.py` → `v_ipms_ip_info`, `user_info` |
 | `/api/mapping-config` | GET, HEAD | `mappingConfigApi.js` / 대부분의 필터 화면 | `mappingConfig.mjs` | `mapping_config.json` |
-| `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 자설비 `df_path.parquet` + `pass_history` |
-| `/api/my-eqp-equipment-data` | GET | `selfEquipmentApi.js` / MY EQP | `selfEquipmentData.mjs` | `myeqp_regist` + mapping + 여러 `df_path` + `pass_history` |
+| `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}`; Self DB history 미결합 |
+| `/api/my-eqp-equipment-data` | GET | dormant legacy client | `selfEquipmentData.mjs` | 현재 Self UI capability에서 비활성; 새 DB 식별 계약 `Unknown` |
 | `/api/erd-scatter-data` | GET | `selfEquipmentApi.js` / 자설비 Scatter·동일성 | `selfEquipmentData.mjs` | ERD `data.parquet`, `{eqp}.parquet` |
 | `/api/erd-file` | GET, HEAD | `buildErdFileUrl` 보유, 현재 주 화면 미사용 | `selfEquipmentData.mjs` | ERD 이미지 stream |
-| `/api/pass-history` | GET | `passHistoryApi.js`, `commonAnomalyApi.js` | `passHistory.mjs` | `pass_history` 조회, 자설비/공통부 SKIP LIST payload |
-| `/api/pass-history` | POST | SKIP, EQP ALL SKIP | `passHistory.mjs` | `pass_history` INSERT 또는 기존 동일행 UPDATE |
-| `/api/pass-history` | DELETE | SKIP 해제 | `passHistory.mjs` | `pass_history` DELETE |
-| `/api/hit-history` | POST | `hitHistoryApi.js` / 자설비 이력저장 | `hitHistory.mjs` | `hit_history` INSERT |
-| `/api/clicked-category-history` | POST | 네 이상감지 화면 | `clickedCategoryHistory.mjs` | `clicked_category_history` INSERT |
+| `/api/pass-history` | GET | dormant Self client, `commonAnomalyApi.js` | `passHistory.mjs` | 공통부 SKIP LIST; Self UI 미호출 |
+| `/api/pass-history` | POST | 공통부 및 dormant Self client | `passHistory.mjs` | `pass_history` INSERT 또는 기존 동일행 UPDATE |
+| `/api/pass-history` | DELETE | 공통부 및 dormant Self client | `passHistory.mjs` | `pass_history` DELETE |
+| `/api/hit-history` | POST | dormant Self client | `hitHistory.mjs` | `hit_history` INSERT |
+| `/api/clicked-category-history` | POST | 비-Self 이상감지 화면; Self client dormant | `clickedCategoryHistory.mjs` | `clicked_category_history` INSERT |
 | `/api/latest-commonality-path` | GET, HEAD | 직접 API 모듈은 있으나 화면은 서버 내부 탐색 사용 | `latestCommonalityPath.mjs` | 최신 동일성 디렉터리 |
 | `/api/commonality-data` | GET | `commonalityApi.js` / 동일성 이상감지 | `commonalityData.mjs` | 동일성 디렉터리 index |
 | `/api/commonality-image` | GET, HEAD | 동일성 이미지 URL builder | `commonalityData.mjs` | `img.png` stream |
@@ -488,12 +494,12 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 | --- | --- | --- | --- |
 | `/appdata/l0_spider/mapping_config.json` | `line_mapping`, `sdwt_mapping` | `mappingConfig.mjs`, `dashboardData.mjs`, `selfEquipmentData.mjs` | 전체 필터, 대시보드, MY EQP |
 | `/appdata/l0_spider/db_info.pkl` | DB host/port/name/user/password | 모든 DB Python helper | DB 기능 전체 |
-| `pic/path/{line}/{sdwt}/df_path.parquet` | `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev` | `selfEquipmentData.mjs` | 자설비, MY EQP |
+| `pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | `selfEquipmentData.mjs` | 자설비 index |
 | `pic/path_common/{line}/{sdwt}/df_path.parquet` | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | `commonAnomalyData.mjs` | 공통부 |
-| `pic/erd/{date}/{sdwt}/{desc}/{ver}/{ppid}/{grade}/{sensor}/{ch_step}/data.parquet` | `act_time`, `{sensor}_{ch_step}`, `eqp_cb`, hover 정보 | `selfEquipmentData.mjs` | 자설비 Scatter/동일성 |
+| index `file_path` + `/data.parquet` | `act_time`, `{sensor}*{ch_step}`, `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id`; 동일성은 `eqp_cb` 추가 | `selfEquipmentData.mjs` | 자설비 Scatter/동일성 |
 | 위 ERD 디렉터리의 `{eqp}.parquet` | `date`, `work_type`, `ctttm_url`, `desc` | `selfEquipmentData.mjs` | 변경점 이력 |
 | `pic/erd/.../{eqp}.png` | 원본 이상감지 이미지 | `selfEquipmentData.mjs` | SKIP/HIT 식별 경로, 선택적 이미지 endpoint |
-| `pic/backup/#appdata#...#{eqp}.png` | 과거 백업 이미지 | `selfEquipmentData.mjs` | 백업 경로를 Scatter 원본 경로로 환산 |
+| `pic/backup/...` | 과거 백업 영역 | `selfEquipmentData.mjs` | 현재 Self Scatter resolver에서 exact root와 하위를 거부 |
 | `pic/common/{date}/{sdwt}/{desc}/{grade}/{sensor}/{ch_step}/data.parquet` | 공통부 Scatter 원본 | `commonAnomalyData.mjs` | 공통부 동일성 차트 |
 | 위 common 디렉터리의 `{eqp}.png` | 공통부 카드 이미지 | `commonAnomalyData.mjs` | 공통부 이미지 카드 |
 | `pic/erd_commonality/{date time}/.../img.png` | 동일성 결과 이미지 | `commonalityData.mjs` | 동일성 이미지 카드 |
@@ -549,9 +555,9 @@ flowchart LR
 | `erdtsum_info` | SELECT DISTINCT | `my_eqp_reference.py` | `/api/my-eqp-reference` | My EQP 등록 후보: `main`, `disp_name`, `sdwt_prod`, `prc_group` |
 | `myeqp_regist` | SELECT, INSERT, DELETE, 조건부 ALTER | `my_eqp_registration.py` | `/api/my-eqp-registration`, 내부 MY EQP 조회 | 사용자별 EQP·기간·수신/열람 조건 |
 | `email` | SELECT, INSERT, UPDATE, DELETE | `mailing_registration.py` | `/api/mailing-registration` | Mailing 수신인의 SDWT·Grade 조건 |
-| `pass_history` | SELECT, INSERT, UPDATE, DELETE | `pass_history.py` | `/api/pass-history` | 자설비/공통부 SKIP, SKIP LIST, 72시간 제외 |
-| `hit_history` | INSERT | `hit_history.py` | `/api/hit-history` | 자설비 `이력저장` 클릭 |
-| `clicked_category_history` | INSERT | `clicked_category_history.py` | `/api/clicked-category-history` | 네 이상감지 App의 Drawing 시작 이력 |
+| `pass_history` | SELECT, INSERT, UPDATE, DELETE | `pass_history.py` | `/api/pass-history` | 공통부 SKIP·SKIP LIST; Self client는 dormant |
+| `hit_history` | INSERT | `hit_history.py` | `/api/hit-history` | 비-Self 결과 이력; Self client는 dormant |
+| `clicked_category_history` | INSERT | `clicked_category_history.py` | `/api/clicked-category-history` | 비-Self 이상감지 App의 Drawing 시작 이력; Self client는 dormant |
 | `information_schema.COLUMNS` | SELECT | `mailing_registration.py`, `my_eqp_registration.py` | 등록 API 내부 | `email` 컬럼 길이 확인, `myeqp_regist.is_public` 존재 확인 |
 
 ### 8.3 주요 저장 규칙
@@ -626,7 +632,7 @@ sequenceDiagram
 | 현재 사용자 | IP별 메모리 cache + 동시 요청 Promise 공유 | 5분 |
 | My EQP 기준정보 `erdtsum_info` | 서버 메모리 | 5분 |
 | 동일성 디렉터리 index | 최신경로+SDWT별 cache + 동시 탐색 공유 | 5분, 최신 폴더 변경 시 key 변경 |
-| 자설비/공통부 경로 Parquet | LRU 1개 | 파일 `mtimeMs`/size가 바뀌면 재조회 |
+| 자설비 최신 `path_xian` index·공통부 경로 Parquet | LRU 1개 | 파일 `mtimeMs`/size가 바뀌면 재조회 |
 | Scatter/변경이력 Parquet | LRU 1개 + 동시 read Promise 공유 | 파일 `mtimeMs`/size가 바뀌면 재조회 |
 | 대시보드 상세 집계 | LRU 최대 32개 | 파일 metadata와 mapping object 기준 |
 | 대시보드 파일 목록 | 디렉터리별 메모리 | 루트 디렉터리 `mtimeMs` 변경 시 |

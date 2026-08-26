@@ -14,7 +14,7 @@
 ## 적용 범위
 
 - Dashboard detail·stats Parquet와 mapping JSON
-- Self/MY EQP의 team `df_path.parquet`, ERD `data.parquet`, history Parquet와 image
+- Self/MY EQP의 최신 `path_xian/{latest_date}`, `file_path/data.parquet`와 history Parquet
 - 동일성 `erd_commonality` directory·`img.png`
 - 공통부 `path_common` Parquet, common `data.parquet`·PNG
 - 파일 path를 전달하는 API와 이를 소비하는 React 화면
@@ -31,7 +31,9 @@
 
 L0 Spider는 분석 결과를 자체 DB로 적재하지 않고 Node server에서 운영 파일 저장소의 Parquet를 직접 읽고 PNG를 stream한다.
 Dashboard는 날짜·시각 filename을 나열해 detail과 stats를 선택한다.
-Self와 공통부는 index Parquet의 `file_path`에서 sibling `data.parquet`·image·history path를 파생한다.
+Self는 최신 `path_xian/{latest_date}` index의 `file_path` directory 아래에서
+`data.parquet`·`{eqp}.parquet`를 찾고, 공통부는 index `file_path`에서 sibling
+data·image path를 파생한다.
 동일성은 최신 유효 시각 directory 아래의 계층을 index로 변환한다.
 
 업무 DB는 사용자 식별, Mailing·MY EQP 등록, PASS·hit·click 이력을 저장한다.
@@ -80,9 +82,9 @@ Self와 공통부는 index Parquet의 `file_path`에서 sibling `data.parquet`·
 |---|---|---|---|
 | Dashboard detail | 시각명을 가진 Parquet file | 날짜별 latest·기간 집계 | `Confirmed` |
 | Dashboard stats | `*_spider_step_stats.parquets` | monitoring sensor·summary | `Confirmed` |
-| Self path index | `df_path.parquet` | filter option과 result path | `Confirmed` |
-| ERD point | sibling `data.parquet` | scatter·identity chart | `Confirmed` |
-| ERD 변경이력 | sibling `{eqp}.parquet` | 변경점 목록 | `Confirmed` |
+| Self path index | `path_xian/{latest_date}` | filter option과 result path | 코드 `Confirmed`; 운영 file `Unknown` |
+| ERD point | path_xian row `file_path` + `/data.parquet` | scatter·identity chart | 코드 `Confirmed`; 운영 file `Unknown` |
+| ERD 변경이력 | path_xian row `file_path` + `/{eqp}.parquet` | 변경점 목록 | 코드 `Confirmed`; 운영 file `Unknown` |
 | 동일성 결과 | directory metadata + `img.png` | filter index·image card | `Confirmed` |
 | 공통부 path index | `path_common/.../df_path.parquet` | PRC Group·EQP·sensor option | `Confirmed` |
 | 공통부 point | common `data.parquet` | scatter·identity chart | `Confirmed` |

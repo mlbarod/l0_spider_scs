@@ -11,7 +11,17 @@ npm run dev
 
 The app opens directly at `/`.
 
-현재 SCS 분리 checkout은 UI shell이 기본값이다. `SCS_DATA_CONNECTIONS_ENABLED`가 정확히 `1`이 아니면 `/api` namespace는 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환하고 기존 Parquet·이미지·DB handler 및 Python helper에는 진입하지 않는다. 새 Parquet·DB 연결정보와 owner 승인이 확정되기 전에는 이 변수를 `1`로 설정하지 않는다.
+현재 SCS 분리 checkout은 UI shell이 기본값이다. `SCS_SELF_EQUIPMENT_DATA_ENABLED=1`을
+설정하면 자설비 이상감지의 read API(`mapping-config`, `self-equipment-data`,
+`erd-scatter-data`)만 활성화한다. 다른 App, image endpoint와 DB read/write API는 계속 안전한
+`503 DATA_CONNECTIONS_DISABLED`를 반환한다. `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체
+API를 한 번에 활성화하므로 다른 App의 새 경로와 DB 연결정보가 확정되기 전에는 설정하지 않는다.
+
+자설비 파일 연결을 활성화한 개발 실행 예시는 다음과 같다.
+
+```bash
+SCS_SELF_EQUIPMENT_DATA_ENABLED=1 npm run dev
+```
 
 ## Server
 
@@ -77,7 +87,10 @@ Defect SPIDER는 요청 헤더나 쿠키에서 `knox_id`를 직접 읽지 않는
 
 ### L0 Spider 적용
 
-L0 Spider는 위 구조를 `/api/current-user`에 적용한다. 자설비 이상감지 화면 진입 시 이 API를 한 번 호출하며, 성공 응답의 `knoxId`를 우측 상단의 `{knox_id}님 안녕하세요!` 문구에 사용한다. 동일 IP의 성공 응답은 서버에서 5분 동안 캐시하고, 프런트엔드는 화면 세션 동안 재조회하지 않는다.
+L0 Spider에는 위 구조를 사용하는 `/api/current-user`와 화면 코드가 남아 있다. 다만 현재 SCS
+`path_xian` mode는 `selfEquipmentDb=false`로 fail-close하므로 자설비 화면 진입 시 이 API를
+호출하지 않고 사용자명도 표시하지 않는다. 아래 항목은 dormant legacy와 다른 DB 기능의
+참고 구현이다.
 
 - Node 처리: `server/currentUser.mjs`
 - DB 조회 helper: `scripts/current_user.py`
@@ -98,7 +111,9 @@ node server.mjs
 
 ## Database References
 
-이하 데이터·DB 설명은 UI shell의 gate 뒤에 보존된 재연결 기준선이다. 기본 shell 실행에서는 활성 데이터 흐름이 아니며, 실제 배포 환경의 `SCS_DATA_CONNECTIONS_ENABLED` 값은 저장소만으로 확인할 수 없어 `Unknown`이다.
+이하 데이터·DB 설명 중 자설비 파일 read는 `SCS_SELF_EQUIPMENT_DATA_ENABLED=1`에서 활성화할 수 있다.
+DB 기능과 다른 App은 여전히 전체 gate 뒤의 재연결 기준선이며, 실제 배포 환경의 두 gate 값은
+저장소만으로 확인할 수 없어 `Unknown`이다.
 
 ### 메인 대시보드 데이터
 
@@ -136,7 +151,8 @@ L0 Spider의 DB 접속정보는 `/appdata/l0_spider/db_info.pkl`에서 읽는다
 
 ### `pass_history`
 
-자설비 이상감지의 PASS 이력 데이터를 DB에 저장하거나 기존 데이터를 조회하는 용도로 사용한다.
+아래 자설비 PASS/SKIP 설명은 `ver`를 포함하던 기존 DB 계약의 dormant legacy다. 현재
+`path_xian` Self 화면은 이 API를 호출하지 않는다.
 
 | 컬럼 | 타입 |
 | --- | --- |
@@ -154,7 +170,8 @@ L0 Spider의 DB 접속정보는 `/appdata/l0_spider/db_info.pkl`에서 읽는다
 | `exec_date` | `TIMESTAMP` |
 | `comment` | `VARCHAR` |
 
-자설비 이상감지의 SKIP 기능은 `/api/pass-history`를 사용한다. GET은 현재 필터의 `line_id`, `sdwt`, `desc`에 해당하는 SKIP 상태를 조회하고, POST는 SKIP을 등록하며, DELETE는 같은 차트 식별값의 SKIP 데이터를 삭제한다. POST/DELETE 시 브라우저는 `lineId`와 `filePath`만 차트 식별정보로 전달하고, 서버가 ERD 경로를 파싱하여 아래 값으로 매핑한다. `knox_id`는 요청 본문을 신뢰하지 않고 접속 IP 기반 현재 사용자 조회 결과를 사용한다.
+legacy SKIP 흐름은 `/api/pass-history`를 사용한다. GET은 필터의 `line_id`, `sdwt`, `desc`에
+해당하는 상태를 조회하고 POST/DELETE로 등록·해제하지만, 현재 Self UI에서는 미호출이다.
 
 | `pass_history` 컬럼 | SKIP 저장값 |
 | --- | --- |
@@ -212,7 +229,7 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 
 ### `hit_history`
 
-자설비 이상감지의 HIT 이력 데이터를 DB에 저장하거나 기존 데이터를 조회하는 용도로 사용한다.
+아래 HIT 이력도 현재 Self UI에서 미호출인 dormant legacy 계약이다.
 
 | 컬럼 | 타입 |
 | --- | --- |
@@ -223,7 +240,7 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 | `knox_id` | `VARCHAR` |
 | `exec_date` | `TIMESTAMP` |
 
-자설비 이상감지 Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다.
+legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다.
 서버는 Chart drawing에 사용한 ERD 이미지 경로를 파싱하고 아래 규칙으로 저장한다.
 `knox_id`는 요청 본문이 아니라 접속 IP 기반 현재 사용자 조회 결과를 사용한다.
 
@@ -242,7 +259,8 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 
 ### `clicked_category_history`
 
-네 이상감지 App에서 마지막 필터를 선택해 Chart Drawing을 시작한 클릭이력을 저장한다.
+동일성·공통부·공통부 동일성 App에서 마지막 필터를 선택해 Chart Drawing을 시작한
+클릭이력을 저장한다. 현재 Self UI의 클릭이력 호출은 dormant 상태다.
 
 | 컬럼 | 타입 |
 | --- | --- |
@@ -254,17 +272,12 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 | `knox_id` | `VARCHAR` |
 
 `POST /api/clicked-category-history`는 실제 Drawing 결과 경로를 서버에서 파싱하고 접속
-IP로 현재 사용자를 확인한 후 한 행을 INSERT한다. 자설비는 `ch_step`, 동일성은
-`ch_step`, 공통부는 마지막 필터인 `sensor`를 새로 선택할 때 호출한다. 필터를 다시
-클릭해 선택 해제하거나 SKIP LIST를 조회하는 동작은 저장하지 않는다.
+IP로 현재 사용자를 확인한 후 한 행을 INSERT한다. 동일성은 `ch_step`, 공통부는 마지막
+필터인 `sensor`를 새로 선택할 때 호출한다. 필터를 다시 클릭해 선택 해제하거나 SKIP
+LIST를 조회하는 동작은 저장하지 않는다.
 
-자설비에서 SDWT 필터의 `MY EQP`를 선택해 조회를 시작하면 같은
-`POST /api/clicked-category-history`를 호출한다. 이 시점에는 Drawing 경로가 아직
-없으므로 `line_id`는 선택 Line, `sdwt`는 `MY EQP`, `grade`는
-`['A', 'B', 'D', 'N', 'M']`, `sensor`는 `ALL`로 구성한다. `update_date`는 MY EQP 선택
-시각을 사용하고 `knox_id`는 서버가 접속 IP로 조회한다. MY EQP에서는 이 진입 이력만
-저장하며 이후 `ch_step` 선택 시 일반 자설비의 파일 경로 기반 이력을 중복 저장하지
-않는다.
+legacy Self client에는 `MY EQP` 진입 이력과 `ch_step` 클릭 이력 생성 코드가 남아 있지만,
+현재 `selfEquipmentDb=false` capability에서 MY EQP·클릭이력 UI와 요청은 비활성이다.
 
 | App | `line_id` | `sdwt` | `grade` | `sensor` | `update_date` |
 | --- | --- | --- | --- | --- | --- |
@@ -287,9 +300,9 @@ Drawing 결과를 `sdwt`, `grade`, `sensor` 기준 대표 경로로 압축해 �
 - 최초버전: `src/features/fdc-trend/pages/versions/FdcTrendPage.initial.jsx.bak`
 - 개선버전(현재 사용): `src/features/fdc-trend/pages/FdcTrendPage.jsx`
 
-My EQP 딥링크는 STEP 이름을 URL에 노출하지 않고 항상 `step=ALL`을 사용한다.
-`sdwt=MY_EQP` URL에 `step`이 없거나 다른 값이 전달되어도 화면에서는 `ALL`로
-해석하며, `eqpCh`가 있으면 전체 STEP 범위에서 해당 EQP를 선택한다.
+legacy My EQP 딥링크 형식은 STEP 이름 대신 `step=ALL`과 선택적 `eqpCh`를 사용한다.
+parser 호환성은 남아 있지만 현재 Self 화면에는 `MY EQP` option이 없으므로 이 URL로
+MY EQP chart를 조회하는 동작은 `Blocked`다.
 
 원복 절차는 `src/features/fdc-trend/pages/versions/README.md`를 참조한다.
 
@@ -305,6 +318,16 @@ My EQP 딥링크는 STEP 이름을 URL에 노출하지 않고 항상 `step=ALL`�
 | 자설비 이상감지 단일설비 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), `{sensor}*{ch_step}` (y축), `eqp` (차트별 EQP 필터), `eqp_id`, `disp_name`, `wafer_id` (hover 표시), `root_lot_id` (hover 표시) |
 | 자설비 이상감지 동일성 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), `{sensor}*{ch_step}` (y축), `eqp` (차트별 EQP 필터), `eqp_id`, `disp_name`, `eqp_cb`, `wafer_id` (hover 표시), `root_lot_id` (hover 표시) |
 | EQP 변경점 이력 | `{eqp}.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
+
+구현은 `path_xian`에서 날짜·시각 이름이 가장 큰 파일을 선택한다. 경로 테이블의 `step`을
+화면 STEP과 `ch_step` 값으로 사용하고, `file_path`의 `/pic_server2/` segment는 `/pic/`로
+바꾼 뒤 `data.parquet` 또는 `{eqp}.parquet`를 읽는다. 차트 y축 컬럼명은
+`{sensor}*{ch_step}`이며 단일설비 row는 `eqp`, 동일성 row는 `eqp`로 대상을 제한한 뒤
+`eqp_cb`별 series로 구분한다. 두 gate mode 모두 chart 요청의 Line·SDWT·EQP·sensor·step·경로가
+최신 `path_xian`의 scoped row와 모두 일치할 때만 후속 Parquet를 읽는다. 새 7-column index에는
+기존 Self DB 식별자 `ver`가 없으므로 전역 gate와 무관하게 Self 화면은
+My EQP·SKIP·클릭이력·이력저장을 숨기고 file chart만 제공한다. 이 DB 기능들의 재연결 계약은
+현재 `Unknown`이다.
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와
 `src/config/spiderDataPaths.mjs`를 함께 업데이트한다.
@@ -346,7 +369,7 @@ SDWT 필터 마지막의 `SKIP LIST`를 선택하면 선택 Line에서 `ver = NA
 `update_date`를 사용하지 않으며, 동일 건은 이미지 목록과 각 필터 건수에서 제외된다.
 정확히 72시간이 지나면 일반 이상감지 대상에 다시 포함되고 공통부 `SKIP LIST`에서도
 제거된다. 만료된 `pass_history` 행은 DB에서 삭제하지 않으며 UI 조회에서만 제외한다.
-`이력저장`은 공통부용 기능이 별도로 정의될 때까지 비활성화한다.
+`이력저장`은 현재 공통부 결과 카드에서 `/api/hit-history`를 호출한다.
 
 - 필터·경로 목록 API: `GET /api/common-anomaly-data`
 - SKIP LIST API: `GET /api/pass-history?view=common-filters`

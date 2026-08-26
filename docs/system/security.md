@@ -94,6 +94,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | DB helper stdin | server-generated JSON | Python helper | application별 normalization | 과도한 DB 권한·원문 오류 | 일부 `Implemented` | `server/*.mjs`; `scripts/*.py` |
 | 환경변수·설정 파일 | path·host·runtime flag | process | 이름별 parsing | 잘못된 경로, secret 유출 | 일부 `Implemented` | server·Vite·Python |
 | SCS data gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite 선행 middleware | 정확히 `"1"`인 경우만 handler 활성 | 단일 변수 오설정으로 모든 file·DB read/write 재활성화 | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; server·Vite 진입점 |
+| SCS Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite 선행 middleware | 정확히 `"1"`; mapping GET/HEAD와 Self·scatter GET만 handler 활성 | source path 노출·mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; self read API |
 | 메일 link | Dashboard·Self URL | 외부 renderer 후보 | template `urlencode`; 실제 renderer 미확인 | 수신자 혼합·URL 노출 | `Policy` / `Needs Validation` | mail template |
 
 ## 7. 인증과 권한 경계
@@ -114,7 +115,12 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 
 저장소에 인증 코드가 없다는 사실만으로 운영 서비스가 인터넷에 익명 노출되었다고 단정하지 않는다.
 다만 application 자체의 write API 권한 경계는 외부 proxy가 제공하는 접근 제한과 별개로 명시적 검증이 부족하다.
-SCS UI shell에서는 전역 data gate가 모든 `/api` handler보다 먼저 적용되므로 write API도 비활성이다. `SCS_DATA_CONNECTIONS_ENABLED=1`은 Parquet·이미지·DB read뿐 아니라 등록·이력 write까지 함께 재활성화하므로 owner 승인과 새 연결정보 검증 없이는 설정하지 않는다.
+SCS UI shell에서는 data gate가 모든 `/api` handler보다 먼저 적용된다.
+`SCS_SELF_EQUIPMENT_DATA_ENABLED=1`은 mapping GET/HEAD와 자설비 index·chart GET만 허용하며
+DB 기반 current-user, MY EQP, PASS/HIT history, image endpoint와 다른 App은 계속 차단한다.
+mapping capability가 DB query와 action을 프론트엔드에서도 비활성화한다.
+`SCS_DATA_CONNECTIONS_ENABLED=1`은 Parquet·이미지·DB read뿐 아니라 등록·이력 write까지
+함께 재활성화하므로 다른 App의 연결정보와 DB 승인이 완료되기 전에는 설정하지 않는다.
 
 ## 8. 브라우저와 프론트엔드 보안
 
@@ -139,9 +145,9 @@ SCS UI shell에서는 전역 data gate가 모든 `/api` handler보다 먼저 적
 | API 또는 영역 | 입력 | 검증 위치 | 실패 결과 | 정보 노출 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | Dashboard | `startDate`, `endDate`, repeated `line` | strict date·range parsing | 보호 오류 `code`·`requestId` | 성공 `sourcePaths` | `Implemented` / `Risk` | `dashboardData.mjs`; `safeApiError.mjs` |
-| SCS UI shell gate | `/api` namespace | handler dispatch 전 strict opt-in | `503 DATA_CONNECTIONS_DISABLED`, UUID `requestId`; HEAD 무본문 | 운영자가 정상 차단을 장애로 오판할 위험 | `Implemented` / 운영 적용 `Unknown` | `dataConnections.mjs`; safe error contract |
+| SCS UI shell gate | `/api` namespace | handler dispatch 전 strict opt-in과 endpoint별 자설비 read method allowlist | 비허용 요청은 `503 DATA_CONNECTIONS_DISABLED`, UUID `requestId`; HEAD 무본문 | 자설비 부분 활성 상태를 전체 활성으로 오판할 위험 | `Implemented` / 운영 적용 `Unknown` | `dataConnections.mjs`; safe error contract |
 | Self Equipment | `line`, `pathSdwt`, `sdwt`, filters | 필수값·path segment·option matching | 400·500 | 성공 `sourcePath` | 일부 `Implemented` | `selfEquipmentData.mjs:62-65,321-353` |
-| ERD scatter | `path`, `eqp`, `sensor`, `chStep`, `days` | root·segment·0~30 integer | 400·보호 오류 500 | 성공 `sourcePath` | 일부 `Implemented` / `Risk` | `selfEquipmentData.mjs`; `safeApiError.mjs` |
+| ERD scatter | `path`, `line`, `pathSdwt`, `eqp`, `sensor`, `chStep`, `latestDate`, `days` | root·segment·0~30 integer; Self gate에서 최신 scoped row path·EQP·date 일치 | 400·403·보호 오류 500 | 성공 `sourcePath` | `Implemented` / 운영 ACL `Unknown` | `selfEquipmentData.mjs`; `safeApiError.mjs` |
 | image | absolute `path` | root·extension·file 존재 | 403·보호 오류 404/500 | 성공 요청 계약에 path 사용 | 일부 `Implemented` | file handlers |
 | registration | JSON, user IDs, 목록 | 1 MiB, count·length·pattern, mapping 가용성·Line/SDWT 범위 | mapping 400/503 또는 보호 오류 500 | debug row·DB detail 제거 | 일부 `Implemented` / CORE-04 | registration handlers |
 | history | JSON, file path, batch | 64 KiB~2 MiB, root parse, batch 500 | 보호 오류 500 | 성공 payload 호환 유지 | 일부 `Implemented` | history handlers |
@@ -158,9 +164,9 @@ SCS UI shell에서는 전역 data gate가 모든 `/api` handler보다 먼저 적
 
 | 데이터 흐름 | 사용자 영향값 | 경로 조립 위치 | 현재 검증 | 접근 형태 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|---|---|
-| team index | `line`, `pathSdwt` | `buildTeamErdPath` | slash·backslash·`..` 거부 | Parquet read | symlink·mount 권한 | `Implemented` / `Unknown` | `selfEquipmentData.mjs:62-65,137-162` |
+| Self index | `line`, `pathSdwt` | 최신 `path_xian/{latest_date}` + mapping scope | segment·mapping 범위 검사 | Parquet read | symlink·mount 권한 | `Implemented` / 운영 `Unknown` | `readLatestSelfEquipmentRows`; `scopeSelfEquipmentRows` |
 | common index | `line`, `pathSdwt` | `buildCommonAnomalyPath` | 같은 segment 검사 | Parquet read | symlink·path 노출 | `Implemented` / `Unknown` | `commonAnomalyData.mjs:223-245` |
-| ERD data | browser가 받은 image path | `resolveErdDataFilePath` | `resolve` 후 ERD·backup root prefix | Parquet read | lexical prefix와 symlink 영향 | `Implemented` / `Needs Validation` | `selfEquipmentData.mjs:449-465` |
+| ERD data | browser가 받은 index `file_path` | `resolveErdDataFilePath` | `/pic_server2/`→`/pic/`, pic root prefix·backup 거부; 두 gate mode에서 최신 scoped index의 path·EQP·date·sensor·step 재검증 | directory의 Parquet read | symlink·producer 신뢰 영향 | `Implemented` / 운영 `Needs Validation` | `resolveErdDataFilePath`; `isSelfEquipmentDataPathAllowed` |
 | common data | image 또는 data path | `resolveCommonAnomalyDataPath` | suffix 변환, common root prefix | Parquet read | symlink·경로 노출 | `Implemented` / `Needs Validation` | `commonAnomalyData.mjs:261-276` |
 | ERD image | absolute path query | `handleErdFileRequest` | ERD root·image extension·regular file | stream read | 직접 file 존재 oracle | `Implemented` / `Risk` | `selfEquipmentData.mjs:803-833` |
 | commonality image | absolute path query | commonality handler | 최신 root·`img.png`·regular file | stream read | 404·500 path 노출 | `Implemented` / `Risk` | `commonalityData.mjs:256-289` |
@@ -237,11 +243,15 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 | process bind | `HOST`, `PORT` | Node | service endpoint로 관찰 가능 | code default | fallback | secret 아님 | `Confirmed` | `server.mjs:37-38` |
 | runtime mode | `BUILD_ON_START`, `LIVE_RELOAD` | Node | 동작에 간접 영향 | enabled unless `0` | default enabled | secret 아님 | `Confirmed` | `server.mjs:39-40` |
 | data connection gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite | API 응답에 간접 영향 | 비활성 | 정확히 `1`이 아니면 `/api` 차단 | secret 아님; owner 승인 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
+| Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite | mapping GET/HEAD, Self·scatter GET에 직접 영향 | 비활성 | 정확히 `1`이면 자설비 read allowlist만 통과 | secret 아님; 부분 연결 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
+| Self Equipment index root | `SCS_SELF_EQUIPMENT_PATH_ROOT` | Node | path_xian 탐색 root | `/appdata/abnormal_trend/pic/path_xian` | 설정 root의 최신 file 사용 | 경로 주의 | `Implemented` / 실제 값 `Unknown` | `server/selfEquipmentData.mjs` |
 
 `.env.example`과 `.env.mock.example`은 현재 `main`에서 확인되지 않았다.
 `VITE_` 변수는 client-visible 영역으로 간주하여 secret, token, DB·mail credential과 HMAC key를 두지 않는 것이 `Policy`다.
 Hard-coded 내부 host 후보는 위치와 유형만 `Risk`로 기록하며 실제 값은 `<redacted>`로 취급한다.
-`SCS_DATA_CONNECTIONS_ENABLED`는 비밀값은 아니지만 영향도가 큰 운영 통제다. 값을 로그·문서에 복사하기보다 `1` 여부와 승인 상태만 확인하며, UI shell에서는 gate 없는 과거 artifact로 rollback하지 않는다.
+두 connection gate는 비밀값은 아니지만 영향도가 큰 운영 통제다. 값을 로그에 복사하기보다
+`1` 여부와 승인 범위만 확인한다. 자설비만 연결할 때는 전체 gate가 아니라
+`SCS_SELF_EQUIPMENT_DATA_ENABLED=1`만 사용하며, gate 없는 과거 artifact로 rollback하지 않는다.
 
 ## 15. DB 보안 경계
 

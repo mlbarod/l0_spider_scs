@@ -43,7 +43,11 @@ import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { fetchCurrentUser } from "../api/currentUserApi"
 import { createHitHistory } from "../api/hitHistoryApi"
 import { fetchLineMapping } from "../api/mappingConfigApi"
-import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
+import {
+  getSelfEquipmentFileConnectionState,
+  isLineMappingQueryReady,
+  isSelfEquipmentDbEnabled,
+} from "../api/mappingContract.mjs"
 import { fetchMyEqpRegistrations } from "../api/myEqpRegistrationApi"
 import {
   createPassHistory,
@@ -511,12 +515,15 @@ export function IdentityChartDialog({
   const [referenceLineMode, setReferenceLineMode] = useState(false)
   const [referenceLines, setReferenceLines] = useState([])
   const identityQuery = useQuery({
-    queryKey: [queryKeyPrefix, row.file_path, eqp, row.sensor, row.step],
+    queryKey: [queryKeyPrefix, row.file_path, row.latest_date, eqp, row.sensor, row.step],
     queryFn: ({ signal }) => identityFetcher({
       filePath: row.file_path,
       eqp,
       sensor: row.sensor,
       chStep: row.step,
+      latestDate: row.latest_date,
+      line: row.line_rev,
+      pathSdwt: row.path_sdwt,
       signal,
     }),
     enabled: Boolean(open && row.file_path && eqp && row.sensor && row.step),
@@ -524,7 +531,7 @@ export function IdentityChartDialog({
     gcTime: Infinity,
   })
   const groups = identityQuery.data?.groups ?? EMPTY_LIST
-  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}_${row.step}`
+  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}*${row.step}`
   const sharedYDomain = useMemo(
     () => numericDomain(
       groups.flatMap((group) => group.points.map((point) => point.value)),
@@ -799,12 +806,15 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
   }, [])
 
   const identityQuery = useQuery({
-    queryKey: ["erd-identity-data", row.file_path, eqp, row.sensor, row.step, 3],
+    queryKey: ["erd-identity-data", row.file_path, row.latest_date, eqp, row.sensor, row.step, 3],
     queryFn: ({ signal }) => fetchErdIdentityData({
       filePath: row.file_path,
       eqp,
       sensor: row.sensor,
       chStep: row.step,
+      latestDate: row.latest_date,
+      line: row.line_rev,
+      pathSdwt: row.path_sdwt,
       days: 3,
       signal,
     }),
@@ -813,7 +823,7 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
     gcTime: 10 * 60 * 1000,
   })
   const groups = identityQuery.data?.groups ?? EMPTY_LIST
-  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}_${row.step}`
+  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}*${row.step}`
   const identityPoints = useMemo(() => buildIdentityChartPoints(groups), [groups])
   const renderedPoints = useMemo(
     () => selectRenderedIdentityPoints(groups, identityPoints, null).points,
@@ -1115,6 +1125,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
   passRecord,
   allSkipLoadTargets,
   dataQueryKeyPrefix,
+  dbActionsEnabled,
 }) {
   const eqp = stripPngExtension(row.eqp)
   const queryClient = useQueryClient()
@@ -1172,12 +1183,15 @@ const ErdScatterCard = memo(function ErdScatterCard({
   }, [])
 
   const chartQuery = useQuery({
-    queryKey: ["erd-scatter-data", row.file_path, eqp, row.sensor, row.step],
+    queryKey: ["erd-scatter-data", row.file_path, row.latest_date, eqp, row.sensor, row.step],
     queryFn: () => fetchErdScatterData({
       filePath: row.file_path,
       eqp,
       sensor: row.sensor,
       chStep: row.step,
+      latestDate: row.latest_date,
+      line: row.line_rev,
+      pathSdwt: row.path_sdwt,
     }),
     enabled: Boolean(isNearViewport && row.file_path && eqp && row.sensor && row.step),
     staleTime: Infinity,
@@ -1194,7 +1208,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
     () => buildRenderedScatterSeries(points, zoomDomain),
     [points, zoomDomain],
   )
-  const axisColumn = chartQuery.data?.axisColumn ?? `${row.sensor}_${row.step}`
+  const axisColumn = chartQuery.data?.axisColumn ?? `${row.sensor}*${row.step}`
   const baseDomain = useMemo(() => ({
     x: numericDomain([
       ...points.map((point) => point.actTimeMs),
@@ -1392,14 +1406,16 @@ const ErdScatterCard = memo(function ErdScatterCard({
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          <SkipChartDialog
-            eqp={eqp}
-            filePath={row.file_path}
-            lineId={lineId}
-            dataQueryKeyPrefix={dataQueryKeyPrefix}
-            disabled={isSkipped}
-          />
-          {allSkipLoadTargets ? (
+          {dbActionsEnabled ? (
+            <SkipChartDialog
+              eqp={eqp}
+              filePath={row.file_path}
+              lineId={lineId}
+              dataQueryKeyPrefix={dataQueryKeyPrefix}
+              disabled={isSkipped}
+            />
+          ) : null}
+          {dbActionsEnabled && allSkipLoadTargets ? (
             <EqpAllSkipDialog
               eqp={eqp}
               sensor={row.sensor}
@@ -1408,7 +1424,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               loadTargets={allSkipLoadTargets}
             />
           ) : null}
-          {isSkipped ? (
+          {dbActionsEnabled && isSkipped ? (
             <Button
               type="button"
               variant="outline"
@@ -1484,19 +1500,21 @@ const ErdScatterCard = memo(function ErdScatterCard({
             )}
             </DialogContent>
           </Dialog>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 px-[0.9rem] text-sm"
-            onClick={handleHistorySave}
-            disabled={saveHitHistoryMutation.isPending}
-          >
-            {saveHitHistoryMutation.isPending
-              ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-              : null}
-            이력저장
-          </Button>
+          {dbActionsEnabled ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 px-[0.9rem] text-sm"
+              onClick={handleHistorySave}
+              disabled={saveHitHistoryMutation.isPending}
+            >
+              {saveHitHistoryMutation.isPending
+                ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                : null}
+              이력저장
+            </Button>
+          ) : null}
         </div>
       </footer>
     </article>
@@ -1513,12 +1531,6 @@ export function FdcTrendPage() {
     () => readSelfEquipmentUrlFilters(searchParams),
     [searchParams],
   )
-  const currentUserQuery = useQuery({
-    queryKey: ["current-user"],
-    queryFn: fetchCurrentUser,
-    staleTime: Infinity,
-    retry: false,
-  })
   const [selectedLine, setSelectedLine] = useState(() => requestedFilters.line)
   const [selectedTeam, setSelectedTeam] = useState(() => requestedFilters.sdwts[0] ?? "")
   const [selectedGrades, setSelectedGrades] = useState(() => (
@@ -1553,6 +1565,16 @@ export function FdcTrendPage() {
     queryFn: fetchLineMapping,
   })
   const mappingReady = isLineMappingQueryReady(mappingQuery)
+  const selfEquipmentFileConnectionState = getSelfEquipmentFileConnectionState(mappingQuery)
+  const selfEquipmentFileReadEnabled = selfEquipmentFileConnectionState === "enabled"
+  const selfEquipmentDbEnabled = isSelfEquipmentDbEnabled(mappingQuery.data)
+  const currentUserQuery = useQuery({
+    queryKey: ["current-user"],
+    queryFn: fetchCurrentUser,
+    enabled: Boolean(mappingReady && selfEquipmentDbEnabled),
+    staleTime: Infinity,
+    retry: false,
+  })
   const lineMapping = mappingReady ? mappingQuery.data.line_mapping : EMPTY_MAPPING
   const sdwtMapping = mappingReady ? mappingQuery.data.sdwt_mapping : EMPTY_MAPPING
   const lines = useMemo(
@@ -1563,7 +1585,7 @@ export function FdcTrendPage() {
   const myEqpRegistrationsQuery = useQuery({
     queryKey: ["my-eqp-registrations", activeLine, true],
     queryFn: () => fetchMyEqpRegistrations({ line: activeLine, activeOnly: true }),
-    enabled: Boolean(mappingReady && activeLine),
+    enabled: Boolean(mappingReady && selfEquipmentDbEnabled && activeLine),
     staleTime: 15 * 1000,
     refetchInterval: 30 * 1000,
     retry: false,
@@ -1574,10 +1596,10 @@ export function FdcTrendPage() {
       ...Object.entries(lineMapping)
         .filter(([, line]) => line === activeLine)
         .map(([key]) => ({ key, label: sdwtMapping[key] ?? key })),
-      ...(hasActiveMyEqp ? [{ key: MY_EQP_TEAM, label: MY_EQP_LABEL }] : []),
-      ...(activeLine ? [{ key: SKIP_LIST_TEAM, label: SKIP_LIST_LABEL }] : []),
+      ...(selfEquipmentDbEnabled && hasActiveMyEqp ? [{ key: MY_EQP_TEAM, label: MY_EQP_LABEL }] : []),
+      ...(selfEquipmentDbEnabled && activeLine ? [{ key: SKIP_LIST_TEAM, label: SKIP_LIST_LABEL }] : []),
     ],
-    [activeLine, hasActiveMyEqp, lineMapping, sdwtMapping],
+    [activeLine, hasActiveMyEqp, lineMapping, sdwtMapping, selfEquipmentDbEnabled],
   )
   const resolvedSelectedTeam = resolveSelfEquipmentTeam(teamOptions, [selectedTeam])
   const activeTeam = resolvedSelectedTeam
@@ -1630,6 +1652,7 @@ export function FdcTrendPage() {
         }),
     enabled: Boolean(
       mappingReady
+      && selfEquipmentFileReadEnabled
       && activeLine
       && activeTeam
       && activeTeamLabel
@@ -1669,6 +1692,7 @@ export function FdcTrendPage() {
     }),
     enabled: Boolean(
       mappingReady
+      && selfEquipmentDbEnabled
       && !isSkipList
       && !isMyEqp
       && activeLine
@@ -1738,7 +1762,7 @@ export function FdcTrendPage() {
     if (chartPage !== activeChartPage) setChartPage(activeChartPage)
   }, [activeChartPage, chartPage])
   const allSkipLoadTargetsByEqp = useMemo(() => {
-    if (isSkipList) return new Map()
+    if (!selfEquipmentDbEnabled || isSkipList) return new Map()
     return new Map(chartGroups.map((group) => [group.eqp, async (sensor) => {
       return fetchEqpAllSkipTargets({
         isMyEqp,
@@ -1760,6 +1784,7 @@ export function FdcTrendPage() {
     isMyEqp,
     isSkipList,
     priorities,
+    selfEquipmentDbEnabled,
   ])
 
   const filteredLines = filterItems(
@@ -1845,7 +1870,7 @@ export function FdcTrendPage() {
   const setQuery = (key, value) => setQueries((current) => ({ ...current, [key]: value }))
 
   useEffect(() => {
-    if (!isMyEqp || !activeLine) {
+    if (!selfEquipmentDbEnabled || !isMyEqp || !activeLine) {
       myEqpHistoryContextRef.current = ""
       return
     }
@@ -1853,7 +1878,7 @@ export function FdcTrendPage() {
     if (myEqpHistoryContextRef.current === contextKey) return
     myEqpHistoryContextRef.current = contextKey
     uploadMyEqpCategoryHistory(activeLine)
-  }, [activeLine, isMyEqp])
+  }, [activeLine, isMyEqp, selfEquipmentDbEnabled])
 
   const resetStepAndSensor = () => {
     setSelectedDesc("")
@@ -1891,7 +1916,7 @@ export function FdcTrendPage() {
     const nextChStep = selectedChStep === chStep ? "" : chStep
     const clickedAt = new Date().toISOString()
     setSelectedChStep(nextChStep)
-    if (!nextChStep || isSkipList || isMyEqp) return
+    if (!nextChStep || !selfEquipmentDbEnabled || isSkipList || isMyEqp) return
 
     try {
       const queryKey = [
@@ -1957,6 +1982,8 @@ export function FdcTrendPage() {
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
                 ? `${currentUserQuery.data.knoxId}님 안녕하세요!`
+                : !selfEquipmentDbEnabled
+                ? "DB 기능 연결 전입니다."
                 : currentUserQuery.isLoading
                 ? "접속자 확인 중…"
                 : "접속자 정보를 확인할 수 없습니다."}
@@ -2192,6 +2219,11 @@ export function FdcTrendPage() {
       </section>
 
       <main className="grid min-w-0 gap-4 p-4">
+        {selfEquipmentFileReadEnabled && !selfEquipmentDbEnabled ? (
+          <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-800 dark:text-sky-200">
+            현재 자설비 파일 조회와 차트만 연결되어 있습니다. My EQP, SKIP, 클릭이력과 이력저장은 새 DB 식별 계약이 정의될 때까지 비활성화됩니다.
+          </div>
+        ) : null}
         {dataQuery.isError ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {dataQuery.error.message}
@@ -2217,7 +2249,7 @@ export function FdcTrendPage() {
             <div>
               <h2 className="text-base font-semibold">Scatter chart</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                ch_step을 선택하면 최신 ERD 이상감지 데이터의 act_time과 sensor_ch_step 값을 표시합니다.
+                ch_step을 선택하면 최신 ERD 이상감지 데이터의 act_time과 sensor*ch_step 값을 표시합니다.
               </p>
             </div>
             {chStepIsSelected ? (
@@ -2301,6 +2333,7 @@ export function FdcTrendPage() {
                                 : passHistoryByKey.get(buildChartPassHistoryKey(activeLine, row))}
                               allSkipLoadTargets={allSkipLoadTargetsByEqp.get(group.eqp) ?? null}
                               dataQueryKeyPrefix={isMyEqp ? "my-eqp-equipment-data" : "self-equipment-data"}
+                              dbActionsEnabled={selfEquipmentDbEnabled}
                             />
                           </div>
                           {group.gathered && showThreeDayIdentity ? (

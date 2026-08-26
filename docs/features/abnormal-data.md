@@ -25,8 +25,8 @@ STEP 딥링크, Dashboard 응답 계약과 보안 원칙은 각 기준 문서를
 | 기능 | 브라우저 route | 핵심 원천 | 선택 방식 | 최종 출력 | 상태 |
 |---|---|---|---|---|---|
 | Line Dashboard | `/`, `/fdc_trend` | detail·stats Parquet, mapping JSON | 날짜별 최신 detail과 최신 시각 stats | KPI, 막대, 추이, 상세표 | `Confirmed` |
-| Self Equipment | `/self-equipment`, `/fdc_trend/self-equipment` | team `df_path.parquet`, ERD `data.parquet`, history Parquet | index row와 종속 필터 | scatter, 동일성 chart, 변경이력 | `Confirmed` |
-| MY EQP | 같은 route의 `sdwt=MY_EQP` | 등록 DB, mapping, 복수 team Parquet | active 등록 EQP와 path row 매칭 | 등록 EQP용 필터·chart | `Confirmed` |
+| Self Equipment | `/self-equipment`, `/fdc_trend/self-equipment` | 최신 `path_xian`, `file_path/data.parquet`, history Parquet | mapping scope와 종속 필터 | scatter, 동일성 chart, 변경이력 | 코드 `Confirmed`; 운영 file `Unknown` |
+| MY EQP | 같은 route의 `sdwt=MY_EQP` | legacy handler 보존 | UI capability 비활성 | 현재 화면 출력 없음 | `Blocked` — 새 DB 식별 계약 `Unknown` |
 | 동일성 이상감지 | `/matching-anomaly` | `erd_commonality` 디렉터리·PNG | 최신 시각 디렉터리와 계층 필터 | 페이지된 분석 이미지 | `Confirmed` |
 | 공통부 이상감지 | `/common-anomaly` | `path_common` Parquet, common `data.parquet`·PNG, SKIP DB | index row와 종속 필터 | 이미지, scatter, 동일성 chart | `Confirmed` |
 | 공통부 동일성 이상감지 | `/common-commonality-anomaly` | `path_common_commonality` 디렉터리·PNG | 최신 `YYYY-MM-DD` 디렉터리와 EQP_MODEL 계층 필터 | 페이지된 분석 이미지 | `Confirmed` |
@@ -71,22 +71,22 @@ Dashboard 상세 링크는 Line·SDWT·Grade를 Self Equipment route로 넘기�
 FdcTrendPage
 → fetchSelfEquipmentData() 또는 fetchMyEqpEquipmentData()
 → GET /api/self-equipment-data 또는 /api/my-eqp-equipment-data
-→ readTeamErdRows() + pass_history
-→ path/{line}/{pathSdwt}/df_path.parquet
+→ readLatestSelfEquipmentRows() + mapping scope
+→ path_xian/{latest_date}
 → buildSelfEquipmentPayload()
 → path row의 file_path
 → GET /api/erd-scatter-data
-→ sibling data.parquet·{eqp}.parquet
+→ file_path/data.parquet·file_path/{eqp}.parquet
 → scatter·동일성 chart·변경이력
 ```
 
 일반 조회는 `line`, `pathSdwt`, 표시 `sdwt`가 필수이며 `priority`, `desc`, `eqpCh`, `sensor`, `chStep`을 순서대로 좁힌다.
-`df_path.parquet` row는 최종 chart의 위치와 metadata를 제공하고, 선택 row의 `file_path`는 다음 scatter 요청의 `path`가 된다.
-서버는 직접 ERD 또는 backup root인지 확인한 뒤 image와 같은 directory의 `data.parquet`를 선택한다.
+최신 `path_xian` row는 최종 chart의 위치와 metadata를 제공하고, 선택 row의 `file_path`는 다음 scatter 요청의 `path`가 된다.
+서버는 `/pic_server2/`를 `/pic/`로 정규화하고 두 gate mode 모두 Line·SDWT·EQP·latest date·sensor·step이 최신 scoped row와 일치하는지 확인한 뒤 directory의 `data.parquet`를 선택한다.
 
-MY EQP는 요청 사용자의 active `myeqp_regist`와 mapping을 먼저 조회한다.
-등록 SDWT를 path key로 바꿔 여러 team Parquet를 읽고 등록 EQP와 row EQP를 정규화해 매칭한 다음 같은 payload builder를 사용한다.
-`step=ALL`은 MY EQP에서만 `allowAllSteps: true`로 전체 STEP row를 허용한다.
+MY EQP handler의 legacy 구현은 남아 있지만 새 7-column index에 기존 Self DB 식별자 `ver`가 없다.
+따라서 현재 SCS mapping capability는 전역 gate에서도 Self DB 기능을 비활성화하고 화면에서
+MY EQP·SKIP 흐름을 호출하지 않는다. 재연결에는 별도의 DB 식별 계약이 필요하며 현재 `Unknown`이다.
 
 ### 3.3 동일성 이상감지
 
@@ -158,8 +158,8 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | 메서드 | API | handler | 주요 원천 | 결과 |
 |---|---|---|---|---|
 | `GET/HEAD` | `/api/dashboard-data` | `handleDashboardDataRequest` | detail·stats Parquet, mapping | Dashboard JSON |
-| `GET` | `/api/self-equipment-data` | `handleSelfEquipmentDataRequest` | team Parquet, `pass_history` | filter option·chart row |
-| `GET` | `/api/my-eqp-equipment-data` | `handleMyEqpEquipmentDataRequest` | registration DB, mapping, team Parquet | MY EQP chart row |
+| `GET` | `/api/self-equipment-data` | `handleSelfEquipmentDataRequest` | 최신 `path_xian`; Self DB history 미결합 | filter option·chart row |
+| `GET` | `/api/my-eqp-equipment-data` | dormant legacy handler | registration DB, mapping, 최신 `path_xian` | 현재 UI 미호출; 새 DB 식별 계약 `Unknown` |
 | `GET` | `/api/erd-scatter-data` | `handleErdScatterDataRequest` | ERD `data.parquet`, history Parquet | scatter·identity JSON |
 | `GET/HEAD` | `/api/erd-file` | `handleErdFileRequest` | ERD image | image stream |
 | `GET/HEAD` | `/api/latest-commonality-path` | `handleLatestCommonalityPathRequest` | commonality root directory | 최신 path·date |
@@ -182,11 +182,11 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 |---|---|---|---|---|
 | `ABN-P01` | `/appdata/abnormal_trend/pic/path/{latest_date}` | Dashboard detail Parquet | root의 시각 파일명 나열 | `Confirmed` |
 | `ABN-P02` | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | Dashboard stats | 최신 detail 시각으로 조립 | `Confirmed` |
-| `ABN-P03` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | Self/MY EQP index | Line·path SDWT로 조립 | `Confirmed` |
-| `ABN-P04` | `/appdata/abnormal_trend/pic/erd/{latest_date}/{sdwt}/{step_desc}/{ver}/{ppid}/{grade}/{sensor}/{ch_step}/data.parquet` | ERD point 원천 | 실제 runtime은 index image의 sibling으로 선택 | pattern·runtime `Confirmed` |
-| `ABN-P05` | 같은 ERD directory의 `{eqp}.png` | ERD 결과 image·path identity | `file_path` 원문 | row 계약 `Confirmed` |
-| `ABN-P06` | 같은 ERD directory의 `{eqp}.parquet` | 변경점 이력 | 선택 EQP 이름으로 조립 | `Confirmed` |
-| `ABN-P07` | `/appdata/abnormal_trend/pic/backup/#appdata#...#{eqp}.png` | backup ERD image 후보 | backup path도 sibling data로 변환 | `Confirmed` |
+| `ABN-P03` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | Self/MY EQP index | 날짜·시각 파일명 중 최신 선택 후 Line·SDWT mapping scope | 코드 `Confirmed`; 운영 file `Unknown` |
+| `ABN-P04` | index `file_path` + `/data.parquet` | ERD point 원천 | `pic_server2` 정규화 후 directory 아래 선택 | 코드 `Confirmed`; 운영 file `Unknown` |
+| `ABN-P05` | index row `file_path` | ERD data directory identity | 최신 scoped row 원문 | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `ABN-P06` | index `file_path` + `/{eqp}.parquet` | 변경점 이력 | 선택 EQP 이름으로 조립 | 코드 `Confirmed`; 운영 file `Unknown` |
+| `ABN-P07` | `/appdata/abnormal_trend/pic/backup/...` | Self 데이터에서 거부되는 경로 | resolver에서 거부 | `Confirmed` |
 | `ABN-P08` | `/appdata/abnormal_trend/pic/erd_commonality/{latest_date}/{sdwt}/{grade}/{step_seq}/{step_desc}/{ppid}/{ppid}/{sensor}_{ch_step}/img.png` | 동일성 이미지 | 최신 directory 계층 탐색 | `Confirmed` |
 | `ABN-P09` | `/appdata/abnormal_trend/pic/path_common/{line}/{sdwt}/df_path.parquet` | 공통부 index | Line·path SDWT로 조립 | `Confirmed` |
 | `ABN-P10` | `/appdata/abnormal_trend/pic/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/data.parquet` | 공통부 point 원천 | index PNG/data path를 sibling data로 변환 | `Confirmed` |
@@ -201,7 +201,7 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 
 | 값 | 최초 근거 | 프론트엔드/API | 서버·경로 반영 | 화면 출력 | 상태 |
 |---|---|---|---|---|---|
-| `latest_date` | Dashboard filename, 최신 directory, index `file_path` | Dashboard date filter 외에는 직접 전달하지 않음 | stats/detail 선택, commonality root, ERD/common path segment | 최신 시각 badge·동일성 날짜 | `Confirmed` |
+| `latest_date` | Dashboard filename, 최신 directory, Self 최신 index 파일명 | Self chart API는 `latestDate` 전달 | stats/detail 선택, Self scoped row 검증, commonality root | 최신 시각 badge·동일성 날짜 | `Confirmed` |
 | `line` | mapping의 Line 값 | Dashboard 반복 `line`; 다른 화면 단일 `line` | team/common index path; matching은 SDWT 후보 제한에만 사용 | Line filter·summary | `Confirmed` |
 | `sdwt` | mapping key·display, path row | `pathSdwt`와 표시 `sdwt`를 분리 | index path·row filter·directory segment | SDWT filter·label | `Confirmed` |
 | `grade` | URL/UI Grade 또는 row `priority` | API에는 주로 반복 `priority` | detail·path row와 directory `grade` | badge·KPI·filter | `Confirmed` |
@@ -209,7 +209,7 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 | `step_desc` | row `desc` 또는 directory | `desc`·`stepDesc` | row filter와 path segment | STEP filter·group title | `Confirmed` |
 | `ppid` | ERD/commonality path | 직접 query로 전달하지 않음 | ERD `{ppid}`, commonality duplicate PPID directory | chart/card PPID | `Confirmed` |
 | `sensor` | row·directory | `sensor` | row filter와 axis column | filter·card·axis | `Confirmed` |
-| `ch_step` | row `step`·directory suffix | query `chStep` | path segment, `${sensor}_${chStep}` column | filter·chart title | `Confirmed` |
+| `ch_step` | row `step`·directory suffix | query `chStep` | Self는 `${sensor}*${chStep}`, 공통부는 `${sensor}_${chStep}` column | filter·chart title | `Confirmed` |
 | `eqp` | index row·image basename·DB 등록 | query `eqp` 또는 `eqpCh` | EQP row filter, image·history filename | EQP group·chart | `Confirmed` |
 | `eqp_model` | 공통부 동일성 directory | query `eqpModel` | directory segment와 종속 filter | EQP_MODEL filter·group title | `Confirmed` |
 | `ver` | team index row·ERD path | query로 직접 전달하지 않음 | ERD path와 history identity | 일부 chart metadata·이력 | `Confirmed` |
@@ -219,7 +219,7 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 ### 6.1 명칭 대응
 
 - Self index와 Dashboard detail은 `recipe_id`를 사용하고 UI는 이를 PPID로 표시한다.
-- Self index의 `desc`는 STEP 설명이며 `step` column은 `ch_step`에 해당한다.
+- Self index의 `step`을 화면 STEP과 `ch_step`에 사용하며 legacy API 이름 `desc`로 선택값을 전달한다.
 - 공통부 index의 `prc_group`은 공통부 화면 filter이고 ERD `{ppid}`와 동일하다고 확정할 근거는 없다.
 - scatter Parquet은 선택 `sensor`·`chStep`으로 동적 column 이름을 만든다.
 - commonality의 `sensorChStep` directory는 마지막 `_`를 기준으로 Sensor와 `chStep`을 나눈다.
@@ -230,8 +230,8 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 |---|---|---|---|
 | Dashboard stats | `exec_date`, `recipe_id`, `priority`, `ng`, `total` | 숫자 합계·Grade 분류 | projection `Confirmed`, 타입·nullable `Unknown` |
 | Dashboard detail | `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` | 5-key 중복 제거·Line mapping | projection `Confirmed`, 전체 Schema `Unknown` |
-| Self index | `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev` | 문자열 정규화·종속 filter | projection `Confirmed`, 전체 Schema `Unknown` |
-| ERD point | `act_time`, `eqp_cb`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id`, 동적 axis | 날짜·숫자 변환·EQP grouping | projection `Confirmed`, axis 타입 `Unknown` |
+| Self index | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | 문자열 정규화·mapping scope·종속 filter | projection `Confirmed`, 타입·nullable `Unknown` |
+| ERD point | 공통 `act_time`, `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id`, 동적 `${sensor}*${chStep}`; identity 추가 `eqp_cb` | `eqp` 필터·날짜·숫자 변환; identity는 `eqp_cb` grouping | projection `Confirmed`, axis 타입 `Unknown` |
 | ERD history | `date`, `ctttm_url`, `work_type`, `desc` | 날짜 정렬·부분 실패 분리 | projection `Confirmed`, 전체 Schema `Unknown` |
 | Common index | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | path→data/image, 종속 filter | projection `Confirmed`, 전체 Schema `Unknown` |
 | Common point | `eqp_id`, `disp_name`, `lotid`, `wafer_id`, `act_time`, `eqp_cb`, 동적 axis | EQP matching·invalid row 제외 | projection `Confirmed`, 전체 Schema `Unknown` |
@@ -259,8 +259,8 @@ L0 Spider의 확인된 책임은 파일 결과를 선택·검증·읽기·집계
 | 영역 | 최신 판단 | server cache | browser cache·query | 영향 |
 |---|---|---|---|---|
 | Dashboard | 유효 시각 filename의 날짜별 마지막 값 | file list root mtime, Parquet 1개, aggregate 32개; mtime·size 검사 | main 60초, trend 5분 stale | overwrite 시 mtime·size 기준 갱신 |
-| Self index | `df_path.parquet` row 자체 | LRU 1개; mtime·size 검사 | 기본 stale 60초 | 새 row는 재조회 시 반영 |
-| ERD chart | index image의 sibling data; path 첫 segment를 latestDate로 사용 | scatter 1개, history 1개; mtime·size 검사 | chart query `staleTime: Infinity` | 같은 query key의 file 교체는 자동 refetch되지 않음 |
+| Self index | `path_xian`의 날짜·시각 파일명 중 최신 file | LRU 1개; mtime·size 검사 | 기본 stale 60초 | 새 최신 파일은 다음 API 요청에서 반영 |
+| ERD chart | index `file_path` directory의 data; index filename을 `latestDate`로 전달 | scatter 1개, history 1개; mtime·size 검사 | chart query key에 path·latest date 포함, `staleTime: Infinity` | 같은 path·date file overwrite는 자동 refetch되지 않음 |
 | 동일성 | 최신 유효 `YYYY-MM-DD hh:mm:ss` directory | directory index 5분 TTL, latest path 포함 key | 기본 stale 60초 | 동일 latest directory 내부 변경은 최대 TTL 영향 가능 |
 | 공통부 동일성 | 최신 유효 `YYYY-MM-DD` directory | directory index 5분 TTL, latest path 포함 key | 기본 stale 60초 | 동일 latest directory 내부 변경은 최대 TTL 영향 가능 |
 | 공통부 index·chart | index row `file_path`가 가리키는 결과 | path 1개, scatter 1개; mtime·size 검사 | 기본 stale 60초, 일부 history 30초 | file 교체는 server mtime·size로 판정 |
@@ -268,7 +268,7 @@ L0 Spider의 확인된 책임은 파일 결과를 선택·검증·읽기·집계
 | 이미지 HTTP | path가 직접 가리키는 file | 별도 memory cache 없음 | commonality/common `private,max-age=300`; ERD `no-cache` | endpoint별 정책 상이 |
 
 Dashboard의 날짜 연산은 UTC 기반 검증·증감을 사용하지만 filename이 표현하는 업무 timezone은 `Unknown`이다.
-Self·공통부는 모든 root를 최신순으로 탐색하지 않고 upstream index row가 가리키는 결과를 신뢰한다.
+Self는 `path_xian` root의 최신 파일을 탐색하고, 공통부는 upstream index row가 가리키는 결과를 신뢰한다.
 
 ## 10. 화면 출력과 원천 연결
 
@@ -276,10 +276,10 @@ Self·공통부는 모든 root를 최신순으로 탐색하지 않고 upstream i
 |---|---|---|---|
 | Dashboard KPI·표 | stats/detail Parquet | 합계·고유조합·Line mapping | 숫자 0·빈 row 또는 전체 오류 |
 | Dashboard trend | 날짜별 detail | 누락 날짜 count 0 | `EmptyChart` |
-| Self filter option | team index Parquet | 종속 option·SKIP 제외 | 다음 filter placeholder |
+| Self filter option | 최신 `path_xian` Parquet | mapping scope·종속 option; DB SKIP 미결합 | 다음 filter placeholder |
 | Self scatter | ERD `data.parquet` | EQP·axis 선택, 날짜·숫자 정규화 | point 없는 chart 상태 |
 | Self 동일성 | 같은 `data.parquet` | EQP별 grouping·기간 filter·sampling | group 없음 안내 |
-| 변경점 이력 | sibling `{eqp}.parquet` | 날짜 정렬 | history만 실패해도 chart는 유지 |
+| 변경점 이력 | `file_path/{eqp}.parquet` | 날짜 정렬 | history만 실패해도 chart는 유지 |
 | 동일성 image card | `erd_commonality/.../img.png` | directory metadata와 lazy image | image error card |
 | 공통부 image | common `{eqp_cb}.png` | path row·EQP image 변환 | image error UI |
 | 공통부 scatter·identity | common `data.parquet` | EQP matching·axis selection | point/group 없는 chart 상태 |
@@ -361,7 +361,7 @@ Self·공통부는 모든 root를 최신순으로 탐색하지 않고 upstream i
 
 - `src/config/spiderDataPaths.mjs:1-90` — 대표 path template·Dashboard column
 - `server/dashboardData.mjs:568-825` — 날짜 선택·Parquet·cache·오류
-- `server/selfEquipmentData.mjs:137-162,196-291,321-834` — team index·ERD data·image·chart
+- `server/selfEquipmentData.mjs` — 최신 Self index·scope authorization·ERD data·chart
 - `server/latestCommonalityPath.mjs:13-89` — 최신 commonality directory
 - `server/commonalityData.mjs:83-290` — directory index·filter·PNG stream
 - `server/commonCommonalityData.mjs` — 공통부 동일성 directory index·filter·PNG stream

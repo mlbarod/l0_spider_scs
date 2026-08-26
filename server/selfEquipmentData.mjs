@@ -1,13 +1,16 @@
-import { createReadStream, existsSync, statSync } from "node:fs"
+import { createReadStream, existsSync, readdirSync, statSync } from "node:fs"
 import { dirname, join, relative, resolve, sep } from "node:path"
 
 import { asyncBufferFromFile, parquetReadObjects } from "hyparquet"
 import { compressors } from "hyparquet-compressors"
 
-import { buildTeamErdPath } from "../src/config/spiderDataPaths.mjs"
+import {
+  SPIDER_DATA_PATH_TEMPLATES,
+  buildSelfEquipmentIndexPath,
+} from "../src/config/spiderDataPaths.mjs"
 import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
 import { getRemoteIp } from "./currentUser.mjs"
-import { readLineMapping } from "./mappingConfig.mjs"
+import { assertKnownMappingLineSdwt, readLineMapping } from "./mappingConfig.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
 import {
@@ -18,19 +21,20 @@ import { listPassHistoryRecords } from "./passHistory.mjs"
 
 export const TEAM_ERD_COLUMNS = Object.freeze([
   "sdwt",
-  "desc",
-  "ver",
   "recipe_id",
   "priority",
   "sensor",
   "step",
   "eqp",
   "file_path",
-  "line_rev",
 ])
 
+const PIC_FILE_ROOT = "/appdata/abnormal_trend/pic"
 const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
 const ERD_BACKUP_ROOT = "/appdata/abnormal_trend/pic/backup"
+const SELF_EQUIPMENT_INDEX_ROOT = process.env.SCS_SELF_EQUIPMENT_PATH_ROOT
+  ?? SPIDER_DATA_PATH_TEMPLATES.selfEquipmentIndexRoot
+const SELF_EQUIPMENT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/
 const ALL_EQP_CHANNELS = "ALL"
 const ALL_SENSORS = "ALL"
 const ALL_CH_STEPS = "ALL"
@@ -67,13 +71,29 @@ function assertPathSegment(name, value) {
   }
 }
 
-function normalizeRow(row) {
-  return Object.fromEntries(
-    TEAM_ERD_COLUMNS.map((column) => {
-      const value = row[column]
-      return [column, value === null || value === undefined ? "" : String(value)]
-    }),
-  )
+function normalizeTextValue(value) {
+  return value === null || value === undefined ? "" : String(value).trim()
+}
+
+export function normalizeSelfEquipmentFilePath(filePath) {
+  return normalizeTextValue(filePath).replaceAll("/pic_server2/", "/pic/")
+}
+
+function normalizeRow(row, latestDate) {
+  const step = normalizeTextValue(row.step)
+  return {
+    sdwt: normalizeTextValue(row.sdwt),
+    desc: step,
+    ver: "",
+    recipe_id: normalizeTextValue(row.recipe_id),
+    priority: normalizeTextValue(row.priority),
+    sensor: normalizeTextValue(row.sensor),
+    step,
+    eqp: normalizeTextValue(row.eqp),
+    file_path: normalizeSelfEquipmentFilePath(row.file_path),
+    line_rev: "",
+    latest_date: latestDate,
+  }
 }
 
 function normalizeSkipEqp(value) {
@@ -86,6 +106,10 @@ function normalizeMyEqpMatchValue(value) {
     .trim()
     .toLocaleUpperCase("en-US")
     .replace(/[^\p{L}\p{N}]/gu, "")
+}
+
+function normalizeScopeMatchValue(value) {
+  return String(value ?? "").normalize("NFKC").trim()
 }
 
 function buildMyEqpMatchKey(sdwt, eqp) {
@@ -136,16 +160,28 @@ export function excludeRecentlySkippedRows(
     : rows
 }
 
-export async function readTeamErdRows({ line, pathSdwt }) {
-  assertPathSegment("line", line)
-  assertPathSegment("pathSdwt", pathSdwt)
+export function resolveLatestSelfEquipmentDate(fileNames) {
+  return fileNames
+    .filter((fileName) => SELF_EQUIPMENT_DATE_PATTERN.test(fileName))
+    .sort((left, right) => right.localeCompare(left))[0] ?? null
+}
 
-  const filePath = buildTeamErdPath({ line, sdwt: pathSdwt })
+export async function readLatestSelfEquipmentRows(indexRoot = SELF_EQUIPMENT_INDEX_ROOT) {
+  const latestDate = resolveLatestSelfEquipmentDate(
+    readdirSync(indexRoot, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name),
+  )
+  if (!latestDate) throw new Error("자설비 이상감지 최신 경로 테이블이 없습니다.")
+
+  const filePath = indexRoot === SPIDER_DATA_PATH_TEMPLATES.selfEquipmentIndexRoot
+    ? buildSelfEquipmentIndexPath(latestDate)
+    : join(indexRoot, latestDate)
   const fileStat = statSync(filePath)
   const cached = getLruEntry(parquetCache, filePath)
 
   if (cached?.mtimeMs === fileStat.mtimeMs && cached?.size === fileStat.size) {
-    return { filePath, rows: cached.rows }
+    return { filePath, latestDate, rows: cached.rows }
   }
 
   const file = await asyncBufferFromFile(filePath)
@@ -153,7 +189,7 @@ export async function readTeamErdRows({ line, pathSdwt }) {
     file,
     columns: TEAM_ERD_COLUMNS,
     compressors,
-  })).map(normalizeRow)
+  })).map((row) => normalizeRow(row, latestDate))
   setLruEntry(
     parquetCache,
     filePath,
@@ -161,7 +197,79 @@ export async function readTeamErdRows({ line, pathSdwt }) {
     PARQUET_CACHE_MAX_ENTRIES,
   )
 
-  return { filePath, rows }
+  return { filePath, latestDate, rows }
+}
+
+export function scopeSelfEquipmentRows(rows, { line, pathSdwt, mapping }) {
+  assertPathSegment("line", line)
+  assertPathSegment("pathSdwt", pathSdwt)
+  assertKnownMappingLineSdwt(mapping, { line, pathSdwt })
+
+  const displaySdwt = normalizeTextValue(mapping.sdwt_mapping[pathSdwt] ?? pathSdwt)
+  const candidateSdwts = [
+    normalizeScopeMatchValue(pathSdwt),
+    normalizeScopeMatchValue(displaySdwt),
+  ].filter(Boolean)
+  const mappingEntries = Object.keys(mapping.line_mapping).map((mappingPathSdwt) => ({
+    pathSdwt: mappingPathSdwt,
+    pathValue: normalizeScopeMatchValue(mappingPathSdwt),
+    displayValue: normalizeScopeMatchValue(mapping.sdwt_mapping[mappingPathSdwt] ?? mappingPathSdwt),
+  }))
+  const matchingSdwts = new Set(candidateSdwts.filter((candidate) => {
+    const owners = new Set(mappingEntries
+      .filter(({ pathValue, displayValue }) => pathValue === candidate || displayValue === candidate)
+      .map(({ pathSdwt: ownerPathSdwt }) => ownerPathSdwt))
+    return owners.size === 1 && owners.has(pathSdwt)
+  }))
+
+  return rows
+    .filter((row) => matchingSdwts.has(normalizeScopeMatchValue(row.sdwt)))
+    .map((row) => ({ ...row, line_rev: line, path_sdwt: pathSdwt, sdwt: displaySdwt }))
+}
+
+export function isSelfEquipmentDataPathAllowed(rows, {
+  dataDirectoryPath,
+  eqp,
+  latestDate,
+  sensor,
+  step,
+}) {
+  const normalizedPath = normalizeSelfEquipmentFilePath(dataDirectoryPath)
+  const normalizedEqp = normalizeSkipEqp(eqp)
+  return rows.some((row) => (
+    row.file_path === normalizedPath
+    && normalizeSkipEqp(row.eqp) === normalizedEqp
+    && (!latestDate || row.latest_date === latestDate)
+    && row.sensor === sensor
+    && row.step === step
+  ))
+}
+
+export async function authorizeSelfEquipmentDataPath({
+  dataDirectoryPath,
+  eqp,
+  latestDate,
+  line,
+  pathSdwt,
+  sensor,
+  step,
+}, {
+  readIndex = readLatestSelfEquipmentRows,
+  readMapping = readLineMapping,
+} = {}) {
+  try {
+    const [indexSource, mapping] = await Promise.all([readIndex(), readMapping()])
+    const scopedRows = scopeSelfEquipmentRows(indexSource.rows, { line, pathSdwt, mapping })
+    return isSelfEquipmentDataPathAllowed(scopedRows, {
+      dataDirectoryPath,
+      eqp,
+      latestDate: latestDate || indexSource.latestDate,
+      sensor,
+      step,
+    })
+  } catch {
+    return false
+  }
 }
 
 function uniqueCount(rows, column) {
@@ -202,8 +310,8 @@ export function buildSelfEquipmentPayload(rows, filters) {
     && (filters.includeAllSdwt || row.sdwt === filters.sdwt)
     && priorities.has(row.priority)
   ))
-  const steps = sortByLabel(aggregateBy(baseRows, "desc", (desc, stepRows) => ({
-    desc,
+  const steps = sortByLabel(aggregateBy(baseRows, "step", (step, stepRows) => ({
+    desc: step,
     rowCount: stepRows.length,
     equipmentCount: uniqueCount(stepRows, "eqp"),
   })), "desc")
@@ -215,7 +323,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
   const stepRows = selectedDesc === ALL_STEPS
     ? baseRows
     : selectedDesc
-    ? baseRows.filter((row) => row.desc === selectedDesc)
+    ? baseRows.filter((row) => row.step === selectedDesc)
     : []
   const eqpChannels = sortByRowCount(aggregateBy(stepRows, "eqp", (eqpCh, eqpChRows) => ({
     eqpCh,
@@ -333,23 +441,28 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
       return
     }
 
-    const [{ filePath, rows }, passRecords, sensorExclusionConfig] = await Promise.all([
-      readTeamErdRows(filters),
-      listPassHistoryRecords({ lineId: filters.line, sdwt: filters.sdwt }),
+    const [{ filePath, rows: sourceRows }, mapping, sensorExclusionConfig] = await Promise.all([
+      readLatestSelfEquipmentRows(),
+      readLineMapping(),
       readSensorExclusionConfig(),
     ])
-    const visibleRows = excludeRecentlySkippedRows(rows, passRecords)
+    const rows = scopeSelfEquipmentRows(sourceRows, { ...filters, mapping })
+    const trustedSdwt = normalizeTextValue(mapping.sdwt_mapping[filters.pathSdwt] ?? filters.pathSdwt)
+    const visibleRows = rows
     const sensorExclusion = excludeSensorRows(
       visibleRows,
       sensorExclusionConfig,
       "selfEquipment",
     )
-    const payload = buildSelfEquipmentPayload(sensorExclusion.rows, filters)
+    const payload = buildSelfEquipmentPayload(sensorExclusion.rows, {
+      ...filters,
+      sdwt: trustedSdwt,
+    })
     sendJson(res, 200, {
       ...payload,
       counts: {
         ...payload.counts,
-        excludedSkipRows: rows.length - visibleRows.length,
+        excludedSkipRows: 0,
         excludedSensorRows: sensorExclusion.excludedCount,
       },
       sourcePath: filePath,
@@ -382,10 +495,11 @@ export async function handleMyEqpEquipmentDataRequest(req, res, url) {
     }
 
     const userId = await resolveRegistrationUserId(remoteIp)
-    const [registrationRecords, mapping, sensorExclusionConfig] = await Promise.all([
+    const [registrationRecords, mapping, sensorExclusionConfig, indexSource] = await Promise.all([
       listMyEqpRegistrationRecords({ line: filters.line, knoxId: userId, activeOnly: true }),
       readLineMapping(),
       readSensorExclusionConfig(),
+      readLatestSelfEquipmentRows(),
     ])
     const pathBySdwt = new Map()
     Object.entries(mapping.line_mapping)
@@ -411,8 +525,15 @@ export async function handleMyEqpEquipmentDataRequest(req, res, url) {
     ))
 
     const [dataSources, passRecordGroups] = await Promise.all([
-      Promise.all(paths.map(async (pathSdwt) => ({
-        ...(await readTeamErdRows({ line: filters.line, pathSdwt })),
+      Promise.resolve(paths.map((pathSdwt) => ({
+        filePath: indexSource.filePath,
+        latestDate: indexSource.latestDate,
+        rows: scopeSelfEquipmentRows(indexSource.rows, {
+          line: filters.line,
+          pathSdwt,
+          sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt,
+          mapping,
+        }),
         pathSdwt,
         registrations: registrationsByPath.get(pathSdwt) ?? [],
       }))),
@@ -471,31 +592,38 @@ export async function handleMyEqpEquipmentDataRequest(req, res, url) {
   }
 }
 
-export function resolveErdDataFilePath(imagePath) {
-  const normalizedImagePath = imagePath.replaceAll("/pic_server2/", "/pic/")
-  const resolvedInputPath = resolve(normalizedImagePath)
-  const isDirectErdPath = resolvedInputPath.startsWith(`${ERD_FILE_ROOT}/`)
-  const isBackupPath = resolvedInputPath.startsWith(`${ERD_BACKUP_ROOT}/`)
+export function resolveErdDataFilePath(dataDirectoryPath) {
+  const normalizedDirectoryPath = normalizeSelfEquipmentFilePath(dataDirectoryPath)
+  const resolvedInputPath = resolve(normalizedDirectoryPath)
+  const isPicPath = resolvedInputPath.startsWith(`${PIC_FILE_ROOT}/`)
+  const isBackupPath = (
+    resolvedInputPath === ERD_BACKUP_ROOT
+    || resolvedInputPath.startsWith(`${ERD_BACKUP_ROOT}/`)
+  )
 
-  if (!isDirectErdPath && !isBackupPath) {
-    throw new Error("허용되지 않은 ERD 이미지 경로입니다.")
+  if (!isPicPath || isBackupPath) {
+    throw new Error("허용되지 않은 ERD 데이터 경로입니다.")
   }
 
-  const pathSegments = isDirectErdPath
-    ? relative(ERD_FILE_ROOT, resolvedInputPath).split(sep)
-    : []
+  const pathSegments = relative(PIC_FILE_ROOT, resolvedInputPath).split(sep)
+  const latestDate = pathSegments.find((segment) => SELF_EQUIPMENT_DATE_PATTERN.test(segment)) ?? ""
 
   return {
-    filePath: join(dirname(resolvedInputPath), "data.parquet"),
-    latestDate: pathSegments[0] ?? "",
-    sensor: pathSegments[pathSegments.length - 3] ?? "",
-    chStep: pathSegments[pathSegments.length - 2] ?? "",
+    filePath: join(resolvedInputPath, "data.parquet"),
+    latestDate,
+    sensor: "",
+    chStep: "",
   }
 }
 
-async function readErdScatterRows(filePath, axisColumn) {
+export function resolveErdHistoryFilePath(dataFilePath, eqp) {
+  assertPathSegment("eqp", normalizeEqp(eqp))
+  return join(dirname(dataFilePath), `${normalizeEqp(eqp)}.parquet`)
+}
+
+async function readErdScatterRows(filePath, axisColumn, { identity = false } = {}) {
   const fileStat = statSync(filePath)
-  const cacheKey = `${filePath}\u0000${axisColumn}`
+  const cacheKey = `${filePath}\u0000${axisColumn}\u0000${identity ? "identity" : "scatter"}`
   const cached = getLruEntry(erdScatterCache, cacheKey)
 
   if (cached?.mtimeMs === fileStat.mtimeMs && cached?.size === fileStat.size) {
@@ -508,7 +636,8 @@ async function readErdScatterRows(filePath, axisColumn) {
     const file = await asyncBufferFromFile(filePath)
     const columns = [
       "act_time",
-      "eqp_cb",
+      "eqp",
+      ...(identity ? ["eqp_cb"] : []),
       "eqp_id",
       "disp_name",
       "wafer_id",
@@ -622,7 +751,7 @@ export function buildErdScatterPayload(rows, {
   const normalizedEqp = normalizeEqp(eqp)
   const latestDateMs = parseDateTimeMs(latestDate)
   const chartPoints = rows.flatMap((row) => {
-    if (normalizeEqp(row.eqp_cb) !== normalizedEqp) return []
+    if (normalizeEqp(row.eqp) !== normalizedEqp) return []
     const actTime = normalizeText(row.act_time)
     const actTimeMs = parseDateTimeMs(actTime)
     const value = normalizeNumber(row[axisColumn])
@@ -685,6 +814,7 @@ export function buildErdIdentityPayload(rows, {
   const normalizedEqp = normalizeEqp(eqp)
   const normalizedWindowDays = Number.isInteger(windowDays) && windowDays > 0 ? windowDays : 0
   const validPoints = rows.flatMap((row) => {
+    if (normalizeEqp(row.eqp) !== normalizedEqp) return []
     const eqpCb = normalizeEqp(row.eqp_cb)
     const actTime = normalizeText(row.act_time)
     const actTimeMs = parseDateTimeMs(actTime)
@@ -750,7 +880,9 @@ export function buildErdIdentityPayload(rows, {
   }
 }
 
-export async function handleErdScatterDataRequest(req, res, url) {
+export async function handleErdScatterDataRequest(req, res, url, {
+  authorizeDataPath = authorizeSelfEquipmentDataPath,
+} = {}) {
   if (req.method !== "GET") {
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
     return
@@ -767,26 +899,51 @@ export async function handleErdScatterDataRequest(req, res, url) {
 
     const requestedSensor = url.searchParams.get("sensor")?.trim() ?? ""
     const requestedChStep = url.searchParams.get("chStep")?.trim() ?? ""
+    const requestedLatestDate = url.searchParams.get("latestDate")?.trim() ?? ""
+    const requestedLine = url.searchParams.get("line")?.trim() ?? ""
+    const requestedPathSdwt = url.searchParams.get("pathSdwt")?.trim() ?? ""
     const requestedDays = url.searchParams.get("days")?.trim() ?? ""
     const {
       filePath,
-      latestDate,
+      latestDate: pathLatestDate,
       sensor: pathSensor,
       chStep: pathChStep,
     } = resolveErdDataFilePath(imagePath)
+    if (requestedLatestDate && !SELF_EQUIPMENT_DATE_PATTERN.test(requestedLatestDate)) {
+      sendJson(res, 400, { ok: false, error: "latestDate 형식이 올바르지 않습니다." })
+      return
+    }
+    if (!requestedLine || !requestedPathSdwt || !requestedSensor || !requestedChStep) {
+      sendJson(res, 400, { ok: false, error: "line, pathSdwt, sensor와 chStep 조건이 필요합니다." })
+      return
+    }
+    const authorized = await authorizeDataPath({
+      dataDirectoryPath: imagePath,
+      eqp,
+      latestDate: requestedLatestDate,
+      line: requestedLine,
+      pathSdwt: requestedPathSdwt,
+      sensor: requestedSensor,
+      step: requestedChStep,
+    })
+    if (!authorized) {
+      sendJson(res, 403, { ok: false, error: "허용되지 않은 자설비 데이터 경로입니다." })
+      return
+    }
+    const latestDate = requestedLatestDate || pathLatestDate
     const sensor = requestedSensor || pathSensor
     const chStep = requestedChStep || pathChStep
     assertPathSegment("sensor", sensor)
     assertPathSegment("chStep", chStep)
     assertPathSegment("eqp", normalizeEqp(eqp))
-    const axisColumn = `${sensor}_${chStep}`
+    const axisColumn = `${sensor}*${chStep}`
     if (mode === "identity") {
       const windowDays = requestedDays ? Number(requestedDays) : 0
       if (!Number.isInteger(windowDays) || windowDays < 0 || windowDays > 30) {
         sendJson(res, 400, { ok: false, error: "동일성 차트 조회 기간은 0~30일 정수여야 합니다." })
         return
       }
-      const rows = await readErdScatterRows(filePath, axisColumn)
+      const rows = await readErdScatterRows(filePath, axisColumn, { identity: true })
       sendJson(res, 200, buildErdIdentityPayload(rows, {
         eqp,
         axisColumn,
@@ -796,7 +953,7 @@ export async function handleErdScatterDataRequest(req, res, url) {
       return
     }
     const rows = await readErdScatterRows(filePath, axisColumn)
-    const historyPath = join(dirname(filePath), `${normalizeEqp(eqp)}.parquet`)
+    const historyPath = resolveErdHistoryFilePath(filePath, eqp)
     let historyRows = []
     let historyError = ""
     try {

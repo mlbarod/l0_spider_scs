@@ -84,10 +84,13 @@ export async function fetchEqpAllSkipTargets({
   return (payload.rows ?? []).map((row) => ({ filePath: row.file_path }))
 }
 
-export async function fetchErdScatterData({ filePath, eqp, sensor, chStep }) {
+export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, latestDate, line, pathSdwt }) {
   const searchParams = new URLSearchParams({ path: filePath, eqp })
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
+  if (latestDate) searchParams.set("latestDate", latestDate)
+  if (line) searchParams.set("line", line)
+  if (pathSdwt) searchParams.set("pathSdwt", pathSdwt)
   const response = await fetch(`/api/erd-scatter-data?${searchParams.toString()}`, {
     headers: { Accept: "application/json" },
   })
@@ -100,10 +103,13 @@ export async function fetchErdScatterData({ filePath, eqp, sensor, chStep }) {
   return payload
 }
 
-export async function fetchErdIdentityData({ filePath, eqp, sensor, chStep, days, signal }) {
+export async function fetchErdIdentityData({ filePath, eqp, sensor, chStep, latestDate, line, pathSdwt, days, signal }) {
   const searchParams = new URLSearchParams({ path: filePath, eqp, mode: "identity" })
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
+  if (latestDate) searchParams.set("latestDate", latestDate)
+  if (line) searchParams.set("line", line)
+  if (pathSdwt) searchParams.set("pathSdwt", pathSdwt)
   if (days) searchParams.set("days", String(days))
   const response = await fetch(`/api/erd-scatter-data?${searchParams.toString()}`, {
     headers: { Accept: "application/json" },

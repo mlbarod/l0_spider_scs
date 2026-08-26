@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  getSelfEquipmentFileConnectionState,
   isLineMappingQueryReady,
   validateLineMappingPayload,
 } from "./mappingContract.mjs"
@@ -44,4 +45,19 @@ test("query가 성공하고 mapping 계약이 유효할 때만 ready로 판정�
     isError: false,
     data: { line_mapping: {}, sdwt_mapping: {} },
   }), false)
+})
+
+test("자설비 file 연결 상태는 loading, error, disabled, enabled를 구분한다", () => {
+  assert.equal(getSelfEquipmentFileConnectionState({ isSuccess: false, isError: false }), "loading")
+  assert.equal(getSelfEquipmentFileConnectionState({ isSuccess: false, isError: true }), "error")
+  assert.equal(getSelfEquipmentFileConnectionState({
+    isSuccess: true,
+    isError: false,
+    data: validMapping,
+  }), "disabled")
+  assert.equal(getSelfEquipmentFileConnectionState({
+    isSuccess: true,
+    isError: false,
+    data: { ...validMapping, capabilities: { selfEquipmentFileRead: true } },
+  }), "enabled")
 })

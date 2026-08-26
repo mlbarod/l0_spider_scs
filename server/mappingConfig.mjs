@@ -3,6 +3,9 @@ import { readFile } from "node:fs/promises"
 import { SPIDER_DATA_PATH_TEMPLATES } from "../src/config/spiderDataPaths.mjs"
 import { validateLineMappingPayload } from "../src/features/fdc-trend/api/mappingContract.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
+import {
+  getDataConnectionCapabilities,
+} from "./dataConnections.mjs"
 
 export const mappingConfigPath = process.env.MAPPING_CONFIG_PATH
   ?? SPIDER_DATA_PATH_TEMPLATES.mappingConfig
@@ -40,6 +43,13 @@ export async function requireLineMapping(mappingReader = readLineMapping) {
       MAPPING_CONFIG_UNAVAILABLE_CODE,
       "기준정보 매핑을 사용할 수 없습니다.",
     )
+  }
+}
+
+export function buildMappingConfigResponse(mapping, environment = process.env) {
+  return {
+    ...mapping,
+    capabilities: getDataConnectionCapabilities(environment),
   }
 }
 
@@ -85,7 +95,7 @@ export async function handleMappingConfigRequest(req, res) {
   }
 
   try {
-    const payload = await readLineMapping()
+    const payload = buildMappingConfigResponse(await readLineMapping())
     res.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-cache",

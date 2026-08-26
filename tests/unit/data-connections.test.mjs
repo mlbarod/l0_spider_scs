@@ -3,7 +3,9 @@ import test from "node:test"
 
 import {
   areDataConnectionsEnabled,
+  areSelfEquipmentDataConnectionsEnabled,
   blockDisabledDataRequest,
+  getDataConnectionCapabilities,
 } from "../../server/dataConnections.mjs"
 
 function createResponse() {
@@ -26,6 +28,27 @@ test("SCS 데이터 연결은 명시적으로 1을 설정하기 전까지 비활
   assert.equal(areDataConnectionsEnabled({ SCS_DATA_CONNECTIONS_ENABLED: "0" }), false)
   assert.equal(areDataConnectionsEnabled({ SCS_DATA_CONNECTIONS_ENABLED: "true" }), false)
   assert.equal(areDataConnectionsEnabled({ SCS_DATA_CONNECTIONS_ENABLED: "1" }), true)
+})
+
+test("자설비 파일 연결도 별도 환경변수가 정확히 1일 때만 활성화된다", () => {
+  assert.equal(areSelfEquipmentDataConnectionsEnabled({}), false)
+  assert.equal(areSelfEquipmentDataConnectionsEnabled({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "true" }), false)
+  assert.equal(areSelfEquipmentDataConnectionsEnabled({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }), true)
+})
+
+test("mapping capability는 전체 gate에서도 호환되지 않는 Self DB 기능을 fail-close한다", () => {
+  assert.deepEqual(getDataConnectionCapabilities({}), {
+    selfEquipmentFileRead: false,
+    selfEquipmentDb: false,
+  })
+  assert.deepEqual(getDataConnectionCapabilities({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }), {
+    selfEquipmentFileRead: true,
+    selfEquipmentDb: false,
+  })
+  assert.deepEqual(getDataConnectionCapabilities({ SCS_DATA_CONNECTIONS_ENABLED: "1" }), {
+    selfEquipmentFileRead: true,
+    selfEquipmentDb: false,
+  })
 })
 
 test("비활성 상태의 API 요청은 handler 실행 전에 503으로 차단된다", () => {
@@ -110,4 +133,39 @@ test("정적 UI 요청과 명시적으로 활성화한 API 요청은 기존 흐�
   ), false)
   assert.equal(staticResponse.statusCode, null)
   assert.equal(enabledResponse.statusCode, null)
+})
+
+test("자설비 연결은 필요한 read API만 열고 다른 App과 write API는 계속 차단한다", () => {
+  const environment = { SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }
+  for (const pathname of [
+    "/api/mapping-config",
+    "/api/self-equipment-data",
+    "/api/erd-scatter-data",
+  ]) {
+    assert.equal(blockDisabledDataRequest(
+      { method: "GET", url: pathname, headers: { host: "localhost" } },
+      createResponse(),
+      environment,
+    ), false, pathname)
+  }
+
+  for (const [method, pathname] of [
+    ["GET", "/api/dashboard-data"],
+    ["GET", "/api/commonality-data"],
+    ["GET", "/api/erd-file"],
+    ["GET", "/api%2Fself-equipment-data"],
+    ["HEAD", "/api/self-equipment-data"],
+    ["HEAD", "/api/erd-scatter-data"],
+    ["POST", "/api/pass-history"],
+    ["POST", "/api/hit-history"],
+  ]) {
+    const response = createResponse()
+    assert.equal(blockDisabledDataRequest(
+      { method, url: pathname, headers: { host: "localhost" } },
+      response,
+      environment,
+      () => {},
+    ), true, `${method} ${pathname}`)
+    assert.equal(response.statusCode, 503)
+  }
 })

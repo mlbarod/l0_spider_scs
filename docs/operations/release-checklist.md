@@ -125,7 +125,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 
 - [ ] `HOST`, `PORT`, `LIVE_RELOAD`, `BUILD_ON_START`의 이름과 적용 mode를 확인했다.
 - [ ] `VITE_SITE_URL`에 secret이 없고 host·HMR 영향이 검토됐다.
-- [ ] `MAPPING_CONFIG_PATH`, `COMMONALITY_ROOT_PATH`, `COMMON_COMMONALITY_ROOT_PATH`, `SPIDER_DASHBOARD_PATH_ROOT` 영향이 검토됐다.
+- [ ] `MAPPING_CONFIG_PATH`, `COMMONALITY_ROOT_PATH`, `COMMON_COMMONALITY_ROOT_PATH`, `SPIDER_DASHBOARD_PATH_ROOT`, `SCS_SELF_EQUIPMENT_PATH_ROOT`, `SENSOR_EXCLUSION_CONFIG_PATH` 영향이 검토됐다.
 - [ ] `DB_INFO_PATH` 위치와 service user read 권한을 값 노출 없이 확인했다.
 - [ ] 실제 환경값을 CLI output, journal, ticket, 문서와 Git에 기록하지 않았다.
 - [ ] tracked `.env.example` 부재를 알고 실제 주입 source와 owner를 확인했다.
@@ -140,7 +140,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 
 - [ ] 실제 file을 수정·순회하지 않고 코드 path contract와 변경 diff를 검토했다.
 - [ ] Dashboard detail·stats·mapping 경로와 latest 선택 규칙을 유지했다.
-- [ ] Self·MY EQP `df_path.parquet`, sibling `data.parquet`·history·image 관계를 확인했다.
+- [ ] 일반 Self 최신 `path_xian/{latest_date}`, `file_path/data.parquet`, `file_path/{eqp}.parquet` 관계와 `pic_server2` 정규화를 확인하고 MY EQP 소비가 `Blocked`임을 유지했다.
 - [ ] 동일성 `erd_commonality`, 공통부 동일성 `path_common_commonality`와 공통부 `path_common`·common data/image 관계를 확인했다.
 - [ ] `latest_date`, `line`, `sdwt`, `grade`, `step_seq`, `step_desc`, `eqp_model`, `ppid`, `sensor`, `ch_step`, `eqp`, `ver` 전파 영향을 검토했다.
 - [ ] Parquet column·type·nullable·dynamic axis 변경을 producer와 consumer가 함께 승인했다.
@@ -165,7 +165,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 ## 10. STEP 딥링크·HMAC
 
 - [ ] 일반 `/self-equipment` link의 `line`, 반복 `sdwt`, 반복 `grade`가 보존된다.
-- [ ] MY EQP의 `sdwt=MY_EQP`, `step=ALL`, `eqpCh`가 보존된다.
+- [ ] legacy MY EQP template의 `sdwt=MY_EQP`, `step=ALL`, `eqpCh` 형식은 보존되며 현재 Self 화면에서는 `selfEquipmentDb=false`로 소비되지 않는다.
 - [ ] `eqpCh`와 호환 alias `eqp_ch`의 parser 우선순위가 유지된다.
 - [ ] URL encoding·`URLSearchParams` round trip 결과를 확인했다.
 - [ ] `step=ALL`을 HMAC token으로 검증하거나 만료시키지 않는다.
@@ -228,18 +228,19 @@ service·unit·port가 확인되지 않으면 실제 배포 단계로 진행하�
 
 ## 14. 배포 후 검증
 
-- [ ] 이번 배포가 SCS UI shell인지 데이터 연결 승인 배포인지 release 기록에 명시했다.
-- [ ] UI shell이면 `SCS_DATA_CONNECTIONS_ENABLED`가 미설정 또는 `1`이 아님을 값 노출 없이 확인했다.
+- [ ] 이번 배포가 SCS UI shell, 자설비 file read 부분 연결, 전체 데이터 연결 중 어느 범위인지 release 기록에 명시했다.
+- [ ] UI shell이면 두 gate가 비활성인지, 자설비 부분 연결이면 Self gate만 활성인지 값 노출 없이 확인했다.
 - [ ] UI shell이면 `/api`와 `/api/*`의 `503 DATA_CONNECTIONS_DISABLED`, `requestId`, `HEAD` 무본문을 확인했다.
+- [ ] 자설비 부분 연결이면 mapping GET/HEAD와 Self·scatter GET만 통과하고 image·다른 App·DB API는 503이다.
 - [ ] service가 active이고 restart count가 증가하지 않는다.
 - [ ] 승인된 port에 예상 process 하나가 listen한다.
 - [ ] `/` liveness가 정상이다.
 - [ ] 전용 health endpoint가 없으므로 dependency readiness를 별도로 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 Dashboard 성공·빈 상태와 latest 시각을 확인했다.
-- [ ] 데이터 연결 승인 배포인 경우에만 Self Equipment와 MY EQP의 filter·chart·등록 read 흐름을 확인했다.
+- [ ] 자설비 부분 연결 배포에서는 일반 Self filter·chart read만 확인하고, MY EQP·SKIP·HIT·click 요청이 발생하지 않으며 `selfEquipmentDb=false`임을 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 동일성·공통부 image·scatter의 정상·부분 결과를 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 DB current-user·등록 read 흐름을 확인했다.
-- [ ] `step=ALL`, `eqpCh` 기존 link가 정상이다.
+- [ ] `step=ALL`, `eqpCh` legacy link 형식은 보존되며 현재 Self 화면에서 MY EQP 조회로 활성화되지 않는다.
 - [ ] Mailing 등록·template asset을 확인하고 실제 sender 상태는 외부 owner가 판정했다.
 - [ ] journal·log에 새 fatal·반복 `500`, secret·개인정보·내부 path 노출이 없다.
 - [ ] DB test write, 실제 mail, `/appdata` 변경 없이 검증했다.

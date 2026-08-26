@@ -97,7 +97,7 @@
 | 화면 | 브라우저 라우트 | 컴포넌트 | API 또는 조회 함수 | 사용자 자료 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | SPIDER 메인·대시보드 | `/`, `/fdc_trend` | `L0SpiderHomePage`, `LineAnomalyDashboard` | `fetchDashboardSummary` → `/api/dashboard-data` | 매뉴얼 2장, 이미지 `01`, `02` | Confirmed | `routes.jsx:11-15,58-67`; `L0SpiderHomePage.jsx:181-188`; `LineAnomalyDashboard.jsx:326-340` |
-| 자설비·MY EQP·SKIP LIST | `/self-equipment`, `/fdc_trend/self-equipment` | `FdcTrendPage` | mapping/current user/self equipment/My EQP/pass/hit/click/scatter/file APIs | 매뉴얼 4장, 이미지 `03`~`07` | Confirmed | `routes.jsx:16-19`; `FdcTrendPage.jsx:1440-1598` |
+| 자설비 file-only | `/self-equipment`, `/fdc_trend/self-equipment` | `FdcTrendPage` | mapping/self equipment/scatter API; current user·MY EQP·pass/hit/click/file은 dormant | 매뉴얼 4장, 이미지 `03`~`07` | 코드 Confirmed; 운영 file Unknown | `routes.jsx`; `FdcTrendPage.jsx`; `dataConnections.mjs` |
 | Mailing·My EQP 등록 | `/registration`; alias `/my-eqp`, `/recipients` | `RegistrationHubPage` 내부 두 등록 page | mapping/current user/reference/registration APIs | 매뉴얼 5장 | Confirmed | `routes.jsx:20-27,40-43`; `RegistrationHubPage.jsx:55-59` |
 | 동일성 이상감지 | `/matching-anomaly` | `CommonalityAnomalyPage` | mapping, `/api/commonality-data`, image, click history | 매뉴얼 6.1, 이미지 `08` | Confirmed | `routes.jsx:28-31`; `CommonalityAnomalyPage.jsx:214-245` |
 | 공통부 이상감지 | `/common-anomaly` | `CommonAnomalyPage` | mapping/current user/common anomaly/pass history/scatter/image/click history | 매뉴얼 6.2, 이미지 `09`, `10` | Confirmed | `routes.jsx:32-35`; `CommonAnomalyPage.jsx:288-352` |
@@ -111,22 +111,22 @@
 | 메서드 | 경로 | 핸들러 | 주요 데이터 소스 | 프론트엔드 소비 위치 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | GET, HEAD | `/api/dashboard-data` | `handleDashboardDataRequest` | dashboard detail/stats Parquet, mapping JSON | `dashboardApi.js`, 메인·대시보드 | Confirmed | `server.mjs:134-139`; `dashboardData.mjs:712-825` |
-| GET | `/api/current-user` | `handleCurrentUserRequest` | `v_ipms_ip_info`, `user_info` | 자설비·등록·공통부 | Confirmed | `server.mjs:141-146`; `currentUser.mjs:102-120` |
-| POST | `/api/hit-history` | `handleHitHistoryRequest` | `hit_history` | 자설비 이력저장 | Confirmed | `server.mjs:148-153`; `hitHistoryApi.js:4` |
-| POST | `/api/clicked-category-history` | `handleClickedCategoryHistoryRequest` | `clicked_category_history` | 자설비·동일성·공통부 최종 필터 | Confirmed | `server.mjs:155-160`; `clickedCategoryHistoryApi.js:12` |
+| GET | `/api/current-user` | `handleCurrentUserRequest` | `v_ipms_ip_info`, `user_info` | 등록·공통부; Self query dormant | endpoint Confirmed | `server.mjs`; `currentUser.mjs` |
+| POST | `/api/hit-history` | `handleHitHistoryRequest` | `hit_history` | Self UI action dormant | endpoint Confirmed; Self 화면 Blocked | `server.mjs`; `hitHistoryApi.js` |
+| POST | `/api/clicked-category-history` | `handleClickedCategoryHistoryRequest` | `clicked_category_history` | 동일성·공통부; Self mutation dormant | endpoint Confirmed | `server.mjs`; `clickedCategoryHistoryApi.js` |
 | GET, HEAD | `/api/latest-commonality-path` | `handleLatestCommonalityPathRequest` | 동일성 최신 일시 디렉터리명 | `latestCommonalityPathApi.js` | Confirmed | `server.mjs:162-167`; `latestCommonalityPath.mjs:36-89` |
 | GET | `/api/commonality-data` | `handleCommonalityDataRequest` | `erd_commonality` 디렉터리 구조 | `CommonalityAnomalyPage` | Confirmed | `server.mjs:169-174`; `commonalityData.mjs:225-253` |
 | GET, HEAD | `/api/commonality-image` | `handleCommonalityImageRequest` | 허용된 `img.png` | `commonalityApi.js` | Confirmed | `server.mjs:195-200`; `commonalityData.mjs:256-290` |
 | GET | `/api/common-anomaly-data` | `handleCommonAnomalyDataRequest` | `path_common/.../df_path.parquet`, pass history | `CommonAnomalyPage` | Confirmed | `server.mjs:176-181`; `commonAnomalyData.mjs:355-386` |
 | GET | `/api/common-anomaly-scatter-data` | `handleCommonAnomalyScatterRequest` | common `data.parquet` | `CommonAnomalyPage` | Confirmed | `server.mjs:183-188`; `commonAnomalyData.mjs:569-615` |
 | GET, HEAD | `/api/common-anomaly-image` | `handleCommonAnomalyImageRequest` | common PNG | `commonAnomalyApi.js` | Confirmed | `server.mjs:190-193`; `commonAnomalyData.mjs:389-415` |
-| GET, POST, DELETE | `/api/pass-history` | `handlePassHistoryRequest` | `pass_history` | 자설비·공통부 | Confirmed | `server.mjs:202-207`; `passHistoryApi.js:13-59` |
+| GET, POST, DELETE | `/api/pass-history` | `handlePassHistoryRequest` | `pass_history` | 공통부; Self UI dormant | endpoint Confirmed | `server.mjs`; `passHistoryApi.js` |
 | GET, HEAD | `/api/mapping-config` | `handleMappingConfigRequest` | `mapping_config.json` | 모든 주요 필터 화면 | Confirmed | `server.mjs:209-214`; `mappingConfig.mjs:26-69` |
 | GET, HEAD | `/api/my-eqp-reference` | `handleMyEqpReferenceRequest` | `erdtsum_info` | `MyEqpRegistrationPage` | Confirmed | `server.mjs:216-221`; `myEqpReferenceApi.js:4` |
 | GET, POST, DELETE | `/api/my-eqp-registration` | `handleMyEqpRegistrationRequest` | `myeqp_regist` | 등록 화면·MY EQP 조회 | Confirmed | `server.mjs:223-228`; `myEqpRegistration.mjs:242-301` |
 | GET, POST, DELETE | `/api/mailing-registration` | `handleMailingRegistrationRequest` | `email` | `MailingRegistrationPage` | Confirmed | `server.mjs:230-235`; `mailingRegistration.mjs:160-217` |
-| GET | `/api/self-equipment-data` | `handleSelfEquipmentDataRequest` | team `df_path.parquet`, pass history | `FdcTrendPage` | Confirmed | `server.mjs:237-242`; `selfEquipmentData.mjs:321-353` |
-| GET | `/api/my-eqp-equipment-data` | `handleMyEqpEquipmentDataRequest` | active `myeqp_regist`, team path Parquet | `FdcTrendPage` | Confirmed | `server.mjs:244-249`; `selfEquipmentData.mjs:356-385` |
+| GET | `/api/self-equipment-data` | `handleSelfEquipmentDataRequest` | 최신 `path_xian/{latest_date}`; Self DB history 미결합 | `FdcTrendPage` | 코드 Confirmed; 운영 file Unknown | `server.mjs`; `selfEquipmentData.mjs` |
+| GET | `/api/my-eqp-equipment-data` | `handleMyEqpEquipmentDataRequest` | dormant legacy endpoint; SCS Self UI capability에서 비활성 | 현재 화면 미호출 | Partial / DB 식별 계약 Unknown | `server.mjs`; `dataConnections.mjs`; `FdcTrendPage.jsx` |
 | GET | `/api/erd-scatter-data` | `handleErdScatterDataRequest` | ERD `data.parquet` 및 history Parquet | `FdcTrendPage` | Confirmed | `server.mjs:251-256`; `selfEquipmentData.mjs:715-800` |
 | GET, HEAD | `/api/erd-file` | `handleErdFileRequest` | 허용된 ERD 이미지 | `selfEquipmentApi.js` | Confirmed | `server.mjs:258-260`; `selfEquipmentData.mjs:803-834` |
 | 해당 없음 | health/status API | 발견하지 못함 | 해당 없음 | 해당 없음 | Unknown | `server.mjs:134-260` route 목록 |
@@ -140,8 +140,8 @@
 | 화면 | 라우트 | 프론트엔드 코드 | API | 백엔드 코드 | 데이터 경로 또는 DB | 데이터 없음 처리 | 상태 | 근거 |
 |---|---|---|---|---|---|---|---|---|
 | 메인 대시보드 | `/` | `dashboardApi.js`, `LineAnomalyDashboard.jsx` | `/api/dashboard-data` | `dashboardData.mjs` | `path/{latest_date}`, `stats/{latest_date}_spider_step_stats.parquets`, mapping JSON | 기간 내 없는 날짜는 추이 0건; 비교 파일 없으면 `null`; 전체 root/형식 오류는 오류 응답 | Confirmed | `dashboardData.mjs:664-780,794-825`; `dashboardData.test.mjs:186-200,245-278` |
-| 자설비 | `/self-equipment` | `FdcTrendPage.jsx`, `selfEquipmentApi.js` | self equipment, scatter, file, pass/hit/click APIs | `selfEquipmentData.mjs` 및 history handlers | `path/{line}/{sdwt}/df_path.parquet` → ERD `data.parquet`/PNG; DB history | 필수 필터 누락 400, 읽기 실패 500, 이미지 없음 404 | Confirmed | `selfEquipmentData.mjs:308-353,803-834`; `spiderDataPaths.mjs:4,13` |
-| MY EQP | `/self-equipment?sdwt=MY_EQP...` | `FdcTrendPage.jsx` | My EQP registration/equipment APIs | `myEqpRegistration.mjs`, `selfEquipmentData.mjs` | active `myeqp_regist` + team path Parquet + ERD | 등록·사용자·Line 조건 오류를 상태 코드로 반환 | Confirmed | `FdcTrendPage.jsx:1491-1557`; `selfEquipmentData.mjs:356-385` |
+| 자설비 | `/self-equipment` | `FdcTrendPage.jsx`, `selfEquipmentApi.js` | self equipment, scatter API | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}` → row `file_path/data.parquet`, `file_path/{eqp}.parquet` | 필수 scope 누락 400, 불일치 403, 읽기 실패 500 | 코드 Confirmed; 운영 file Unknown | `selfEquipmentData.mjs`; `spiderDataPaths.mjs` |
+| MY EQP | `/self-equipment?sdwt=MY_EQP...` | `FdcTrendPage.jsx` | 현재 SCS Self capability에서 미호출 | legacy handler 보존 | 새 7-column index에 기존 `ver` 식별자가 없음 | 화면 fail-close Confirmed; 재연결 계약 Unknown | `dataConnections.mjs`; `FdcTrendPage.jsx`; `selfEquipmentData.mjs` |
 | 동일성 | `/matching-anomaly` | `CommonalityAnomalyPage.jsx`, `commonalityApi.js` | commonality data/image | `latestCommonalityPath.mjs`, `commonalityData.mjs` | `erd_commonality/{latest_date}/.../{sensor}_{ch_step}/img.png` | 최신 날짜/SDWT 디렉터리 없음 404, 이미지 없음 404 | Confirmed | `commonalityData.mjs:83-130,225-290`; `spiderDataPaths.mjs:9-10` |
 | 공통부 | `/common-anomaly` | `CommonAnomalyPage.jsx`, `commonAnomalyApi.js` | common anomaly data/scatter/image, pass history | `commonAnomalyData.mjs` | `path_common/{line}/{sdwt}/df_path.parquet` → common `data.parquet`/PNG + DB | 필수 필터 누락 400, 경로 읽기 실패 500, 이미지 없음 404 | Confirmed | `commonAnomalyData.mjs:325-415,569-615`; `spiderDataPaths.mjs:14-16` |
 | Mailing 등록 | `/registration` | `MailingRegistrationPage.jsx` | mapping/current user/mailing registration | `mailingRegistration.mjs` + Python helper | `email` DB table | 등록 validation·DB 오류 처리는 확인됨; 실제 메일 데이터 없음 처리는 별도 `Unknown` | Confirmed | `MailingRegistrationPage.jsx:214-340`; `mailingRegistration.mjs:160-217` |

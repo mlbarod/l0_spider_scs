@@ -30,7 +30,7 @@ import {
 } from "./server/selfEquipmentData.mjs"
 
 const STAGING_HOST = "stg.plane.samsungds.net"
-const MEM_ETCH_COMMON_HOST = "mem-etch-common.samsungds.net"
+const MEM_ETCH_COMMON_HOST = "mem-etch-spider-scs.samsungds.net"
 const siteHost = process.env.VITE_SITE_URL
   ? process.env.VITE_SITE_URL.replace(/^https?:\/\//, "")
       .split("/")[0]

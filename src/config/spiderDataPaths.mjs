@@ -12,6 +12,8 @@ export const SPIDER_DATA_PATH_TEMPLATES = Object.freeze({
   commonCommonalityImage: `${PIC_ROOT}/path_common_commonality/{latest_date}/{sdwt}/{eqp_model}/{grade}/{sensor}@{ch_step}/img.png`,
   backupImage: `${PIC_ROOT}/backup/#appdata#abnormal_trend#pic#erd#{latest_date}#{sdwt}#{step_desc}#{ver}#{ppid}#{grade}#{sensor}#{ch_step}#{eqp}.png`,
   latestDateFile: `${PIC_ROOT}/path/{latest_date}`,
+  selfEquipmentIndexRoot: `${PIC_ROOT}/path_xian`,
+  selfEquipmentIndex: `${PIC_ROOT}/path_xian/{latest_date}`,
   teamErdPath: `${PIC_ROOT}/path/{line}/{sdwt}/df_path.parquet`,
   commonAnomalyPath: `${PIC_ROOT}/path_common/{line}/{sdwt}/df_path.parquet`,
   commonAnomalyData: `${PIC_ROOT}/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/data.parquet`,
@@ -72,6 +74,12 @@ export function buildBackupImagePath(values) {
 
 export function buildLatestDateFilePath(latestDate) {
   return fillPathTemplate(SPIDER_DATA_PATH_TEMPLATES.latestDateFile, { latest_date: latestDate })
+}
+
+export function buildSelfEquipmentIndexPath(latestDate) {
+  return fillPathTemplate(SPIDER_DATA_PATH_TEMPLATES.selfEquipmentIndex, {
+    latest_date: latestDate,
+  })
 }
 
 export function buildTeamErdPath({ line, sdwt }) {

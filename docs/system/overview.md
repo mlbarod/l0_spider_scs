@@ -19,7 +19,8 @@
 
 L0 Spider는 L0 공정의 이상감지 결과를 Line, SDWT, STEP, 설비와 sensor 조건으로 조회하는 웹서비스다.
 사용자는 메인 대시보드에서 Line별 현황을 확인하고, 자설비·동일성·공통부 화면에서 Parquet 기반 차트와 분석 이미지를 상세 조회한다.
-개인 모니터링 설비인 MY EQP, SKIP·HIT·클릭 이력, Mailing 수신 조건을 DB에 관리하는 기능도 제공한다.
+MY EQP·Mailing 조건 등록과 비-Self App의 SKIP·HIT·클릭 이력은 DB에 관리한다. 현재
+자설비 화면의 MY EQP·SKIP·HIT·클릭 이력은 새 DB 식별 계약이 없어 `Blocked`다.
 React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와 이미지 제공을 담당하며, DB 작업은 Python helper를 통해 수행한다.
 메일용 요약 집계와 HTML 템플릿은 확인되지만 실제 메일 renderer, scheduler와 sender는 현재 저장소에서 확인되지 않았다.
 
@@ -28,7 +29,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 관점 | 목적 | 상태 |
 |---|---|---|
 | 업무 | 분산된 이상감지 결과를 Line·설비 조건별로 조회하고 대시보드와 상세 화면의 기준을 연결한다. | Confirmed |
-| 사용자 | 현황에서 차트·이미지로 이동하고 SKIP·이력을 남기며, MY EQP·Mailing 조건과 딥링크를 사용한다. | Confirmed |
+| 사용자 | 현황에서 차트·이미지로 이동하고 비-Self SKIP·이력을 남기며 MY EQP·Mailing 조건을 등록한다. Self의 DB 기능과 MY EQP 딥링크 소비는 현재 `Blocked`다. | 부분 `Confirmed`; Self DB `Blocked` |
 | 운영·유지보수 | 기존 동작과 API 호환성을 보존하고 화면·API·데이터 근거와 운영 자원 비의존 Core 검증을 축적한다. | 프로젝트 운영 정책 |
 
 ## 4. 주요 사용자와 사용 시나리오
@@ -40,7 +41,9 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 메일 수신 사용자 | 요약 결과 확인과 상세 화면 재진입 | Mailing Report와 딥링크 | Documented |
 | 운영·유지보수 담당자 | 배포, 데이터·DB·계약과 장애 관리 | 환경·운영 문서와 Core Harness | Inferred |
 
-대표 시나리오는 대시보드 현황 확인, Self Equipment 상세 조회, MY EQP 조회, STEP·장비 조건 딥링크 진입, Mailing 조건 등록과 요약 메일 확인이다.
+대표 시나리오는 대시보드 현황 확인, 일반 Self Equipment 상세 조회, 일반 STEP·장비 조건
+딥링크 진입, MY EQP·Mailing 조건 등록과 요약 메일 확인이다. Self MY EQP 조회는 현재
+`Blocked`다.
 조직명, 직무별 권한 체계와 별도 로그인 역할은 현재 자료로 확인되지 않았다.
 
 ## 5. 주요 기능
@@ -48,7 +51,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 기능 | 사용자에게 제공하는 결과 | 주요 진입점 | 상세 문서 |
 |---|---|---|---|
 | Line 대시보드 | 최신 KPI, Line별 건수와 기간 추이 | `/`, `GET /api/dashboard-data` | [dashboard.md](../features/dashboard.md) — `Active Baseline` |
-| Self Equipment·MY EQP | 조건별 Scatter·동일성 차트와 SKIP/HIT 기능 | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) — `Active Baseline` |
+| Self Equipment | 일반 조건별 Scatter·동일성 차트와 변경점 이력; MY EQP·SKIP·HIT·클릭은 미제공 | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) — file read `Confirmed`, Self DB `Blocked` |
 | 동일성 이상감지 | STEP·sensor 조건별 분석 이미지 | `/matching-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
 | 공통부 이상감지 | 공통부 이미지와 설비 비교 차트 | `/common-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
 | 공통부 동일성 이상감지 | EQP_MODEL·sensor 조건별 공통부 분석 이미지 | `/common-commonality-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |

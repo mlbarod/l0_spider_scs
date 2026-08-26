@@ -6,7 +6,11 @@ import { fileURLToPath } from "node:url"
 
 import Ajv2020 from "ajv/dist/2020.js"
 
-import { validateLineMappingPayload } from "../../src/features/fdc-trend/api/mappingContract.mjs"
+import {
+  isSelfEquipmentDbEnabled,
+  validateLineMappingPayload,
+} from "../../src/features/fdc-trend/api/mappingContract.mjs"
+import { buildMappingConfigResponse } from "../../server/mappingConfig.mjs"
 
 const testDirectory = dirname(fileURLToPath(import.meta.url))
 const schemaPath = resolve(testDirectory, "../../harness/contracts/mapping-config.schema.json")
@@ -21,6 +25,21 @@ const validMapping = {
 test("synthetic mapping success payload가 Schema와 runtime 계약을 만족한다", () => {
   assert.equal(validate(validMapping), true, JSON.stringify(validate.errors))
   assert.deepEqual(validateLineMappingPayload(validMapping), validMapping)
+})
+
+test("mapping capability는 Schema를 만족하고 DB 기능을 fail-close한다", () => {
+  const fileOnlyMapping = buildMappingConfigResponse(validMapping, {
+    SCS_SELF_EQUIPMENT_DATA_ENABLED: "1",
+  })
+  const fullMapping = buildMappingConfigResponse(validMapping, {
+    SCS_DATA_CONNECTIONS_ENABLED: "1",
+  })
+
+  assert.equal(validate(fileOnlyMapping), true, JSON.stringify(validate.errors))
+  assert.equal(validate(fullMapping), true, JSON.stringify(validate.errors))
+  assert.equal(isSelfEquipmentDbEnabled(fileOnlyMapping), false)
+  assert.equal(isSelfEquipmentDbEnabled(fullMapping), false)
+  assert.equal(isSelfEquipmentDbEnabled(validMapping), false)
 })
 
 test("빈 line mapping과 잘못된 value type을 거부한다", () => {
