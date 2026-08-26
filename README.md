@@ -295,27 +295,16 @@ My EQP 딥링크는 STEP 이름을 URL에 노출하지 않고 항상 `step=ALL`�
 
 ## Data References
 
-`latest_date`는 `/appdata/abnormal_trend/pic/path`에 있는 파일명 중
-`yyyy-mm-dd hh:mm:ss` 형식과 일치하는 가장 최신 파일명으로 결정한다.
+아래 표는 다른 서버에 별도 서비스할 자설비 이상감지 App의 신규 데이터 연결 기준이다.
+실제 파일 연결과 운영 데이터 검증은 아직 수행하지 않았다.
 
-자설비 Scatter chart의 ERD 데이터 경로는 `df_path.parquet`의 `file_path`에서
-부모 경로를 유지하고 마지막 `/` 뒤 파일명만 `data.parquet`으로 바꾸어 사용한다.
-
-| 구분 | 참조 파일 | 경로 | 참조 컬럼/키 |
+| 구분 | 참조 파일 | 참조 경로 | 참조 컬럼/키 |
 | --- | --- | --- | --- |
-| ERD 이상감지 데이터 | `data.parquet` | `/appdata/abnormal_trend/pic/erd/{latest_date}/{sdwt}/{step_desc}/{ver}/{ppid}/{grade}/{sensor}/{ch_step}/data.parquet` | `act_time` (x축), `{sensor}_{ch_step}` (y축), `eqp_cb` (차트별 EQP 필터), `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` (hover 표시) |
-| EQP 변경점 이력 | `{eqp}.parquet` | ERD `data.parquet`과 같은 디렉터리의 `{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
-| stats 파일 | `{latest_date}_spider_step_stats.parquets` | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | `exec_date`, `recipe_id`, `priority`, `ng`, `total` |
-| V제외 stats 파일 | `{latest_date}_spider_step_stats_except_v.parquets` | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats_except_v.parquets` | 미정 (개발하면서 순차 정의) |
-| 동일성 기준 이상 감지 그래프 | `img.png` | `/appdata/abnormal_trend/pic/erd_commonality/{latest_date}/{sdwt}/{grade}/{step_seq}/{step_desc}/{ppid}/{ppid}/{sensor}_{ch_step}/img.png` | 미정 (개발하면서 순차 정의) |
-| 공통부 동일성 기준 이상 감지 그래프 | `img.png` | `/appdata/abnormal_trend/pic/path_common_commonality/{latest_date}/{sdwt}/{eqp_model}/{grade}/{sensor}@{ch_step}/img.png` | 해당 없음 (이미지 파일) |
-| 이상감지 이력 이미지 | `#appdata#abnormal_trend#pic#erd#{latest_date}#{sdwt}#{step_desc}#{ver}#{ppid}#{grade}#{sensor}#{ch_step}#{eqp}.png` | `/appdata/abnormal_trend/pic/backup/#appdata#abnormal_trend#pic#erd#{latest_date}#{sdwt}#{step_desc}#{ver}#{ppid}#{grade}#{sensor}#{ch_step}#{eqp}.png` | 해당 없음 (이미지 파일) |
-| `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path/{latest_date}` | `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` |
-| 분임조별 ERD 이상감지 경로 데이터 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev` |
-| 공통부 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path_common/{line}/{sdwt}/df_path.parquet` | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` |
-| 공통부 이상감지 데이터 | `data.parquet` | `/appdata/abnormal_trend/pic/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/data.parquet` | `eqp_id`, `disp_name`, `lotid`, `wafer_id`, `act_time` (x축), `{sensor}_{ch_step}` (y축), `eqp_cb` (차트별 EQP 필터) |
-| 공통부 이상감지 이미지 | `{eqp_cb}.png` | `/appdata/abnormal_trend/pic/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/{eqp_cb}.png` | 해당 없음 (메인 카드 이미지 출력) |
-| 기준정보 매핑 | `mapping_config.json` | `/appdata/l0_spider/mapping_config.json` | `root.line_mapping` (`key`: SDWT 식별자, `value`: 라인), `root.sdwt_mapping` (`key`: SDWT 식별자, `value`: 표시명, key가 없으면 원본 SDWT 사용) |
+| `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
+| ERD 이상감지 경로 테이블 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` |
+| 자설비 이상감지 단일설비 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), `{sensor}*{ch_step}` (y축), `eqp` (차트별 EQP 필터), `eqp_id`, `disp_name`, `wafer_id` (hover 표시), `root_lot_id` (hover 표시) |
+| 자설비 이상감지 동일성 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), `{sensor}*{ch_step}` (y축), `eqp` (차트별 EQP 필터), `eqp_id`, `disp_name`, `eqp_cb`, `wafer_id` (hover 표시), `root_lot_id` (hover 표시) |
+| EQP 변경점 이력 | `{eqp}.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와
 `src/config/spiderDataPaths.mjs`를 함께 업데이트한다.
