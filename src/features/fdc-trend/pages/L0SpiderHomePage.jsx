@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 import { fetchDashboardSummary } from "../api/dashboardApi"
+import { formatDashboardLatestDate } from "../api/dashboardLatestDate.mjs"
 import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
 import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
 
@@ -182,10 +183,8 @@ function LatestDataCard() {
     staleTime: 60 * 1000,
     retry: false,
   })
-  const latestDateTime = dashboardQuery.data?.lineDashboard?.summary?.latestDateTime ?? ""
-  const displayDateTime = latestDateTime
-    ? `${latestDateTime.slice(0, 10).replaceAll("-", ".")} ${latestDateTime.slice(11)}`
-    : dashboardQuery.isPending ? "조회 중" : "확인 불가"
+  const latestDate = formatDashboardLatestDate(dashboardQuery.data)
+  const displayDateTime = latestDate || (dashboardQuery.isPending ? "조회 중" : "확인 불가")
 
   return (
     <aside

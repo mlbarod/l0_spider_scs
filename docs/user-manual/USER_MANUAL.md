@@ -45,6 +45,8 @@ SPIDER는 L0 공정의 이상감지 결과를 조회하고 개인 모니터링 �
 ![SPIDER 메인 화면](images/01-main-screen.png)
 
 메인 화면 위쪽에는 기능 카드, 아래쪽에는 **라인별 이상 현황 Dashboard**가 표시됩니다.
+오른쪽 위의 **마지막 알고리즘 수행 시간**은 서버가 최신으로 선택한 Dashboard 세부파일
+`path/{latest_date}`의 `{latest_date}`를 표시합니다.
 
 ### 대시보드 사용법
 

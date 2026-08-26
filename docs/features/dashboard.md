@@ -55,7 +55,7 @@ Dashboard route는 `startDate`, `endDate`, `line`을 브라우저 URL에서 읽�
 
 | 화면 영역 | 사용자에게 표시하는 정보 | 데이터 출처 필드 | 컴포넌트 | 상태 | 근거 |
 |---|---|---|---|---|---|
-| 마지막 수행 시각 | 메인 상단 최신 시각 | `summary.latestDateTime` | `LatestDataCard` | `Confirmed` | `L0SpiderHomePage.jsx:181-205` |
+| 마지막 수행 시각 | 메인 상단 최신 시각 | 상위 `latestDate` | `LatestDataCard` | `Confirmed` | `L0SpiderHomePage.jsx`; `dashboardLatestDate.mjs` |
 | 조회 header | Dashboard 제목과 최신 데이터 시각 | `summary.latestDateTime` | `LineAnomalyDashboard` | `Confirmed` | `LineAnomalyDashboard.jsx:443-453` |
 | Line filter | 전체 또는 복수 Line, 조회·초기화 | `options.lines`, `filters.lines` | `LineMultiSelect` | `Confirmed` | `LineAnomalyDashboard.jsx:166-213,456-474` |
 | 7개 KPI | sensor 총합, 전체·Grade별 건수, 전일 대비 | `summary.*` | `KpiCard`, `ChangeText` | `Confirmed` | `LineAnomalyDashboard.jsx:482-496` |
@@ -283,7 +283,8 @@ mapping되지 않은 detail row는 집계에서 제외되며 화면은 `meta.unm
 
 | 응답 영역 | 소비 위치 | 표시·변환 | 상태 |
 |---|---|---|---|
-| `summary.latestDateTime` | `LatestDataCard`, Dashboard badge | `YYYY.MM.DD hh:mm:ss` 형태 | `Confirmed` |
+| 상위 `latestDate` | `LatestDataCard` | 선택된 detail `path/{latest_date}`의 filename을 `YYYY.MM.DD hh:mm:ss` 형태로 표시 | `Confirmed` |
+| `summary.latestDateTime` | Dashboard badge | `YYYY.MM.DD hh:mm:ss` 형태 | `Confirmed` |
 | `summary.monitoringSensorTotal` | 첫 KPI | locale 숫자와 `개` | `Confirmed` |
 | 전체·Grade count | 나머지 count KPI | locale 숫자와 `건` | `Confirmed` |
 | `changeFromPreviousDay` | 전일 대비 KPI | 증가 ▲, 감소 ▼, 0 변동 없음, null 비교 없음 | `Confirmed` |
