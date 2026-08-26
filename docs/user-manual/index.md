@@ -55,7 +55,7 @@
 | `docs/user-manual/USER_MANUAL.md` | Markdown | 서비스 개요, Dashboard, Self, 등록, 동일성·공통부, 메일, 오류 안내 | `/manual`에서 raw import 후 HTML sanitize | 파일·화면 연결 `Confirmed`; 브라우저 재현 `Not Run` |
 | `images/01-main-screen.png` | PNG 1920×1080 | 메인 화면과 Dashboard | 2장에 직접 삽입 | 존재 `Confirmed`; 현재 픽셀 일치 `Unknown` |
 | `images/02-main-menu.png` | PNG 1920×1080 | 과거 메인 메뉴 설명 표시 | 본문 미참조 | 현재 메뉴명·상태와 `Mismatch` |
-| `images/03-self-equipment-filters.png` | PNG 1920×1080 | Self Equipment 필터 | 4.1에 직접 삽입 | 현재 3일 동일성 toggle을 완전히 반영하지 않아 `Mismatch` |
+| `images/03-self-equipment-filters.png` | PNG 1920×1080 | Self Equipment 필터 | 4.1에 직접 삽입 | 현재 3일 동일성 toggle과 REICPE_ID label을 반영하지 않아 `Mismatch` |
 | `images/04-self-equipment-chart.png` | PNG 1920×1080 | Self Equipment chart | 4.2에 직접 삽입 | 현재 모아보기 pair를 완전히 반영하지 않아 `Mismatch` |
 | `images/05-self-equipment-actions.png` | PNG 608×465 | chart 작업 버튼 | 4.3에 직접 삽입 | 존재 `Confirmed`; 현재 픽셀 일치 `Unknown` |
 | `images/06-self-equipment-skip-dialog.png` | PNG 448×220 | SKIP 확인 dialog | 4.3에 직접 삽입 | 존재 `Confirmed`; 현재 픽셀 일치 `Unknown` |
@@ -74,7 +74,7 @@
 | ID | 기존 자료 | 현재 코드·문서 | 사용자 영향 | 안내 기준 |
 |---|---|---|---|---|
 | `MAN-M01` | `02-main-menu.png`의 메뉴명·운영 상태 | 현재 메인에는 `My EQP 등록` 카드와 변경된 기능 상태가 있음 | 오래된 카드명으로 메뉴를 찾지 못할 수 있음 | 현재 `L0SpiderHomePage.jsx`의 메뉴명을 사용 |
-| `MAN-M02` | `03`, `04` 이미지 | 현재 Self 화면에는 3일 동일성 toggle과 모아보기 pair가 있음 | 이미지에 없는 조작을 놓칠 수 있음 | `USER_MANUAL.md:71-108` 본문과 `self-equipment.md`를 우선 |
+| `MAN-M02` | `03`, `04` 이미지 | 현재 Self 화면에는 REICPE_ID 필터, 3일 동일성 toggle과 모아보기 pair가 있음 | 이미지에 없는 필터명·조작을 놓칠 수 있음 | `USER_MANUAL.md:80-117` 본문과 `self-equipment.md`를 우선 |
 | `MAN-M03` | `08-matching-anomaly.png`는 SDWT 다음에 Sensor를 표시 | 현재 동일성 filter는 SDWT 다음 STEP 선택을 요구 | STEP을 선택하지 않아 하위 option이 비어 보일 수 있음 | `USER_MANUAL.md:169-179` 본문을 우선 |
 | `MAN-M04` | `15-manual-status.png`의 과거 문서 기준일 | 현재 `USER_MANUAL.md` 기준일은 2026-08-20 | 캡처만 보고 최신 문서 상태를 오판할 수 있음 | Markdown 기준일과 Git 변경 이력을 확인 |
 | `MAN-M05` | 문제 해결 표는 “표시된 경로” 확인을 안내 | 현재 browser 오류는 파일 경로를 `[파일 경로 숨김]`으로 마스킹 | 사용자가 경로를 직접 확인할 수 없을 수 있음 | 메시지·시각·선택 조건만 기록하고 운영 담당자가 server 측을 확인 |

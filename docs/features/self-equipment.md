@@ -70,7 +70,7 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 | `line` | Line 초기 선택값 | 첫 값 | 선택 | 유효하지 않거나 없으면 mapping의 첫 Line | page 초기 state | `Confirmed` | `selfEquipmentUrlFilters.mjs:23-32`; `FdcTrendPage.jsx:1451,1490` |
 | `sdwt` | 일반 SDWT; parser는 legacy `MY_EQP`도 수용 | parser는 복수·dedupe | 선택 | 화면은 첫 유효 일반 SDWT로 보정; `MY EQP` option은 없음 | team state | 일반 Self `Confirmed`; MY EQP `Blocked` | `selfEquipmentUrlFilters.mjs:24-25`; `FdcTrendPage.jsx` |
 | `grade` | Sensor Grade | 복수·dedupe | 선택 | 유효한 값이 없으면 `A/B`; A·B·A/B는 `A/B`로 정규화 | Grade state→`priority` | `Confirmed` | `selfEquipmentUrlFilters.mjs:29,51-60`; `FdcTrendPage.jsx:1453-1457,1517` |
-| `step` | STEP 후보 또는 legacy MY EQP의 `ALL` | 첫 값 | 선택 | parser의 `ALL` 호환은 보존되지만 현재 일반 Self STEP option과 일치할 때만 화면 선택 | `selectedDesc` 초기화 | 일반 Self `Confirmed`; MY EQP `Blocked`; token `Mismatch` | `selfEquipmentUrlFilters.mjs:30`; `FdcTrendPage.jsx` |
+| `step` | legacy STEP deep-link 또는 MY EQP의 `ALL` | 첫 값 | 선택 | parser 호환은 보존하지만 일반 Self 화면의 REICPE_ID option과 직접 연결하지 않음 | legacy `selectedDesc` 초기화 후보 | 일반 Self `Mismatch`; MY EQP `Blocked`; token `Mismatch` | `selfEquipmentUrlFilters.mjs:30`; `FdcTrendPage.jsx` |
 | `eqpCh` | 서버 row의 `eqp`와 매칭할 초기 선택값 | 첫 값 | 선택 | 없으면 빈 값; legacy alias `eqp_ch` 허용 | `selectedEqpCh`→API | `Confirmed` | `selfEquipmentUrlFilters.mjs:31`; `FdcTrendPage.jsx:1461,1545-1556` |
 
 파라미터 순서는 의미가 없다. 중복 `line`, `step`, `eqpCh`는 첫 값을 소비하고 `sdwt`, `grade`는 전체 값을 공백 제거·dedupe하며, `eqpCh`에만 `eqp_ch` fallback이 있다.
@@ -81,7 +81,7 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 | Line | URL `line` | mapping에 없으면 첫 Line | 없음 | `Confirmed` | `FdcTrendPage.jsx:1451,1480-1490` |
 | SDWT | URL `sdwt` 첫 값 | option에 없으면 mapping의 첫 일반 SDWT; MY EQP는 추가하지 않음 | 없음 | 일반 Self `Confirmed`; MY EQP `Blocked` | `FdcTrendPage.jsx` |
 | Grade | URL 반복 `grade` | 유효값 없으면 `A/B`; 일반 Self 범위에서 선택 | 없음 | `Confirmed` | `FdcTrendPage.jsx` |
-| STEP | URL `step` | 정확히 `ALL`일 때만 초기 반영 | 없음 | `Confirmed` | `FdcTrendPage.jsx:1458-1460` |
+| REICPE_ID | URL `step` | 일반 Self에서는 자동 선택하지 않음 | 없음 | `Mismatch` — legacy query 명칭 | `FdcTrendPage.jsx` |
 | `eqp_ch` | URL `eqpCh`/`eqp_ch` | 서버 option과 불일치하면 응답 `filters.eqpCh`가 빈 값 | 없음 | `Confirmed` | `FdcTrendPage.jsx:1461,1575-1578`; `selfEquipmentData.mjs:218-239` |
 | sensor·`ch_step` | 코드 빈 문자열 | 상위 필터 선택 후 API option에서 선택 | 없음 | `Confirmed` | `FdcTrendPage.jsx:1462-1463` |
 | 3일 동일성 | 코드 `true` | 사용자 toggle | query 대상 아님 | `Confirmed` | `FdcTrendPage.jsx:1465,1901-1928` |
@@ -108,9 +108,9 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 | 사용자 동작 | 변경 상태 | URL 변경 | API 재요청 | 화면 영향 | 상태 |
 |---|---|---|---|---|---|
 | Line 변경 | Line과 하위 선택 초기화 | 없음 | mapping 기반 query key 변경 | SDWT부터 재구성 | `Confirmed` |
-| SDWT 변경 | 일반 team과 하위 선택 초기화 | 없음 | 일반 Self data query 변경 | Grade·STEP 재구성 | `Confirmed` |
-| Grade 변경 | 복수 Grade와 하위 선택 초기화 | 없음 | `priority` 반복 query 변경 | STEP option 변경 | `Confirmed` |
-| STEP 변경 | `selectedDesc`, 이하 초기화 | 없음 | data query 변경 | `eqp_ch` option 변경 | `Confirmed` |
+| SDWT 변경 | 일반 team과 하위 선택 초기화 | 없음 | 일반 Self data query 변경 | Grade·REICPE_ID 재구성 | `Confirmed` |
+| Grade 변경 | 복수 Grade와 하위 선택 초기화 | 없음 | `priority` 반복 query 변경 | REICPE_ID option 변경 | `Confirmed` |
+| REICPE_ID 변경 | legacy state `selectedDesc`, 이하 초기화 | 없음 | data query 변경 | `eqp_ch` option 변경 | `Confirmed` |
 | `eqp_ch` 변경 | `selectedEqpCh`, sensor·ch_step 초기화 | 없음 | data query 변경 | sensor option 변경 | `Confirmed` |
 | sensor 변경 | sensor, ch_step 초기화 | 없음 | data query 변경 | ch_step option 변경 | `Confirmed` |
 | `ch_step` 변경 | chStep 선택·해제 | 없음 | data fetch 후 chart query | chart 표시; Self 클릭이력은 미호출 | chart `Confirmed`; 클릭이력 `Blocked` |
@@ -187,7 +187,7 @@ sequenceDiagram
 | API | 대표 응답 필드 | 생산 위치 | 화면 표현 | 빈값 처리 | 상태 |
 |---|---|---|---|---|---|
 | equipment API | `filters` | `buildSelfEquipmentPayload` | 서버가 인정한 active filter | 불일치 값은 `""` | `Confirmed` |
-| equipment API | `steps`, `eqpChannels`, `sensors`, `chSteps` | 같은 builder | 4개 종속 option 목록 | 빈 목록 placeholder | `Confirmed` |
+| equipment API | legacy `steps`, `eqpChannels`, `sensors`, `chSteps` | 같은 builder | REICPE_ID와 3개 종속 option 목록 | 빈 목록 placeholder | `Confirmed`; wire 명칭은 legacy |
 | equipment API | `rows`, `counts` | 같은 builder | EQP group과 chart 대상 | rows가 없으면 빈 chart 안내 | `Confirmed` |
 | MY EQP API | `availablePriorities`, registration counts | legacy MY EQP handler | 현재 화면 미소비 | 해당 없음 | dormant legacy |
 | 일반 API | `counts.excludedSensorRows` | sensor 제외 설정 | 화면 직접 표시는 없음 | 기본 파일 최초 읽기 실패는 0, 재로딩 실패는 마지막 정상 규칙 적용 | `Confirmed` |
@@ -202,7 +202,7 @@ sequenceDiagram
 | Data Source ID | 유형 | 경로·테이블·자원 | 접근 코드 | 사용 목적 | 읽기·쓰기 | 생성 책임 | 상태 |
 |---|---|---|---|---|---|---|---|
 | `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | `readLatestSelfEquipmentRows` | 최신 index의 filter option·`file_path` | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
-| `DS-SELF-02` | Parquet | index row `file_path` + `/data.parquet` | `readErdScatterRows` | `eqp` 대상 scatter·`eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
+| `DS-SELF-02` | Parquet | index row `file_path` + `/data.parquet` | `readErdScatterRows` | schema 기반 axis·EQP 식별 scatter와 `eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02-H` | Parquet | index row `file_path` + `/{eqp}.parquet` | `readErdHistoryRows` | 변경점 이력 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-IMG` | image | 허용 ERD root의 image | `handleErdFileRequest` | stream endpoint | 읽기 | `Unknown` | endpoint `Confirmed` |
 | `DS-MAP` | JSON | mapping config | `readLineMapping` | 현재 일반 Self Line·SDWT scope; legacy MY EQP handler에도 보존 | 읽기 | `Unknown` | 일반 Self `Confirmed`; MY EQP dormant |
@@ -229,29 +229,29 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 | 파라미터 | URL·UI 입력 | API 전달 | 서버·데이터 반영 | 화면 영향 | 상태 |
 |---|---|---|---|---|---|
 | `line` | URL 또는 Line 선택 | `line` | mapping의 `pathSdwt` 소유 Line 검증, 응답 `line_rev` | SDWT 범위 | 코드 `Confirmed` |
-| `sdwt` | URL 또는 SDWT 선택 | `pathSdwt`와 legacy display `sdwt` | 요청 display는 scope에 사용하지 않으며 mapping key/유일 display만 index row와 비교 | STEP 범위 | 코드 `Confirmed` |
+| `sdwt` | URL 또는 SDWT 선택 | `pathSdwt`와 legacy display `sdwt` | 요청 display는 scope에 사용하지 않으며 mapping key/유일 display만 index row와 비교 | REICPE_ID 범위 | 코드 `Confirmed` |
 | `grade` | URL 또는 복수 선택 | 반복 `priority` | row `priority` | 모든 하위 option | `Confirmed` |
-| `step` | URL 초기값 또는 STEP 선택 | 선택 후 legacy query 이름 `desc` | path_xian row `step` | EQP option | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `REICPE_ID` | UI 선택 | legacy query 이름 `desc` | path_xian row `REICPE_ID` | EQP option | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `eqpCh` | URL 또는 eqp_ch 선택 | `eqpCh` | row `eqp` 매칭 | sensor option | `Confirmed` |
 | `sensor` | UI 선택 | `sensor` | row `sensor`; chart axis prefix | ch_step·chart | `Confirmed` |
-| `ch_step` | UI 선택 | `chStep` | row `step`; chart axis는 `${sensor}*${chStep}` | rows·chart | 코드 `Confirmed` |
+| `ch_step` | UI 선택 | `chStep` | row `step`; chart axis는 schema의 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환 | rows·chart | 코드 `Confirmed` |
 | `file_path` | index row | chart API `path` | directory 아래 data/history path; `pic_server2` 정규화 | chart source | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `latest_date` | 최신 `path_xian` 파일명 | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
-| `recipe_id` | index row | row payload | chart context | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `recipe_id` | index `REICPE_ID` 정규화 alias | row payload | chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ver` | 새 index에 없음 | 빈 compatibility 값 | 기존 Self SKIP 식별에 사용할 수 없음 | DB 기능 fail-close | `Mismatch` |
 
 `step_seq`와 `ppid`를 URL 또는 equipment API filter로 전달하는 흐름은 확인되지 않았다.
 `ppid`는 `file_path`/row context와 chart 모아보기 식별에 간접 사용된다.
-## 16. STEP 선택 처리 개요
+## 16. REICPE_ID 선택과 legacy STEP query 처리 개요
 
 | 입력 형태 | 처리 위치 | 변환·검증 | 조회 조건 | 화면 결과 | 상태 |
 |---|---|---|---|---|---|
-| UI STEP label | `FdcTrendPage` | path_xian `step`에서 만든 `steps[].desc` 중 선택 | API legacy query `desc` | 다음 eqp_ch option | 코드 `Confirmed` |
+| UI REICPE_ID label | `FdcTrendPage` | path_xian `REICPE_ID`에서 만든 legacy `steps[].desc` 중 선택 | API legacy query `desc` | 다음 eqp_ch option | 코드 `Confirmed` |
 | URL `step=ALL`, MY EQP | parser·legacy handler | 기존 구현 보존 | 현재 UI capability에서 미호출 | 화면 결과 없음 | `Blocked` — DB 식별 계약 `Unknown` |
 | URL `step=ALL`, 일반 SDWT | page·server | page state에는 ALL이나 일반 handler는 ALL 불허 | server `filters.desc=""` | STEP 재선택 필요 | `Confirmed` |
 | URL 비-ALL STEP 문자열 | parser·page | `stepToken`으로 읽지만 state에 반영 안 함 | API로 전달 안 함 | STEP 미선택 | `Mismatch` |
 | 잘못된 token | 확인된 검증 없음 | 오류·매핑 없음 | 조회 조건 없음 | STEP 미선택과 동일 | `Unknown` |
-| STEP 없음 | page | 빈 state | `desc` 생략 | STEP option 표시 | `Confirmed` |
+| REICPE_ID 없음 | page | 빈 state | `desc` 생략 | REICPE_ID option 표시 | `Confirmed` |
 
 현재 코드에는 HMAC 생성, 검증, timing-safe 비교 또는 STEP 매핑 호출이 확인되지 않았다.
 ## 17. `eqpCh` 처리
@@ -274,7 +274,7 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 |---|---|---|---|---|
 | 상단 | 제목, Self DB 비활성 안내, 메인 링크 | capability | `FdcTrendPage` | `Confirmed`; 사용자 인사는 dormant |
 | toggle | 최근 72시간 동일성 동시 표시 | local boolean | switch, 기본 ON | `Confirmed` |
-| filter area | Line→일반 SDWT→Grade→STEP→eqp_ch→sensor→ch_step | mapping, equipment options | `FilterCard`; MY EQP·SKIP option 없음 | `Confirmed`; DB option `Blocked` |
+| filter area | Line→일반 SDWT→Grade→REICPE_ID→eqp_ch→sensor→ch_step | mapping, equipment options | `FilterCard`; MY EQP·SKIP option 없음 | `Confirmed`; DB option `Blocked` |
 | 상태 안내 | mapping·file API 오류와 file-only capability | query state, capabilities | alert | `Confirmed` |
 | chart summary | EQP category·chart count·page | equipment `rows` | group·pagination | `Confirmed` |
 | scatter card | `act_time`, axis value, EQP·lot·wafer 등 | scatter `points` | lazy query·zoom·dialog | `Confirmed` |
@@ -296,7 +296,7 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 | ch_step 미선택 | 성공 가능, rows 미표시 | chart query 비활성 | 선택 안내 | `Confirmed` |
 | chart row 없음 | 성공+빈 rows | group 없음 | `표시할 file_path 데이터가 없습니다.` | `Confirmed` |
 | MY EQP 등록은 있으나 매칭 없음 | 현재 query 비활성 | 없음 | 없음 | dormant legacy |
-| ERD data 없음·오류 | chart API `500` | card query error | chart 오류 문구 | `Confirmed` |
+| ERD 필수 schema 없음·파일 오류 | chart API `500` | card query error | chart 오류 문구 | `Confirmed`; 운영 원인 `Unknown` |
 | history Parquet만 실패 | scatter API `200`+`historyError` | chart 유지 | 변경점 이력 오류 | `Confirmed` |
 | image 없음 | `/api/erd-file` `404` | 현재 화면 소비 미확인 | `Unknown` | endpoint `Confirmed` |
 | 잘못된 HMAC token | 전용 오류 응답 없음 | 일반 STEP 미선택과 구분 안 됨 | 별도 안내 없음 | `Mismatch` |

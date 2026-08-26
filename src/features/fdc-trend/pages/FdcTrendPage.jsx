@@ -531,7 +531,7 @@ export function IdentityChartDialog({
     gcTime: Infinity,
   })
   const groups = identityQuery.data?.groups ?? EMPTY_LIST
-  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}*${row.step}`
+  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}_${row.step}`
   const sharedYDomain = useMemo(
     () => numericDomain(
       groups.flatMap((group) => group.points.map((point) => point.value)),
@@ -823,7 +823,7 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
     gcTime: 10 * 60 * 1000,
   })
   const groups = identityQuery.data?.groups ?? EMPTY_LIST
-  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}*${row.step}`
+  const axisColumn = identityQuery.data?.axisColumn ?? `${row.sensor}_${row.step}`
   const identityPoints = useMemo(() => buildIdentityChartPoints(groups), [groups])
   const renderedPoints = useMemo(
     () => selectRenderedIdentityPoints(groups, identityPoints, null).points,
@@ -1208,7 +1208,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
     () => buildRenderedScatterSeries(points, zoomDomain),
     [points, zoomDomain],
   )
-  const axisColumn = chartQuery.data?.axisColumn ?? `${row.sensor}*${row.step}`
+  const axisColumn = chartQuery.data?.axisColumn ?? `${row.sensor}_${row.step}`
   const baseDomain = useMemo(() => ({
     x: numericDomain([
       ...points.map((point) => point.actTimeMs),
@@ -1975,7 +1975,7 @@ export function FdcTrendPage() {
               <h1 className="text-lg font-semibold tracking-tight">자설비 이상감지</h1>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              라인, 분임조, 센서 등급과 STEP, eqp_ch, sensor, ch_step을 선택해 ERD 결과를 조회합니다.
+              라인, 분임조, 센서 등급과 REICPE_ID, eqp_ch, sensor, ch_step을 선택해 ERD 결과를 조회합니다.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -2096,10 +2096,10 @@ export function FdcTrendPage() {
               ))}
             </FilterCard>
             <FilterCard
-              title="STEP"
+              title="REICPE_ID"
               badge={steps.length ? `${steps.length}` : null}
               disabled={!activeTeam || dataQuery.isLoading}
-              placeholder={dataQuery.isLoading ? "로딩 중…" : "선택 조건에 해당하는 STEP이 없습니다."}
+              placeholder={dataQuery.isLoading ? "로딩 중…" : "선택 조건에 해당하는 REICPE_ID가 없습니다."}
               isActive={Boolean(activeDesc)}
               isLoading={dataQuery.isFetching && !selectedDesc}
               query={queries.step}
@@ -2128,7 +2128,7 @@ export function FdcTrendPage() {
               title="eqp_ch"
               badge={eqpChannels.length ? `${eqpChannels.length}` : null}
               disabled={!activeDesc || dataQuery.isLoading}
-              placeholder={activeDesc ? "선택 STEP에 해당하는 eqp_ch가 없습니다." : "STEP을 먼저 선택하세요"}
+              placeholder={activeDesc ? "선택 REICPE_ID에 해당하는 eqp_ch가 없습니다." : "REICPE_ID를 먼저 선택하세요"}
               isActive={Boolean(activeEqpCh)}
               isLoading={dataQuery.isFetching && Boolean(activeDesc) && !selectedEqpCh}
               query={queries.eqpCh}
@@ -2249,7 +2249,7 @@ export function FdcTrendPage() {
             <div>
               <h2 className="text-base font-semibold">Scatter chart</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                ch_step을 선택하면 최신 ERD 이상감지 데이터의 act_time과 sensor*ch_step 값을 표시합니다.
+                ch_step을 선택하면 최신 ERD 이상감지 데이터의 act_time과 실제 sensor/ch_step 컬럼 값을 표시합니다.
               </p>
             </div>
             {chStepIsSelected ? (
@@ -2285,7 +2285,7 @@ export function FdcTrendPage() {
           ) : null}
           {!chStepIsSelected ? (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-              STEP, eqp_ch, sensor와 ch_step을 선택하면 scatter chart가 표시됩니다.
+              REICPE_ID, eqp_ch, sensor와 ch_step을 선택하면 scatter chart가 표시됩니다.
             </div>
           ) : chartGroups.length ? (
             <div className="grid min-w-0 gap-5">

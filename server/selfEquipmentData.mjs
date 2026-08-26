@@ -1,7 +1,12 @@
 import { createReadStream, existsSync, readdirSync, statSync } from "node:fs"
 import { dirname, join, relative, resolve, sep } from "node:path"
 
-import { asyncBufferFromFile, parquetReadObjects } from "hyparquet"
+import {
+  asyncBufferFromFile,
+  parquetMetadataAsync,
+  parquetReadObjects,
+  parquetSchema,
+} from "hyparquet"
 import { compressors } from "hyparquet-compressors"
 
 import {
@@ -21,7 +26,7 @@ import { listPassHistoryRecords } from "./passHistory.mjs"
 
 export const TEAM_ERD_COLUMNS = Object.freeze([
   "sdwt",
-  "recipe_id",
+  "REICPE_ID",
   "priority",
   "sensor",
   "step",
@@ -81,11 +86,12 @@ export function normalizeSelfEquipmentFilePath(filePath) {
 
 function normalizeRow(row, latestDate) {
   const step = normalizeTextValue(row.step)
+  const recipeId = normalizeTextValue(row.REICPE_ID)
   return {
     sdwt: normalizeTextValue(row.sdwt),
-    desc: step,
+    desc: recipeId,
     ver: "",
-    recipe_id: normalizeTextValue(row.recipe_id),
+    recipe_id: recipeId,
     priority: normalizeTextValue(row.priority),
     sensor: normalizeTextValue(row.sensor),
     step,
@@ -310,10 +316,10 @@ export function buildSelfEquipmentPayload(rows, filters) {
     && (filters.includeAllSdwt || row.sdwt === filters.sdwt)
     && priorities.has(row.priority)
   ))
-  const steps = sortByLabel(aggregateBy(baseRows, "step", (step, stepRows) => ({
-    desc: step,
-    rowCount: stepRows.length,
-    equipmentCount: uniqueCount(stepRows, "eqp"),
+  const steps = sortByLabel(aggregateBy(baseRows, "recipe_id", (recipeId, recipeRows) => ({
+    desc: recipeId,
+    rowCount: recipeRows.length,
+    equipmentCount: uniqueCount(recipeRows, "eqp"),
   })), "desc")
   const selectedDesc = filters.allowAllSteps && filters.desc === ALL_STEPS && steps.length > 0
     ? ALL_STEPS
@@ -323,7 +329,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
   const stepRows = selectedDesc === ALL_STEPS
     ? baseRows
     : selectedDesc
-    ? baseRows.filter((row) => row.step === selectedDesc)
+    ? baseRows.filter((row) => row.recipe_id === selectedDesc)
     : []
   const eqpChannels = sortByRowCount(aggregateBy(stepRows, "eqp", (eqpCh, eqpChRows) => ({
     eqpCh,
@@ -621,37 +627,82 @@ export function resolveErdHistoryFilePath(dataFilePath, eqp) {
   return join(dirname(dataFilePath), `${normalizeEqp(eqp)}.parquet`)
 }
 
-async function readErdScatterRows(filePath, axisColumn, { identity = false } = {}) {
+const ERD_SCATTER_OPTIONAL_COLUMNS = Object.freeze([
+  "eqp_id",
+  "disp_name",
+  "wafer_id",
+  "root_lot_id",
+])
+
+export function resolveErdScatterProjection(schemaColumns, {
+  sensor,
+  chStep,
+  identity = false,
+}) {
+  const availableColumns = new Set(schemaColumns)
+  if (!availableColumns.has("act_time")) {
+    throw new Error("ERD scatter act_time 컬럼이 없습니다.")
+  }
+
+  const axisColumn = [`${sensor}_${chStep}`, `${sensor}*${chStep}`]
+    .find((column) => availableColumns.has(column))
+  if (!axisColumn) {
+    throw new Error("ERD scatter sensor/ch_step 컬럼이 없습니다.")
+  }
+
+  if (identity && !availableColumns.has("eqp_cb")) {
+    throw new Error("ERD identity eqp_cb 컬럼이 없습니다.")
+  }
+  const equipmentColumn = availableColumns.has("eqp")
+    ? "eqp"
+    : !identity && availableColumns.has("eqp_cb")
+    ? "eqp_cb"
+    : ""
+  if (!identity && !equipmentColumn) {
+    throw new Error("ERD scatter EQP 식별 컬럼이 없습니다.")
+  }
+
+  const columns = Array.from(new Set([
+    "act_time",
+    equipmentColumn,
+    ...(identity ? ["eqp_cb"] : []),
+    ...ERD_SCATTER_OPTIONAL_COLUMNS.filter((column) => availableColumns.has(column)),
+    axisColumn,
+  ].filter(Boolean)))
+
+  return { axisColumn, equipmentColumn, columns }
+}
+
+async function readErdScatterRows(filePath, { sensor, chStep, identity = false }) {
   const fileStat = statSync(filePath)
-  const cacheKey = `${filePath}\u0000${axisColumn}\u0000${identity ? "identity" : "scatter"}`
+  const cacheKey = `${filePath}\u0000${sensor}\u0000${chStep}\u0000${identity ? "identity" : "scatter"}`
   const cached = getLruEntry(erdScatterCache, cacheKey)
 
   if (cached?.mtimeMs === fileStat.mtimeMs && cached?.size === fileStat.size) {
-    return cached.rows
+    return cached.result
   }
 
   if (erdScatterPending.has(cacheKey)) return erdScatterPending.get(cacheKey)
 
   const readPromise = (async () => {
     const file = await asyncBufferFromFile(filePath)
-    const columns = [
-      "act_time",
-      "eqp",
-      ...(identity ? ["eqp_cb"] : []),
-      "eqp_id",
-      "disp_name",
-      "wafer_id",
-      "root_lot_id",
-      axisColumn,
-    ]
-    const rows = await parquetReadObjects({ file, columns, compressors })
+    const metadata = await parquetMetadataAsync(file)
+    const schemaColumns = parquetSchema(metadata).children.map((column) => column.element.name)
+    const projection = resolveErdScatterProjection(schemaColumns, { sensor, chStep, identity })
+    const rows = await parquetReadObjects({
+      file,
+      metadata,
+      columns: projection.columns,
+      compressors,
+    })
+    const result = { ...projection, rows }
     setLruEntry(
       erdScatterCache,
       cacheKey,
-      { mtimeMs: fileStat.mtimeMs, size: fileStat.size, rows },
+      { mtimeMs: fileStat.mtimeMs, size: fileStat.size, result },
       ERD_SCATTER_CACHE_MAX_ENTRIES,
     )
-    return rows
+    return result
   })()
   erdScatterPending.set(cacheKey, readPromise)
 
@@ -742,6 +793,7 @@ function sampleEvenly(points, limit) {
 export function buildErdScatterPayload(rows, {
   eqp,
   axisColumn,
+  equipmentColumn = "eqp",
   filePath,
   latestDate,
   historyPath = "",
@@ -751,7 +803,7 @@ export function buildErdScatterPayload(rows, {
   const normalizedEqp = normalizeEqp(eqp)
   const latestDateMs = parseDateTimeMs(latestDate)
   const chartPoints = rows.flatMap((row) => {
-    if (normalizeEqp(row.eqp) !== normalizedEqp) return []
+    if (normalizeEqp(row[equipmentColumn]) !== normalizedEqp) return []
     const actTime = normalizeText(row.act_time)
     const actTimeMs = parseDateTimeMs(actTime)
     const value = normalizeNumber(row[axisColumn])
@@ -808,13 +860,14 @@ export function buildErdScatterPayload(rows, {
 export function buildErdIdentityPayload(rows, {
   eqp,
   axisColumn,
+  equipmentColumn = "eqp",
   filePath,
   windowDays = 0,
 }) {
   const normalizedEqp = normalizeEqp(eqp)
   const normalizedWindowDays = Number.isInteger(windowDays) && windowDays > 0 ? windowDays : 0
   const validPoints = rows.flatMap((row) => {
-    if (normalizeEqp(row.eqp) !== normalizedEqp) return []
+    if (equipmentColumn && normalizeEqp(row[equipmentColumn]) !== normalizedEqp) return []
     const eqpCb = normalizeEqp(row.eqp_cb)
     const actTime = normalizeText(row.act_time)
     const actTimeMs = parseDateTimeMs(actTime)
@@ -936,23 +989,23 @@ export async function handleErdScatterDataRequest(req, res, url, {
     assertPathSegment("sensor", sensor)
     assertPathSegment("chStep", chStep)
     assertPathSegment("eqp", normalizeEqp(eqp))
-    const axisColumn = `${sensor}*${chStep}`
     if (mode === "identity") {
       const windowDays = requestedDays ? Number(requestedDays) : 0
       if (!Number.isInteger(windowDays) || windowDays < 0 || windowDays > 30) {
         sendJson(res, 400, { ok: false, error: "동일성 차트 조회 기간은 0~30일 정수여야 합니다." })
         return
       }
-      const rows = await readErdScatterRows(filePath, axisColumn, { identity: true })
-      sendJson(res, 200, buildErdIdentityPayload(rows, {
+      const source = await readErdScatterRows(filePath, { sensor, chStep, identity: true })
+      sendJson(res, 200, buildErdIdentityPayload(source.rows, {
         eqp,
-        axisColumn,
+        axisColumn: source.axisColumn,
+        equipmentColumn: source.equipmentColumn,
         filePath,
         windowDays,
       }))
       return
     }
-    const rows = await readErdScatterRows(filePath, axisColumn)
+    const source = await readErdScatterRows(filePath, { sensor, chStep })
     const historyPath = resolveErdHistoryFilePath(filePath, eqp)
     let historyRows = []
     let historyError = ""
@@ -961,9 +1014,10 @@ export async function handleErdScatterDataRequest(req, res, url, {
     } catch {
       historyError = "변경점 이력을 불러오지 못했습니다."
     }
-    sendJson(res, 200, buildErdScatterPayload(rows, {
+    sendJson(res, 200, buildErdScatterPayload(source.rows, {
       eqp,
-      axisColumn,
+      axisColumn: source.axisColumn,
+      equipmentColumn: source.equipmentColumn,
       filePath,
       latestDate,
       historyPath,

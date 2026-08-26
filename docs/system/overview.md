@@ -17,7 +17,7 @@
 
 ## 2. 시스템 한눈에 보기
 
-L0 Spider는 L0 공정의 이상감지 결과를 Line, SDWT, STEP, 설비와 sensor 조건으로 조회하는 웹서비스다.
+L0 Spider는 L0 공정의 이상감지 결과를 Line, SDWT, 자설비 REICPE_ID 또는 기능별 STEP, 설비와 sensor 조건으로 조회하는 웹서비스다.
 사용자는 메인 대시보드에서 Line별 현황을 확인하고, 자설비·동일성·공통부 화면에서 Parquet 기반 차트와 분석 이미지를 상세 조회한다.
 MY EQP·Mailing 조건 등록과 비-Self App의 SKIP·HIT·클릭 이력은 DB에 관리한다. 현재
 자설비 화면의 MY EQP·SKIP·HIT·클릭 이력은 새 DB 식별 계약이 없어 `Blocked`다.

@@ -11,6 +11,7 @@ import {
   handleErdScatterDataRequest,
   isSelfEquipmentDataPathAllowed,
   normalizeSelfEquipmentFilePath,
+  resolveErdScatterProjection,
   resolveErdDataFilePath,
   resolveErdHistoryFilePath,
   resolveLatestSelfEquipmentDate,
@@ -101,11 +102,11 @@ test("SDWT 파일 경로가 매칭된 뒤에는 EQP의 구분자와 대소문자
   )
 })
 
-test("My EQP 전체 Sensor Grade 조건에서는 모든 등급의 STEP을 제공한다", () => {
+test("My EQP 전체 Sensor Grade 조건에서는 모든 등급의 REICPE_ID를 제공한다", () => {
   const rows = [
-    createRow({ priority: "A", step: "STEP-A" }),
-    createRow({ priority: "D", step: "STEP-D", line_rev: "INTERNAL-LINE-NAME" }),
-    createRow({ priority: "M", step: "STEP-M" }),
+    createRow({ priority: "A", recipe_id: "RECIPE-A" }),
+    createRow({ priority: "D", recipe_id: "RECIPE-D", line_rev: "INTERNAL-LINE-NAME" }),
+    createRow({ priority: "M", recipe_id: "RECIPE-M" }),
   ]
   const payload = buildSelfEquipmentPayload(rows, {
     line: "P1L",
@@ -120,7 +121,7 @@ test("My EQP 전체 Sensor Grade 조건에서는 모든 등급의 STEP을 제공
     chStep: "",
   })
 
-  assert.deepEqual(payload.steps.map((step) => step.desc), ["STEP-A", "STEP-D", "STEP-M"])
+  assert.deepEqual(payload.steps.map((step) => step.desc), ["RECIPE-A", "RECIPE-D", "RECIPE-M"])
 })
 
 test("My EQP STEP ALL은 선택 Grade 내 모든 EQP를 eqp_ch 선택지로 제공한다", () => {
@@ -152,7 +153,7 @@ test("My EQP STEP ALL은 선택 Grade 내 모든 EQP를 eqp_ch 선택지로 제�
 })
 
 test("My EQP URL의 eqp_ch는 확장자와 표기 차이가 있어도 실제 EQP로 선택한다", () => {
-  const rows = [createRow({ step: "STEP-A", eqp: "EQP-01_CH A.png" })]
+  const rows = [createRow({ recipe_id: "RECIPE-A", eqp: "EQP-01_CH A.png" })]
   const payload = buildSelfEquipmentPayload(rows, {
     line: "P1L",
     pathSdwt: "__MY_EQP__",
@@ -162,7 +163,7 @@ test("My EQP URL의 eqp_ch는 확장자와 표기 차이가 있어도 실제 EQP
     allowAllSteps: true,
     normalizeEqpCh: true,
     priorities: ["A"],
-    desc: "STEP-A",
+    desc: "RECIPE-A",
     eqpCh: "eqp01-cha",
     sensor: "",
     chStep: "",
@@ -181,7 +182,7 @@ test("eqp_ch ALL에서 Sensor ALL과 ch_step ALL을 선택하면 모든 센서 �
     pathSdwt: "SDWT-1",
     sdwt: "SDWT-1",
     priorities: ["A"],
-    desc: "10@MAIN",
+    desc: "R1",
     eqpCh: "ALL",
     sensor: "ALL",
     chStep: "ALL",
@@ -203,7 +204,7 @@ test("Sensor ALL에서는 개별 ch_step 선택을 허용하지 않는다", () =
     pathSdwt: "SDWT-1",
     sdwt: "SDWT-1",
     priorities: ["A"],
-    desc: "10@MAIN",
+    desc: "R1",
     eqpCh: "EQP-1.png",
     sensor: "ALL",
     chStep: "10@MAIN",
@@ -223,16 +224,64 @@ test("path_xian 최신 파일은 날짜와 시각이 가장 큰 이름을 선택
   ]), "2026-08-25 18:30:00")
 })
 
-test("path_xian index는 사용자 제공 7개 컬럼만 projection한다", () => {
+test("path_xian index는 REICPE_ID를 포함한 7개 컬럼만 projection한다", () => {
   assert.deepEqual(TEAM_ERD_COLUMNS, [
     "sdwt",
-    "recipe_id",
+    "REICPE_ID",
     "priority",
     "sensor",
     "step",
     "eqp",
     "file_path",
   ])
+})
+
+test("ERD scatter는 실제 schema의 underscore axis와 eqp_cb를 선택한다", () => {
+  assert.deepEqual(resolveErdScatterProjection([
+    "act_time",
+    "eqp_cb",
+    "eqp_id",
+    "TEMP_10@MAIN",
+  ], {
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+  }), {
+    axisColumn: "TEMP_10@MAIN",
+    equipmentColumn: "eqp_cb",
+    columns: ["act_time", "eqp_cb", "eqp_id", "TEMP_10@MAIN"],
+  })
+})
+
+test("ERD scatter는 star axis와 eqp schema도 호환한다", () => {
+  assert.deepEqual(resolveErdScatterProjection([
+    "act_time",
+    "eqp",
+    "wafer_id",
+    "TEMP*10@MAIN",
+  ], {
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+  }), {
+    axisColumn: "TEMP*10@MAIN",
+    equipmentColumn: "eqp",
+    columns: ["act_time", "eqp", "wafer_id", "TEMP*10@MAIN"],
+  })
+})
+
+test("ERD identity는 eqp 없이 eqp_cb group 전체를 읽을 수 있다", () => {
+  assert.deepEqual(resolveErdScatterProjection([
+    "act_time",
+    "eqp_cb",
+    "TEMP_10@MAIN",
+  ], {
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+    identity: true,
+  }), {
+    axisColumn: "TEMP_10@MAIN",
+    equipmentColumn: "",
+    columns: ["act_time", "eqp_cb", "TEMP_10@MAIN"],
+  })
 })
 
 test("자설비 경로의 pic_server2 segment만 pic로 정규화한다", () => {
@@ -488,21 +537,21 @@ test("다른 Line과 중복되는 display SDWT는 global index scope와 chart au
   }), false)
 })
 
-test("STEP 필터는 legacy desc가 아니라 ERD 경로 테이블의 step을 사용한다", () => {
-  const row = createRow({ desc: "LEGACY-DESC", step: "INDEX-STEP" })
+test("REICPE_ID 필터는 ch_step용 step과 분리된 index 값을 사용한다", () => {
+  const row = createRow({ desc: "LEGACY-DESC", recipe_id: "INDEX-RECIPE", step: "INDEX-STEP" })
   const payload = buildSelfEquipmentPayload([row], {
     line: "P1L",
     pathSdwt: "SDWT-1",
     sdwt: "SDWT-1",
     priorities: ["A"],
-    desc: "INDEX-STEP",
+    desc: "INDEX-RECIPE",
     eqpCh: "",
     sensor: "",
     chStep: "",
   })
 
-  assert.deepEqual(payload.steps.map((item) => item.desc), ["INDEX-STEP"])
-  assert.equal(payload.filters.desc, "INDEX-STEP")
+  assert.deepEqual(payload.steps.map((item) => item.desc), ["INDEX-RECIPE"])
+  assert.equal(payload.filters.desc, "INDEX-RECIPE")
 })
 
 test("chart API는 path_xian latestDate 형식이 잘못되면 파일을 읽기 전에 거부한다", async () => {

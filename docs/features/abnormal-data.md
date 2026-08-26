@@ -63,7 +63,7 @@ LineAnomalyDashboard
 | 출력 | `LineAnomalyDashboard` | 요약 KPI, Line별 bar·trend·상세 table | `LineAnomalyDashboard.jsx:435-622` |
 
 고유 이상건은 `desc`, `recipe_id`, `priority`, `sensor`, `eqp` 조합으로 계산한다.
-Dashboard 상세 링크는 Line·SDWT·Grade를 Self Equipment route로 넘기며 STEP·EQP는 이후 화면에서 선택한다.
+Dashboard 상세 링크는 Line·SDWT·Grade를 Self Equipment route로 넘기며 REICPE_ID·EQP는 이후 화면에서 선택한다.
 
 ### 3.2 Self Equipment와 MY EQP
 
@@ -218,8 +218,8 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 
 ### 6.1 명칭 대응
 
-- Self index와 Dashboard detail은 `recipe_id`를 사용하고 UI는 이를 PPID로 표시한다.
-- Self index의 `step`을 화면 STEP과 `ch_step`에 사용하며 legacy API 이름 `desc`로 선택값을 전달한다.
+- Self index는 원본 `REICPE_ID`를 내부 `recipe_id` 호환 alias로 정규화하고 UI의 REICPE_ID 필터와 기존 PPID grouping에 사용한다.
+- Self index의 `step`은 `ch_step`에 사용하며 REICPE_ID 선택값은 legacy API 이름 `desc`로 전달한다.
 - 공통부 index의 `prc_group`은 공통부 화면 filter이고 ERD `{ppid}`와 동일하다고 확정할 근거는 없다.
 - scatter Parquet은 선택 `sensor`·`chStep`으로 동적 column 이름을 만든다.
 - commonality의 `sensorChStep` directory는 마지막 `_`를 기준으로 Sensor와 `chStep`을 나눈다.
@@ -230,8 +230,8 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 |---|---|---|---|
 | Dashboard stats | `exec_date`, `recipe_id`, `priority`, `ng`, `total` | 숫자 합계·Grade 분류 | projection `Confirmed`, 타입·nullable `Unknown` |
 | Dashboard detail | `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` | 5-key 중복 제거·Line mapping | projection `Confirmed`, 전체 Schema `Unknown` |
-| Self index | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | 문자열 정규화·mapping scope·종속 filter | projection `Confirmed`, 타입·nullable `Unknown` |
-| ERD point | 공통 `act_time`, `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id`, 동적 `${sensor}*${chStep}`; identity 추가 `eqp_cb` | `eqp` 필터·날짜·숫자 변환; identity는 `eqp_cb` grouping | projection `Confirmed`, axis 타입 `Unknown` |
+| Self index | `sdwt`, `eqp`, `REICPE_ID`, `priority`, `sensor`, `step`, `file_path` | 문자열 정규화·mapping scope·종속 filter | projection `Confirmed`, 타입·nullable `Unknown` |
+| ERD point | 필수 `act_time`, schema에 존재하는 `eqp_cb` 또는 `eqp`, 동적 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환; identity는 `eqp_cb` 필수, hover 컬럼 선택 | EQP 필터·날짜·숫자 변환; identity는 `eqp_cb` grouping | schema 선택 코드 `Confirmed`, 운영 schema `Unknown` |
 | ERD history | `date`, `ctttm_url`, `work_type`, `desc` | 날짜 정렬·부분 실패 분리 | projection `Confirmed`, 전체 Schema `Unknown` |
 | Common index | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | path→data/image, 종속 filter | projection `Confirmed`, 전체 Schema `Unknown` |
 | Common point | `eqp_id`, `disp_name`, `lotid`, `wafer_id`, `act_time`, `eqp_cb`, 동적 axis | EQP matching·invalid row 제외 | projection `Confirmed`, 전체 Schema `Unknown` |

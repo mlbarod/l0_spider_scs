@@ -315,16 +315,18 @@ MY EQP chart를 조회하는 동작은 `Blocked`다.
 | 구분 | 참조 파일 | 참조 경로 | 참조 컬럼/키 |
 | --- | --- | --- | --- |
 | `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
-| ERD 이상감지 경로 테이블 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` |
-| 자설비 이상감지 단일설비 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), `{sensor}*{ch_step}` (y축), `eqp` (차트별 EQP 필터), `eqp_id`, `disp_name`, `wafer_id` (hover 표시), `root_lot_id` (hover 표시) |
-| 자설비 이상감지 동일성 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), `{sensor}*{ch_step}` (y축), `eqp` (차트별 EQP 필터), `eqp_id`, `disp_name`, `eqp_cb`, `wafer_id` (hover 표시), `root_lot_id` (hover 표시) |
+| ERD 이상감지 경로 테이블 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `REICPE_ID`, `priority`, `sensor`, `step`, `file_path` |
+| 자설비 이상감지 단일설비 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
+| 자설비 이상감지 동일성 데이터 | `data.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/data.parquet` | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
 | EQP 변경점 이력 | `{eqp}.parquet` | ERD 이상감지 경로 테이블의 `file_path` 컬럼 데이터 + `/{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
 
-구현은 `path_xian`에서 날짜·시각 이름이 가장 큰 파일을 선택한다. 경로 테이블의 `step`을
-화면 STEP과 `ch_step` 값으로 사용하고, `file_path`의 `/pic_server2/` segment는 `/pic/`로
-바꾼 뒤 `data.parquet` 또는 `{eqp}.parquet`를 읽는다. 차트 y축 컬럼명은
-`{sensor}*{ch_step}`이며 단일설비 row는 `eqp`, 동일성 row는 `eqp`로 대상을 제한한 뒤
-`eqp_cb`별 series로 구분한다. 두 gate mode 모두 chart 요청의 Line·SDWT·EQP·sensor·step·경로가
+구현은 `path_xian`에서 날짜·시각 이름이 가장 큰 파일을 선택한다. 화면 `REICPE_ID` 필터는
+동일 이름의 `REICPE_ID` 컬럼을, `ch_step`은 `step` 컬럼을 사용한다. `file_path`의
+`/pic_server2/` segment는 `/pic/`로 바꾼 뒤 `data.parquet` 또는 `{eqp}.parquet`를 읽는다.
+차트는 실제 Parquet schema에서 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`도
+호환하며, 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series는 `eqp_cb`를 사용한다.
+hover 보조 컬럼은 존재하는 항목만 projection한다. 두 gate mode 모두 chart 요청의
+Line·SDWT·EQP·sensor·step·경로가
 최신 `path_xian`의 scoped row와 모두 일치할 때만 후속 Parquet를 읽는다. 새 7-column index에는
 기존 Self DB 식별자 `ver`가 없으므로 전역 gate와 무관하게 Self 화면은
 My EQP·SKIP·클릭이력·이력저장을 숨기고 file chart만 제공한다. 이 DB 기능들의 재연결 계약은

@@ -41,7 +41,7 @@ test("MY EQP URL의 ALL·eqpCh 계약이 parser와 payload builder까지 보존�
   const priorities = resolveSelfEquipmentGrades(requested.grades, ["A/B", "D", "N", "M"])
   const rows = [
     createSyntheticRow(),
-    createSyntheticRow({ desc: "SYNTH_STEP_BETA" }),
+    createSyntheticRow({ recipe_id: "SYNTH_RECIPE_BETA" }),
     createSyntheticRow({ eqp: "SYNTH_EQP_02.png" }),
     createSyntheticRow({ priority: "A", eqp: "SYNTH_EQP_03.png" }),
   ]
@@ -67,8 +67,8 @@ test("MY EQP URL의 ALL·eqpCh 계약이 parser와 payload builder까지 보존�
   assert.equal(payload.filters.desc, "ALL")
   assert.equal(payload.filters.eqpCh, "SYNTH_EQP_01.png")
   assert.deepEqual(payload.steps.map((item) => item.desc), [
-    "SYNTH_STEP_ALPHA",
-    "SYNTH_STEP_BETA",
+    "SYNTH_RECIPE",
+    "SYNTH_RECIPE_BETA",
   ])
   assert.equal(
     payload.eqpChannels.find((item) => item.eqpCh === "SYNTH_EQP_01.png")?.rowCount,
@@ -76,10 +76,10 @@ test("MY EQP URL의 ALL·eqpCh 계약이 parser와 payload builder까지 보존�
   )
 })
 
-test("일반 Self Equipment payload는 실제 STEP 이름이 없으면 ALL을 선택하지 않는다", () => {
+test("일반 Self Equipment payload는 실제 REICPE_ID가 없으면 ALL을 선택하지 않는다", () => {
   const payload = buildSelfEquipmentPayload([
     createSyntheticRow(),
-    createSyntheticRow({ desc: "SYNTH_STEP_BETA" }),
+    createSyntheticRow({ recipe_id: "SYNTH_RECIPE_BETA" }),
   ], {
     line: "SYNTH_LINE",
     pathSdwt: "SYNTH_SDWT",
