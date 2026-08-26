@@ -10,6 +10,7 @@ import {
   filterMyEqpRows,
   handleErdScatterDataRequest,
   isSelfEquipmentDataPathAllowed,
+  normalizeSelfEquipmentIndexRow,
   normalizeSelfEquipmentFilePath,
   resolveErdScatterProjection,
   resolveErdDataFilePath,
@@ -102,7 +103,7 @@ test("SDWT 파일 경로가 매칭된 뒤에는 EQP의 구분자와 대소문자
   )
 })
 
-test("My EQP 전체 Sensor Grade 조건에서는 모든 등급의 REICPE_ID를 제공한다", () => {
+test("My EQP 전체 Sensor Grade 조건에서는 모든 등급의 RECIPE_ID를 제공한다", () => {
   const rows = [
     createRow({ priority: "A", recipe_id: "RECIPE-A" }),
     createRow({ priority: "D", recipe_id: "RECIPE-D", line_rev: "INTERNAL-LINE-NAME" }),
@@ -224,16 +225,40 @@ test("path_xian 최신 파일은 날짜와 시각이 가장 큰 이름을 선택
   ]), "2026-08-25 18:30:00")
 })
 
-test("path_xian index는 REICPE_ID를 포함한 7개 컬럼만 projection한다", () => {
+test("path_xian index는 reicpe_id를 포함한 7개 컬럼만 projection한다", () => {
   assert.deepEqual(TEAM_ERD_COLUMNS, [
     "sdwt",
-    "REICPE_ID",
+    "reicpe_id",
     "priority",
     "sensor",
     "step",
     "eqp",
     "file_path",
   ])
+})
+
+test("path_xian reicpe_id는 RECIPE_ID 필터와 row 호환 필드로 정규화한다", () => {
+  assert.deepEqual(normalizeSelfEquipmentIndexRow({
+    sdwt: " SDWT-1 ",
+    reicpe_id: " RECIPE-1 ",
+    priority: " A ",
+    sensor: " TEMP ",
+    step: " 10@MAIN ",
+    eqp: " EQP-1 ",
+    file_path: "/appdata/abnormal_trend/pic_server2/erd/path",
+  }, "2026-08-27"), {
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    ver: "",
+    recipe_id: "RECIPE-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+    file_path: "/appdata/abnormal_trend/pic/erd/path",
+    line_rev: "",
+    latest_date: "2026-08-27",
+  })
 })
 
 test("ERD scatter는 실제 schema의 underscore axis와 eqp_cb를 선택한다", () => {
@@ -537,7 +562,7 @@ test("다른 Line과 중복되는 display SDWT는 global index scope와 chart au
   }), false)
 })
 
-test("REICPE_ID 필터는 ch_step용 step과 분리된 index 값을 사용한다", () => {
+test("RECIPE_ID 필터는 ch_step용 step과 분리된 index 값을 사용한다", () => {
   const row = createRow({ desc: "LEGACY-DESC", recipe_id: "INDEX-RECIPE", step: "INDEX-STEP" })
   const payload = buildSelfEquipmentPayload([row], {
     line: "P1L",

@@ -88,14 +88,14 @@ Line 또는 추이 기간을 변경하면 새 조회가 끝날 때까지 이전 
 1. **Line Name**
 2. **SDWT** (mapping의 일반 자설비 분임조만 표시)
 3. **Sensor Grade** (복수 선택 가능)
-4. **REICPE_ID**
+4. **RECIPE_ID**
 5. **eqp_ch** (`ALL` 가능)
 6. **sensor** (선택지가 있으면 `ALL` 포함)
 7. **ch_step** (`ALL` 가능)
 
 ![자설비 필터](images/03-self-equipment-filters.png)
 
-sensor에서 `ALL`을 선택하면 현재 REICPE_ID·eqp_ch 범위의 모든 sensor가 조회 대상이 되며, `ch_step`에는 `ALL`만 표시됩니다. 개별 sensor를 선택하면 해당 sensor의 개별 `ch_step`과 `ALL`을 선택할 수 있습니다.
+sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sensor가 조회 대상이 되며, `ch_step`에는 `ALL`만 표시됩니다. 개별 sensor를 선택하면 해당 sensor의 개별 `ch_step`과 `ALL`을 선택할 수 있습니다.
 
 마지막 `ch_step`을 선택하면 EQP별 Scatter chart가 표시됩니다. 처음에는 **ch_step 모아보기 상태**로 그려지며 sensor·PPID별 대표 ch_step이 보입니다. sensor `ALL`에서도 각 sensor의 대표 차트가 유지됩니다.
 
@@ -264,7 +264,7 @@ Self의 SKIP·EQP ALL SKIP·SKIP해제·이력저장·클릭이력은 현재 화
 | --- | --- |
 | 선택 가능한 Line이 없습니다. | 라인 매핑, 사내 네트워크, 파일 권한 확인 |
 | 기준정보 매핑 오류 | 조회·등록·삭제가 안전하게 중단됩니다. **다시 조회**를 누르고 계속 실패하면 발생 시각과 문의 코드를 기록해 운영 담당자에게 문의 |
-| REICPE_ID·sensor·ch_step이 없습니다. | 앞 단계 필터와 실제 데이터 존재 여부 확인 |
+| RECIPE_ID·sensor·ch_step이 없습니다. | 앞 단계 필터와 실제 데이터 존재 여부 확인 |
 | 특정 SDWT의 PRC Group이 없습니다. | SDWT 기준정보 존재 여부 확인. 대소문자 차이는 자동 보정됨 |
 | 등록된 SDWT·EQP와 일치하는 이상건이 없습니다. | 등록 조건과 최신 ERD 생성 여부 확인 |
 | 이미지 또는 scatter 데이터를 읽지 못했습니다. | 발생 시각·선택 조건·문의 코드를 기록하고 파일 생성·읽기 권한을 운영 담당자에게 확인 요청 |

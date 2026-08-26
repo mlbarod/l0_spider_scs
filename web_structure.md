@@ -309,7 +309,7 @@ flowchart LR
 자설비 상세 흐름:
 
 1. `mapping_config.json`으로 Line과 SDWT 선택지를 만듭니다.
-2. 최신 `path_xian/{latest_date}` 파일에서 REICPE_ID → `eqp_ch` → sensor → `ch_step` 필터와 차트 경로를 만듭니다. REICPE_ID는 index의 동일 이름 컬럼, `ch_step`은 `step` 컬럼을 사용합니다.
+2. 최신 `path_xian/{latest_date}` 파일에서 RECIPE_ID → `eqp_ch` → sensor → `ch_step` 필터와 차트 경로를 만듭니다. RECIPE_ID는 index의 원천 철자 `reicpe_id` 컬럼, `ch_step`은 `step` 컬럼을 사용합니다.
 3. sensor 목록이 있으면 `ALL`을 항상 제공하며, sensor가 `ALL`이면 `ch_step`은 `ALL`만 선택할 수 있습니다. 서버도 같은 규칙으로 필터 조합을 정규화합니다.
 4. index의 `file_path`에서 `/pic_server2/`를 `/pic/`로 정규화한 뒤 같은 디렉터리의 `data.parquet`을 읽습니다.
 5. 실제 schema에서 y축은 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`도 호환합니다. 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series 분리는 `eqp_cb`를 사용합니다.
@@ -494,7 +494,7 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 | --- | --- | --- | --- |
 | `/appdata/l0_spider_scs/mapping_config.json` | `line_mapping`, `sdwt_mapping` | `mappingConfig.mjs`, `dashboardData.mjs`, `selfEquipmentData.mjs` | 전체 필터, 대시보드, MY EQP |
 | `/appdata/l0_spider/db_info.pkl` | DB host/port/name/user/password | 모든 DB Python helper | DB 기능 전체 |
-| `pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `REICPE_ID`, `priority`, `sensor`, `step`, `file_path` | `selfEquipmentData.mjs` | 자설비 index |
+| `pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `reicpe_id`, `priority`, `sensor`, `step`, `file_path` | `selfEquipmentData.mjs` | 자설비 index |
 | `pic/path_common/{line}/{sdwt}/df_path.parquet` | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | `commonAnomalyData.mjs` | 공통부 |
 | index `file_path` + `/data.parquet` | `act_time`, schema에 존재하는 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환, `eqp_cb` 또는 `eqp`; hover 보조 컬럼은 선택 | `selfEquipmentData.mjs` | 자설비 Scatter/동일성 |
 | 위 ERD 디렉터리의 `{eqp}.parquet` | `date`, `work_type`, `ctttm_url`, `desc` | `selfEquipmentData.mjs` | 변경점 이력 |

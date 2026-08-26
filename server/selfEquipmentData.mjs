@@ -26,7 +26,7 @@ import { listPassHistoryRecords } from "./passHistory.mjs"
 
 export const TEAM_ERD_COLUMNS = Object.freeze([
   "sdwt",
-  "REICPE_ID",
+  "reicpe_id",
   "priority",
   "sensor",
   "step",
@@ -84,9 +84,9 @@ export function normalizeSelfEquipmentFilePath(filePath) {
   return normalizeTextValue(filePath).replaceAll("/pic_server2/", "/pic/")
 }
 
-function normalizeRow(row, latestDate) {
+export function normalizeSelfEquipmentIndexRow(row, latestDate) {
   const step = normalizeTextValue(row.step)
-  const recipeId = normalizeTextValue(row.REICPE_ID)
+  const recipeId = normalizeTextValue(row.reicpe_id)
   return {
     sdwt: normalizeTextValue(row.sdwt),
     desc: recipeId,
@@ -195,7 +195,7 @@ export async function readLatestSelfEquipmentRows(indexRoot = SELF_EQUIPMENT_IND
     file,
     columns: TEAM_ERD_COLUMNS,
     compressors,
-  })).map((row) => normalizeRow(row, latestDate))
+  })).map((row) => normalizeSelfEquipmentIndexRow(row, latestDate))
   setLruEntry(
     parquetCache,
     filePath,

@@ -51,7 +51,7 @@
 | Flow ID | 사용자 기능 | 시작점 | 주요 처리 | 데이터 원천 | 최종 출력 | 완성도 | 상태 |
 |---|---|---|---|---|---|---|---|
 | `DF-DASH-01` | Line Dashboard | `/`, `/fdc_trend` | 날짜 선택·고유조합 집계 | detail·stats Parquet, mapping JSON | KPI·막대·추이·상세표 | `Complete` | `Confirmed` |
-| `DF-SELF-01` | Self Equipment 필터 | `/self-equipment` | mapping·최신 path_xian row·종속 필터 | `path_xian/{latest_date}`; DB history 미결합 | REICPE_ID·EQP·sensor·ch_step·chart row | 코드 `Complete`; 운영 `Unknown` | `Confirmed`/`Unknown` |
+| `DF-SELF-01` | Self Equipment 필터 | `/self-equipment` | mapping·최신 path_xian row·종속 필터 | `path_xian/{latest_date}`; DB history 미결합 | RECIPE_ID·EQP·sensor·ch_step·chart row | 코드 `Complete`; 운영 `Unknown` | `Confirmed`/`Unknown` |
 | `DF-SELF-02` | Scatter·동일성 차트 | Self Equipment chart card | image path 검증·data path 변환·point 집계 | ERD `data.parquet`, history Parquet | scatter·3일 동일성·변경이력 | `Complete` | `Confirmed` |
 | `DF-SELF-03` | MY EQP 조회 | `sdwt=MY_EQP` | legacy handler 보존, UI capability 비활성 | `myeqp_regist`, mapping JSON, 최신 path_xian | 현재 화면 출력 없음 | `Blocked` | 새 DB 식별 계약 `Unknown` |
 | `DF-ABN-01` | 동일성 이상감지 | `/matching-anomaly` | 최신 directory index와 종속 필터 | `erd_commonality` directory·PNG | 분석 이미지 카드 | `Complete` | `Confirmed` |
@@ -151,7 +151,7 @@ flowchart LR
 | Flow ID | API·진입점 | handler·서비스 | 데이터 원천 | 변환·집계 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | `DF-DASH-01` | `GET /api/dashboard-data` | `getDashboardSummary` | `DS-DASH-01/02`, `DS-MAP-01` | 날짜별 최신·D-1 선택, 5-key 고유집계 | `Confirmed` | `dashboardData.mjs` |
-| `DF-SELF-01` | `GET /api/self-equipment-data` | `readLatestSelfEquipmentRows`, `scopeSelfEquipmentRows`, `buildSelfEquipmentPayload` | `DS-SELF-01`; DB history 미결합 | mapping 범위, REICPE_ID=`REICPE_ID`, ch_step=`step`, 종속 option·row 생성 | 코드 `Confirmed`; 운영 `Unknown` | `selfEquipmentData.mjs` |
+| `DF-SELF-01` | `GET /api/self-equipment-data` | `readLatestSelfEquipmentRows`, `scopeSelfEquipmentRows`, `buildSelfEquipmentPayload` | `DS-SELF-01`; DB history 미결합 | mapping 범위, RECIPE_ID=`reicpe_id`→내부 `recipe_id`, ch_step=`step`, 종속 option·row 생성 | 코드 `Confirmed`; 운영 `Unknown` | `selfEquipmentData.mjs` |
 | `DF-SELF-02` | scatter·file API | `resolveErdDataFilePath`, payload builder | `DS-SELF-02` | axis column, point grouping·sampling·history | `Confirmed` | `selfEquipmentData.mjs` |
 | `DF-SELF-03` | `GET /api/my-eqp-equipment-data` | legacy 사용자·등록 조회 후 `filterMyEqpRows` | DB·mapping·`DS-SELF-01` | UI는 `selfEquipmentDb=false`로 미호출 | `Blocked` / handler만 `Documented` | `handleMyEqpEquipmentDataRequest`; `dataConnections.mjs` |
 | `DF-ABN-01` | commonality data/image API | latest path·directory index·filter payload | `DS-ABN-01` | folder segment를 image row로 변환 | `Confirmed` | commonality modules |
@@ -170,7 +170,7 @@ flowchart LR
 | `sdwt` | mapping display 또는 URL 반복값 | 일반 Self는 legacy display도 전달 | 서버 scope는 mapping key·유일 display만 신뢰; `MY_EQP`는 dormant virtual 값 | 일반 상세 endpoint에서 필수 | 코드 `Confirmed` | URL utility; handlers |
 | `pathSdwt` | mapping JSON key | 화면의 team key | mapping 전체에서 해당 key만 유일하게 소유하는 key·표시값과 최신 index row `sdwt`를 대조 | 일반 상세에서 필수, 모호한 display는 제외 | 코드 `Confirmed` | `scopeSelfEquipmentRows` |
 | `grade` / `priority` | 사용자·URL | `A/B`를 `A`,`B`로 확장하여 반복 `priority` | Parquet `priority`, mailing group | URL Grade가 없으면 화면 기본 `A/B` | `Confirmed` | `expandPriorities`; URL utility |
-| `REICPE_ID` / legacy `desc` | 사용자 | UI label은 REICPE_ID; API wire 이름은 legacy `desc` | path_xian Parquet `REICPE_ID` filter | URL `step`과 직접 연결 안 함 | 코드 `Confirmed` / URL 명칭 `Mismatch` | `FdcTrendPage`; self handler |
+| `RECIPE_ID` / legacy `desc` | 사용자 | UI label은 RECIPE_ID; API wire 이름은 legacy `desc` | path_xian Parquet `reicpe_id`를 내부 `recipe_id`로 정규화해 filter | URL `step`과 직접 연결 안 함 | 코드 `Confirmed` / URL 명칭 `Mismatch` | `FdcTrendPage`; self handler |
 | `eqpCh` | 사용자 또는 URL | `eqpCh`; legacy `eqp_ch`도 읽음 | 일반 Self row `eqp` filter; MY EQP 정규화는 dormant | 없으면 미선택 | `Confirmed` | API·URL utility |
 | `sensor` | 사용자 선택 | `sensor` query; `ALL` 허용 | row·axis filter; click history는 선택 `ALL`을 그대로 저장 | 없으면 후속 row 없음 | `Confirmed` | Self/commonality handlers |
 | `chStep` / `ch_step` | 사용자 선택 | API query는 `chStep` | row `step`, 자설비 axis `${sensor}*${chStep}` | sensor `ALL`이면 `ALL`만 정상 분기 | 코드 `Confirmed` | Self payload |
@@ -212,7 +212,7 @@ flowchart LR
 
 | 단계 | 구성요소 | 입력 | 처리 | 출력 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
-| 1 | `FdcTrendPage` | mapping, 사용자 선택 | Line→SDWT→Grade→REICPE_ID→EQP→sensor→ch_step 상태 구성 | API query | `Confirmed` | page query state |
+| 1 | `FdcTrendPage` | mapping, 사용자 선택 | Line→SDWT→Grade→RECIPE_ID→EQP→sensor→ch_step 상태 구성 | API query | `Confirmed` | page query state |
 | 2 | `fetchSelfEquipmentData` | filter state | 반복 priority와 선택 query 직렬화 | `GET /api/self-equipment-data` | `Confirmed` | API module |
 | 3 | Self handler | `line`, `pathSdwt`, `sdwt` 등 | 필수값·path segment 검증 | 조회 조건 | `Confirmed` | `readFilters` |
 | 4 | `readLatestSelfEquipmentRows` | path_xian root | 최신 날짜·시각 Parquet 읽기·정규화 | 전체 path rows | 코드 `Confirmed`; 운영 `Unknown` | `DS-SELF-01` |

@@ -76,7 +76,7 @@ test("MY EQP URL의 ALL·eqpCh 계약이 parser와 payload builder까지 보존�
   )
 })
 
-test("일반 Self Equipment payload는 실제 REICPE_ID가 없으면 ALL을 선택하지 않는다", () => {
+test("일반 Self Equipment payload는 실제 RECIPE_ID가 없으면 ALL을 선택하지 않는다", () => {
   const payload = buildSelfEquipmentPayload([
     createSyntheticRow(),
     createSyntheticRow({ recipe_id: "SYNTH_RECIPE_BETA" }),

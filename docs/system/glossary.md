@@ -25,11 +25,11 @@
 | Line | 업무 용어 | 화면 필터·집계·파일 경로에서 사용하는 상위 Line 구분값 | `line`, `lineId`, `line_rev` | Dashboard, Self Equipment, 이상 데이터 | 표시 Line과 원천 `line_rev`는 mapping을 거칠 수 있다. 공식 master와 소유자는 `Unknown`이다. | 사용 `Confirmed` — `data-flow.md:157`; `abnormal-data.md:168` |
 | SDWT | 업무 용어 | Line 아래에서 조회·등록 범위를 나누는 단위 | `sdwt`, `pathSdwt` | Self Equipment, 이상 데이터, Mailing | 약어의 공식 확장명은 `Unknown`; 표시값 `sdwt`와 경로 key `pathSdwt`를 구분한다. | 사용 `Confirmed`, 정의 `Unknown` — `data-flow.md:158-159`; `abnormal-data.md:169` |
 | Grade | 업무 용어 | 화면에 `Sensor Grade`로 표시되는 이상 등급 필터 | URL `grade`, API·Parquet `priority` | Dashboard, Self Equipment, Mailing | 화면의 `A/B`는 조회 시 `A`, `B`로 확장되지만 `mailingSummary`는 원본 Grade를 유지한다. | `Confirmed` — `self-equipment.md:63`; `dashboard.md:249` |
-| REICPE_ID | Self 화면 용어 | 자설비 이상 결과를 recipe 식별자 단위로 선택하는 상위 필터 | UI `REICPE_ID`, Self 원천 row `REICPE_ID`, 호환 응답 `steps[].desc`, query `desc` | Self Equipment | 원천 철자 `REICPE_ID`를 그대로 projection하고 내부 `recipe_id` alias로 정규화한다. | 코드 `Confirmed`; 운영 값 `Unknown` — `self-equipment.md` |
-| STEP | 업무 용어 | 동일성 화면과 legacy 딥링크의 공정 STEP 개념 | UI `STEP`, query `step` | 동일성, 딥링크 | Self Equipment 상위 필터는 REICPE_ID로 변경됐고 `step` row는 `ch_step`에만 사용한다. URL 비-`ALL` token 연결은 별도 후보다. | Self 분리 `Confirmed`; 비-`ALL` 딥링크 연결 `Mismatch` — `self-equipment.md` |
+| RECIPE_ID | Self 화면 용어 | 자설비 이상 결과를 recipe 식별자 단위로 선택하는 상위 필터 | UI `RECIPE_ID`, Self 원천 row `reicpe_id`, 내부 row `recipe_id`, 호환 응답 `steps[].desc`, query `desc` | Self Equipment | 원천 철자 `reicpe_id`를 projection하고 내부 `recipe_id`로 정규화한 뒤 UI에서 `RECIPE_ID`로 표시한다. | 코드 `Confirmed`; 운영 값 `Unknown` — `self-equipment.md` |
+| STEP | 업무 용어 | 동일성 화면과 legacy 딥링크의 공정 STEP 개념 | UI `STEP`, query `step` | 동일성, 딥링크 | Self Equipment 상위 필터는 RECIPE_ID로 변경됐고 `step` row는 `ch_step`에만 사용한다. URL 비-`ALL` token 연결은 별도 후보다. | Self 분리 `Confirmed`; 비-`ALL` 딥링크 연결 `Mismatch` — `self-equipment.md` |
 | `step_seq` | 코드·경로 식별자 | 동일성 결과 디렉터리에서 읽어 image row metadata로 전달하는 순서 값 | `stepSeq`, path `step_seq` | 동일성 이상감지 | 브라우저 query나 Self Equipment STEP 선택값이 아니다. 업무상 순서 의미는 `Unknown`이다. | 전달 `Confirmed`, 정의 `Unknown` — `abnormal-data.md:171,185` |
 | `step_desc` | 코드·경로 식별자 | 동일성 경로 등에서 STEP 설명을 나타내는 표현 | API `stepDesc`, path `step_desc` | 동일성; Self legacy 문맥 | 현재 Self `path_xian`의 원천 컬럼은 `step`이며 별도 `step_desc`가 아니다. | 비-Self 사용 `Confirmed`; Self legacy `Documented` — `abnormal-data.md` |
-| `desc` | 코드 식별자 | Dashboard의 STEP 설명 또는 Self 호환 응답 필드 | `desc` | Dashboard, Self Equipment, Mailing 집계 | 현재 Self에서는 `path_xian.step`을 `desc`로 투영한다. 원천 `desc` 컬럼으로 해석하지 않는다. | Self 투영 `Confirmed` — `self-equipment.md:224-233`; `data-flow.md` |
+| `desc` | 코드 식별자 | Dashboard의 STEP 설명 또는 Self 호환 응답 필드 | `desc` | Dashboard, Self Equipment, Mailing 집계 | 현재 Self에서는 `path_xian.reicpe_id`를 내부 `recipe_id`와 호환 응답 `desc`로 투영한다. 원천 `desc` 컬럼으로 해석하지 않는다. | Self 투영 `Confirmed` — `self-equipment.md:224-249`; `data-flow.md` |
 | `eqpCh` | query·API 식별자 | Self Equipment에서 초기 EQP 선택과 row 필터에 쓰는 단일 query 값 | `eqpCh`, 호환 alias `eqp_ch`, state `selectedEqpCh` | 딥링크, Self Equipment | 서버 row `eqp`에 대응하지만 정확한 equipment/chamber 업무 의미는 `Unknown`이다. | 사용 `Confirmed`, 도메인 정의 `Unknown` — `step-deeplink.md:100-109,237-249` |
 | PPID | 업무·화면 용어 | 화면의 chart/card에서 레시피 식별 맥락으로 표시하는 값 | UI `PPID`, source `recipe_id`, path `ppid` | Dashboard, Self Equipment, 동일성 | 약어의 공식 정의와 모든 경로 `ppid`가 `recipe_id`와 동일하다는 보장은 `Unknown`이다. | 표시 매핑 `Confirmed` — `abnormal-data.md:179-182` |
 | `recipe_id` | 데이터 식별자 | Dashboard/Self row의 레시피 식별 필드이며 고유 이상건 key에 포함됨 | `recipe_id` | Dashboard 집계, Self Equipment | UI는 PPID로 표시한다. 공통부 `prc_group`과 같은 값으로 확정하지 않는다. | `Confirmed` — `data-flow.md:169,180`; `abnormal-data.md:181` |
@@ -53,7 +53,7 @@
 | 사용자 표기 | URL·API 표기 | 저장·경로 표기 | 기준 해석 |
 |---|---|---|---|
 | Sensor Grade | `grade`, 반복 `priority` | `priority`, 경로 `grade` | UI Grade를 조회 시 원천 `priority`로 변환한다. |
-| STEP | query `step`, Self API `desc`, 비-Self API `stepDesc` | Self `path_xian.step`, 비-Self path `step_desc` | 현재 Self는 원천 `step`을 호환 필드 `desc`로 투영하며 URL token 후보는 별도 문맥이다. |
+| STEP | query `step`, Self API의 legacy `desc`, 비-Self API `stepDesc` | Self `path_xian.step`, 비-Self path `step_desc` | 현재 Self에서 원천 `step`은 `ch_step`이며, legacy query `desc`는 RECIPE_ID 선택에 사용한다. URL token 후보는 별도 문맥이다. |
 | PPID | 직접 query 없음 | `recipe_id`, path `ppid` | UI 표시 매핑은 확인됐지만 모든 원천의 동일성은 확정하지 않는다. |
 | eqp_ch | `eqpCh`, alias `eqp_ch` | row `eqp` | query 이름과 화면 label, 원천 column이 다르다. |
 | ch_step | `chStep` | Self row `step`, 비-Self path `ch_step` | 현재 Self에서는 STEP과 같은 원천 `step` 값을 사용한다. |
