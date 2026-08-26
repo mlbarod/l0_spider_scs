@@ -57,6 +57,7 @@ import {
   fetchSkipListData,
 } from "../api/passHistoryApi"
 import {
+  buildErdDataReferencePath,
   fetchErdIdentityData,
   fetchErdScatterData,
   fetchEqpAllSkipTargets,
@@ -500,6 +501,21 @@ function ChartLoadingSurface({ active, label }) {
   )
 }
 
+function ChartLoadError({ error, filePath }) {
+  const referencePath = buildErdDataReferencePath(filePath)
+  return (
+    <div className="grid max-w-2xl gap-3 px-4 text-center text-sm text-destructive">
+      <p>{error?.message ?? "차트 데이터를 불러오지 못했습니다."}</p>
+      {referencePath ? (
+        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-left text-xs">
+          <p className="mb-1 font-medium">차트 참조 경로</p>
+          <code className="block select-all break-all font-mono text-foreground">{referencePath}</code>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export function IdentityChartDialog({
   row,
   eqp,
@@ -685,8 +701,8 @@ export function IdentityChartDialog({
             </span>
           </div>
         ) : identityQuery.isError ? (
-          <div className="grid min-h-80 place-items-center px-6 text-center text-sm text-destructive">
-            {identityQuery.error.message}
+          <div className="grid min-h-80 place-items-center px-6">
+            <ChartLoadError error={identityQuery.error} filePath={row.file_path} />
           </div>
         ) : groups.length ? (
           <div
@@ -872,9 +888,7 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
             label="최근 3일 동일성 차트를 준비 중입니다."
           />
         ) : identityQuery.isError ? (
-          <div className="max-w-md px-4 text-center text-sm text-destructive">
-            {identityQuery.error.message}
-          </div>
+          <ChartLoadError error={identityQuery.error} filePath={row.file_path} />
         ) : groups.length ? (
           <div ref={chartRef} className="h-[320px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -1320,9 +1334,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
             label="Scatter chart를 준비 중입니다."
           />
         ) : chartQuery.isError ? (
-          <div className="max-w-md px-4 text-center text-sm text-destructive">
-            {chartQuery.error.message}
-          </div>
+          <ChartLoadError error={chartQuery.error} filePath={row.file_path} />
         ) : points.length ? (
           <div
             ref={chartContainerRef}

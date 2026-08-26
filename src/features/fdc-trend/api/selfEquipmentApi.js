@@ -1,5 +1,15 @@
 import { getApiErrorMessage } from "./errorMessage.js"
 
+export function buildErdDataReferencePath(filePath) {
+  const normalizedPath = String(filePath ?? "").trim().replaceAll("/pic_server2/", "/pic/")
+  if (!normalizedPath) return ""
+  if (/\/data\.parquet$/i.test(normalizedPath)) return normalizedPath
+  if (/\/[^/]+\.png$/i.test(normalizedPath)) {
+    return normalizedPath.replace(/\/[^/]+\.png$/i, "/data.parquet")
+  }
+  return `${normalizedPath.replace(/\/+$/, "")}/data.parquet`
+}
+
 export async function fetchSelfEquipmentData({
   line,
   pathSdwt,

@@ -136,7 +136,7 @@ mapping capability가 DB query와 action을 프론트엔드에서도 비활성�
 | sessionStorage | 사용 위치 확인 안 됨 | 민감값 저장 여부 | `Unknown`이나 source 검색상 미사용 | code search |
 | browser 설정 | `VITE_SITE_URL`이 Vite config에 사용됨 | `VITE_*` secret은 bundle 노출 가능 | `Policy` | `vite.config.mjs:29-33` |
 | API base URL | feature client는 상대 `/api` 사용 | origin 경계 변경 | same-origin `Implemented` | `src/features/fdc-trend/api/*.js` |
-| 오류 표시 | API `error`의 경로 마스킹과 안전한 `requestId` 문의 코드 표시 | 보호 대상 외 legacy 오류의 비경로 정보 | 일부 `Implemented` | `errorMessage.js`; `safeApiError.mjs` |
+| 오류 표시 | API `error`의 경로 마스킹과 안전한 `requestId` 문의 코드 표시; 차트 실패에 한해 이미 받은 row에서 계산한 `data.parquet` 경로를 별도 표시 | 운영 file topology | 사용자 파일 확인 목적의 제한적 노출 `Implemented` / `Risk` | `errorMessage.js`; `ChartLoadError`; `safeApiError.mjs` |
 | query cache | React Query memory cache, 기본 retry 1 | 브라우저 memory에 업무 payload 잔류 | `Needs Validation` | `src/lib/queryClient.js:8-17` |
 | source map | Vite build에서 명시 설정 미확인 | production source 노출 여부 | `Unknown` | `vite.config.mjs` |
 
@@ -166,7 +166,7 @@ mapping capability가 DB query와 action을 프론트엔드에서도 비활성�
 |---|---|---|---|---|---|---|---|
 | Self index | `line`, `pathSdwt` | 최신 `path_xian/{latest_date}` + mapping scope | segment·mapping 범위 검사 | Parquet read | symlink·mount 권한 | `Implemented` / 운영 `Unknown` | `readLatestSelfEquipmentRows`; `scopeSelfEquipmentRows` |
 | common index | `line`, `pathSdwt` | `buildCommonAnomalyPath` | 같은 segment 검사 | Parquet read | symlink·path 노출 | `Implemented` / `Unknown` | `commonAnomalyData.mjs:223-245` |
-| ERD data | browser가 받은 index `file_path` | `resolveErdDataFilePath` | `/pic_server2/`→`/pic/`, pic root prefix·backup 거부; 두 gate mode에서 최신 scoped index의 path·EQP·date·sensor·step 재검증 | directory의 Parquet read | symlink·producer 신뢰 영향 | `Implemented` / 운영 `Needs Validation` | `resolveErdDataFilePath`; `isSelfEquipmentDataPathAllowed` |
+| ERD data | browser가 받은 index `file_path` | `resolveErdDataFilePath` | `/pic_server2/`→`/pic/`, `.png` sibling·directory 하위·직접 `data.parquet` 구분, pic root prefix·backup 거부; 두 gate mode에서 최신 scoped index의 path·EQP·date·sensor·step 재검증 | Parquet read | symlink·producer 신뢰·화면 경로 노출 | `Implemented` / 운영 `Needs Validation` | `resolveErdDataFilePath`; `isSelfEquipmentDataPathAllowed` |
 | common data | image 또는 data path | `resolveCommonAnomalyDataPath` | suffix 변환, common root prefix | Parquet read | symlink·경로 노출 | `Implemented` / `Needs Validation` | `commonAnomalyData.mjs:261-276` |
 | ERD image | absolute path query | `handleErdFileRequest` | ERD root·image extension·regular file | stream read | 직접 file 존재 oracle | `Implemented` / `Risk` | `selfEquipmentData.mjs:803-833` |
 | commonality image | absolute path query | commonality handler | 최신 root·`img.png`·regular file | stream read | 404·500 path 노출 | `Implemented` / `Risk` | `commonalityData.mjs:256-289` |
@@ -302,13 +302,15 @@ Parameterized value query는 SQL injection 위험을 줄이지만 인증·권한
 | API error body | 고정 `error`, 안정적 `code`, `requestId` | 공통 보호 오류 builder | network client | 내부 detail 제거 | `Implemented` for CORE-03A scope | `safeApiError.mjs`; handler catches |
 | API debug body | 없음 | debug row·DB detail field 제거 | network client·UI | 해당 없음 | `Implemented` | registration handlers·pages |
 | success payload | `sourcePath`, `sourcePaths` | 없음 | network client | 운영 file topology | `Risk` | Dashboard·Self handlers |
-| browser display | server error·request ID | file path regex 마스킹, 문의 코드 표시 | 사용자 UI | 보호 대상은 고정 문구 | 일부 `Implemented` | `errorMessage.js` |
+| browser display | server error·request ID, chart row 파생 data path | server error path regex 마스킹, 문의 코드 표시; chart 실패에 한해 파생 경로 별도 표시 | 사용자 UI | 운영 file topology | 사용자 파일 확인 목적 `Implemented` / `Risk` | `errorMessage.js`; `ChartLoadError` |
 | server startup log | bind host·port | 없음 | process log | network topology | `Low` | `server.mjs:301-304` |
 | query string log | access log 구현 없음 | 해당 없음 | 외부 proxy 후보 | STEP token·filter 노출 | `Unknown` | 저장소 밖 |
 | request body log | application에서 전체 body log 미확인 | 해당 없음 | process log | 개인정보 | source상 미확인 |
 | systemd journal | 설정 없음 | 미확인 | 운영자 | 보존·권한 | `Unknown` | unit file 부재 |
 
-보호 대상 오류의 network response 원문 노출은 CORE-03A에서 제거했다. 성공 payload의 legacy path와 보호 대상 밖 단순 오류는 별도 계약 범위다.
+보호 대상 오류의 network response 원문 노출은 CORE-03A에서 제거했다. 차트 실패 화면의 경로는
+오류 body나 exception 원문이 아니라 이미 성공 payload로 받은 index row에서 결정적으로 파생한다.
+성공 payload의 legacy path와 보호 대상 밖 단순 오류는 별도 계약 범위다.
 Log·오류 정책은 token, 실제 path, 수신자·사용자 정보, DB detail을 기본적으로 기록하지 않는 `Policy`를 따라야 한다.
 
 ## 18. 네트워크와 host 경계

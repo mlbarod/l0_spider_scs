@@ -140,7 +140,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 
 - [ ] 실제 file을 수정·순회하지 않고 코드 path contract와 변경 diff를 검토했다.
 - [ ] Dashboard detail·stats·mapping 경로와 latest 선택 규칙을 유지했다.
-- [ ] 일반 Self 최신 `path_xian/{latest_date}`, `file_path/data.parquet`, `file_path/{eqp}.parquet` 관계와 `pic_server2` 정규화를 확인하고 MY EQP 소비가 `Blocked`임을 유지했다.
+- [ ] 일반 Self 최신 `path_xian/{latest_date}`의 `file_path`가 png·directory·직접 `data.parquet`인 경우의 data/history sibling 변환과 `pic_server2` 정규화를 확인하고 MY EQP 소비가 `Blocked`임을 유지했다.
 - [ ] 동일성 `erd_commonality`, 공통부 동일성 `path_common_commonality`와 공통부 `path_common`·common data/image 관계를 확인했다.
 - [ ] `latest_date`, `line`, `sdwt`, `grade`, `step_seq`, `step_desc`, `eqp_model`, `ppid`, `sensor`, `ch_step`, `eqp`, `ver` 전파 영향을 검토했다.
 - [ ] Parquet column·type·nullable·dynamic axis 변경을 producer와 consumer가 함께 승인했다.

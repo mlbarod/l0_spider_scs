@@ -613,9 +613,14 @@ export function resolveErdDataFilePath(dataDirectoryPath) {
 
   const pathSegments = relative(PIC_FILE_ROOT, resolvedInputPath).split(sep)
   const latestDate = pathSegments.find((segment) => SELF_EQUIPMENT_DATE_PATTERN.test(segment)) ?? ""
+  const filePath = /\.png$/i.test(resolvedInputPath)
+    ? join(dirname(resolvedInputPath), "data.parquet")
+    : resolvedInputPath.endsWith(`${sep}data.parquet`)
+    ? resolvedInputPath
+    : join(resolvedInputPath, "data.parquet")
 
   return {
-    filePath: join(resolvedInputPath, "data.parquet"),
+    filePath,
     latestDate,
     sensor: "",
     chStep: "",

@@ -142,7 +142,7 @@ sequenceDiagram
     API->>Index: path_xian/{latest_date} 읽기
     API-->>Browser: filters, options, rows
     Browser->>API: erd-scatter-data GET
-    API->>Erd: file_path/data.parquet와 file_path/{eqp}.parquet 읽기
+    API->>Erd: file_path에서 해석한 data.parquet와 sibling {eqp}.parquet 읽기
     API-->>Browser: points, groups, changeHistory
     Browser-->>User: EQP별 scatter와 동일성 chart
 ```
@@ -202,8 +202,8 @@ sequenceDiagram
 | Data Source ID | 유형 | 경로·테이블·자원 | 접근 코드 | 사용 목적 | 읽기·쓰기 | 생성 책임 | 상태 |
 |---|---|---|---|---|---|---|---|
 | `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | `readLatestSelfEquipmentRows` | 최신 index의 filter option·`file_path` | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
-| `DS-SELF-02` | Parquet | index row `file_path` + `/data.parquet` | `readErdScatterRows` | schema 기반 axis·EQP 식별 scatter와 `eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
-| `DS-SELF-02-H` | Parquet | index row `file_path` + `/{eqp}.parquet` | `readErdHistoryRows` | 변경점 이력 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
+| `DS-SELF-02` | Parquet | index row `file_path`: `{eqp}.png` sibling 또는 directory 하위 `data.parquet`; 직접 `data.parquet` 호환 | `readErdScatterRows` | schema 기반 axis·EQP 식별 scatter와 `eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
+| `DS-SELF-02-H` | Parquet | 선택한 `data.parquet` directory의 `{eqp}.parquet` | `readErdHistoryRows` | 변경점 이력 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-IMG` | image | 허용 ERD root의 image | `handleErdFileRequest` | stream endpoint | 읽기 | `Unknown` | endpoint `Confirmed` |
 | `DS-MAP` | JSON | mapping config | `readLineMapping` | 현재 일반 Self Line·SDWT scope; legacy MY EQP handler에도 보존 | 읽기 | `Unknown` | 일반 Self `Confirmed`; MY EQP dormant |
 | `DS-SENSOR-EXCLUSION` | JSON | 기본 `config/sensor-exclusions.json`, 선택적 `SENSOR_EXCLUSION_CONFIG_PATH` override | `readSensorExclusionConfig` | 현재 일반 Self sensor 제외; legacy MY EQP handler에도 보존 | 읽기 | 개발자·배포 담당자 | 일반 Self `Confirmed`; MY EQP dormant |
@@ -216,14 +216,15 @@ sequenceDiagram
 | 경로 또는 자원 ID | 코드의 경로 패턴 | 용도 | 경로 변수 | 누락 처리 | 상태 |
 |---|---|---|---|---|---|
 | latest index | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | 현재 일반 Self 대상 row; legacy MY EQP handler도 보존 | 날짜·시각 이름 중 최신 file, mapping의 Line·SDWT | root·file 예외→API `500` | 일반 Self 코드 `Confirmed`; MY EQP dormant; 운영 file `Unknown` |
-| ERD data | row `file_path` directory의 `data.parquet` | scatter·identity | index row, sensor, chStep | `/pic_server2/`→`/pic/`; 예외→chart API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
-| ERD history | row `file_path` directory의 `{eqp}.parquet` | 변경점 이력 | 선택 EQP | 실패를 `historyError`로 분리 | 코드 `Confirmed`; 운영 file `Unknown` |
+| ERD data | row `file_path`가 `.png`이면 sibling `data.parquet`; directory이면 하위 파일; `data.parquet` 직접 입력 호환 | scatter·identity | index row, sensor, chStep | `/pic_server2/`→`/pic/`; 예외→chart API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
+| ERD history | 선택한 `data.parquet` directory의 `{eqp}.parquet` | 변경점 이력 | 선택 EQP | 실패를 `historyError`로 분리 | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD image | `/appdata/abnormal_trend/pic/erd/...` | image stream endpoint | 요청 `path` | 금지 `403`, 없음 `404` | endpoint `Confirmed` |
 | Self scoped path | 최신 index row의 정규화된 `file_path` | Self 전용 gate의 chart 접근 경계 | Line·path SDWT·EQP·latest date | 불일치 `403` | 코드 `Confirmed`; 운영 row `Unknown` |
 
 경로 template 근거는 `src/config/spiderDataPaths.mjs:1-17,70-72`, 접근 근거는 `server/selfEquipmentData.mjs:137-163,449-468`이다.
 Self Equipment는 `path_xian` root의 날짜·시각 파일명을 비교해 최신 index를 선택하고,
-index row의 `file_path`를 후속 데이터 directory로 사용한다.
+index row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`, directory와
+`data.parquet` 직접 입력을 구분해 같은 결과 파일을 선택한다.
 ## 15. 조회 파라미터 전파
 
 | 파라미터 | URL·UI 입력 | API 전달 | 서버·데이터 반영 | 화면 영향 | 상태 |
@@ -235,7 +236,7 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 | `eqpCh` | URL 또는 eqp_ch 선택 | `eqpCh` | row `eqp` 매칭 | sensor option | `Confirmed` |
 | `sensor` | UI 선택 | `sensor` | row `sensor`; chart axis prefix | ch_step·chart | `Confirmed` |
 | `ch_step` | UI 선택 | `chStep` | row `step`; chart axis는 schema의 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환 | rows·chart | 코드 `Confirmed` |
-| `file_path` | index row | chart API `path` | directory 아래 data/history path; `pic_server2` 정규화 | chart source | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `file_path` | index row | chart API `path` | `.png` sibling 또는 directory 하위 data/history path; `pic_server2` 정규화 | chart source | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `latest_date` | 최신 `path_xian` 파일명 | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
 | `recipe_id` | index 원천값 | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ver` | 새 index에 없음 | 빈 compatibility 값 | 기존 Self SKIP 식별에 사용할 수 없음 | DB 기능 fail-close | `Mismatch` |
@@ -296,14 +297,17 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 | ch_step 미선택 | 성공 가능, rows 미표시 | chart query 비활성 | 선택 안내 | `Confirmed` |
 | chart row 없음 | 성공+빈 rows | group 없음 | `표시할 file_path 데이터가 없습니다.` | `Confirmed` |
 | MY EQP 등록은 있으나 매칭 없음 | 현재 query 비활성 | 없음 | 없음 | dormant legacy |
-| ERD 필수 schema 없음·파일 오류 | chart API `500` | card query error | chart 오류 문구 | `Confirmed`; 운영 원인 `Unknown` |
+| ERD 필수 schema 없음·파일 오류 | chart API `500` | card query error | chart 오류 문구와 실제 참조 `data.parquet` 경로 | `Confirmed`; 운영 원인 `Unknown` |
 | history Parquet만 실패 | scatter API `200`+`historyError` | chart 유지 | 변경점 이력 오류 | `Confirmed` |
 | image 없음 | `/api/erd-file` `404` | 현재 화면 소비 미확인 | `Unknown` | endpoint `Confirmed` |
 | 잘못된 HMAC token | 전용 오류 응답 없음 | 일반 STEP 미선택과 구분 안 됨 | 별도 안내 없음 | `Mismatch` |
 
 근거: `FdcTrendPage.jsx:2100-2234`, `selfEquipmentData.mjs:321-446,728-833`.
 
-보호 대상 `500`·일부 `404`는 고정 사용자 메시지, 안정적 `code`, `requestId`만 반환한다. history 부분 실패의 `historyError`도 원문 exception 없이 고정 메시지만 반환하며, 브라우저는 안전한 request ID를 문의 코드로 표시한다.
+보호 대상 `500`·일부 `404`는 고정 사용자 메시지, 안정적 `code`, `requestId`만 반환한다.
+history 부분 실패의 `historyError`도 원문 exception 없이 고정 메시지만 반환한다. 차트 실패
+카드는 오류 response의 내부 경로가 아니라 이미 받은 index row `file_path`에서 계산한 실제
+`data.parquet` 참조 경로를 별도 표시하고, 안전한 request ID는 문의 코드로 유지한다.
 ## 20. 캐시, 재조회와 최신 데이터
 
 | 항목 | 설정 또는 구현 | 적용 대상 | 영향 | 상태 |
@@ -358,7 +362,7 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 | proxy→현재 사용자 | forwarding header·remote address | IP 기반 사용자 조회 | proxy 신뢰 정책 미확인 | `Risk` | environment·security 문서 |
 | server→DB | 사용자·등록·history 조건 | Python helper | 권한·개인정보 범위 | `Risk` | operations·security 문서 |
 | server→운영 file | mapping·Parquet·image path | root·segment 검사 | 운영 경로 의존 | `Confirmed`/`Risk` | data-flow·operations |
-| API→browser | payload·error | JSON | 성공 `sourcePath` 노출; 실패 원문은 CORE-03A에서 차단 | `Risk` / 일부 `Implemented` | error contract |
+| API→browser | payload·error | JSON | 성공 row `file_path`; 차트 실패 UI가 파생 `data.parquet` 경로 표시; 실패 exception 원문은 CORE-03A에서 차단 | `Risk` / 사용자 승인 `Implemented` | error contract·chart error card |
 | server secret | HMAC 후보 | 구현 확인 안 됨 | key 관리·검증 부재 | `Unknown` | STEP·security 문서 |
 
 URL에 실제 token이나 비밀정보를 기록해서는 안 된다.

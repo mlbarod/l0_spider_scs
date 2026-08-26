@@ -335,6 +335,30 @@ test("ERD file_path 디렉터리에서 data와 EQP 이력 parquet 경로 기준�
   )
 })
 
+test("ERD file_path가 EQP png이면 같은 디렉터리의 data와 이력 parquet를 참조한다", () => {
+  const resolved = resolveErdDataFilePath(
+    "/appdata/abnormal_trend/pic_server2/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/EQP-1.png",
+  )
+
+  assert.equal(
+    resolved.filePath,
+    "/appdata/abnormal_trend/pic/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+  )
+  assert.equal(
+    resolveErdHistoryFilePath(resolved.filePath, "EQP-1"),
+    "/appdata/abnormal_trend/pic/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/EQP-1.parquet",
+  )
+})
+
+test("ERD file_path가 data.parquet이면 중복으로 파일명을 붙이지 않는다", () => {
+  assert.equal(
+    resolveErdDataFilePath(
+      "/appdata/abnormal_trend/pic/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+    ).filePath,
+    "/appdata/abnormal_trend/pic/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+  )
+})
+
 test("ERD data 경로는 backup root와 하위만 거부하고 이름이 비슷한 형제는 허용한다", () => {
   assert.throws(
     () => resolveErdDataFilePath("/appdata/abnormal_trend/pic/backup"),

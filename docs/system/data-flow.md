@@ -114,7 +114,7 @@ flowchart LR
 | `DS-DASH-01` | Parquet | `path/{latest_date}` | Node | 읽기 | `Unknown` | `DF-DASH-01`, `DF-MAIL-02` | `Confirmed` | `dashboardData.mjs` — `listDashboardDateFiles` |
 | `DS-DASH-02` | Parquet | `stats/{latest_date}_spider_step_stats.parquets` | Node | 읽기 | `Unknown` | `DF-DASH-01`, `DF-MAIL-02` | `Confirmed` | `buildDashboardStatsPath` |
 | `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | Node | 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readLatestSelfEquipmentRows` |
-| `DS-SELF-02` | Parquet | path row `file_path` + `/data.parquet`, `/{eqp}.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-02` | 코드 `Confirmed`; 운영 file `Unknown` | `resolveErdDataFilePath`, scatter handler |
+| `DS-SELF-02` | Parquet | path row `file_path`: `{eqp}.png`의 sibling 또는 directory 하위 `data.parquet`; 같은 directory의 `{eqp}.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-02` | 코드 `Confirmed`; 운영 file `Unknown` | `resolveErdDataFilePath`, scatter handler |
 | `DS-ABN-01` | directory·PNG | `erd_commonality/{latest_date}/.../{sensor}_{ch_step}/img.png` | Node | directory 읽기·stream | `Unknown` | `DF-ABN-01` | `Confirmed` | `commonalityData.mjs` — `collectCommonalityRows` |
 | `DS-ABN-02` | Parquet·PNG | `path_common/{line}/{sdwt}/df_path.parquet` → `common/.../data.parquet`, PNG | Node | 읽기·stream | `Unknown` | `DF-ABN-02` | `Confirmed` | `commonAnomalyData.mjs` |
 | `DS-ABN-03` | directory·PNG | `path_common_commonality/{latest_date}/{sdwt}/{eqp_model}/{grade}/{sensor}@{ch_step}/img.png` | Node | directory 읽기·stream | `Unknown` | `DF-ABN-03` | `Confirmed` | `commonCommonalityData.mjs` |
@@ -224,12 +224,16 @@ flowchart LR
 
 chart row의 `file_path`가 `GET /api/erd-scatter-data`의 `path`가 된다.
 서버는 index row의 `file_path`에서 `/pic_server2/`를 `/pic/`로 바꾸고 허용 pic root인지 검사한다.
+`file_path`가 `{eqp}.png`이면 같은 directory의 `data.parquet`, directory이면 하위
+`data.parquet`, 이미 `data.parquet`이면 해당 파일을 선택한다.
 두 gate mode 모두 요청 Line·path SDWT·EQP·latest date·sensor·ch_step이 최신 scoped index row와
-일치하는지 재검증한다. 일치할 때만 그 directory의 `data.parquet` schema에서
+일치하는지 재검증한다. 일치할 때만 선택한 `data.parquet` schema에서
 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`을 호환 axis로 선택해 읽는다.
 scatter mode는 `eqp`가 선택 EQP인 point와 같은 directory의 `{eqp}.parquet` 이력을 반환하며,
 identity mode는 같은 `eqp` 범위에서 `eqp_cb`별 series를 만든다. history 읽기 실패는 `historyError`로 분리한다.
 identity mode는 요청 `days` 범위의 EQP group을 만들고 point 수를 제한한다.
+chart query 실패 화면은 browser가 이미 받은 `file_path`에 같은 변환을 적용해 실제 참조
+`data.parquet` 경로를 표시하며, 서버 exception 원문은 계속 노출하지 않는다.
 `GET /api/erd-file`은 현재 Self page 소비가 없으며 Self 전용 gate에서도 허용하지 않는다.
 
 ### Flow ID: `DF-SELF-03` — MY EQP dormant legacy

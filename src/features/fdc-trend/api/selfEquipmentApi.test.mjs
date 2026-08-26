@@ -1,7 +1,28 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { fetchEqpAllSkipTargets } from "./selfEquipmentApi.js"
+import { buildErdDataReferencePath, fetchEqpAllSkipTargets } from "./selfEquipmentApi.js"
+
+test("자설비 EQP png 경로를 실제 data.parquet 참조 경로로 변환한다", () => {
+  assert.equal(
+    buildErdDataReferencePath(
+      "/appdata/abnormal_trend/pic_server2/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/EQP-1.png",
+    ),
+    "/appdata/abnormal_trend/pic/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+  )
+})
+
+test("자설비 directory와 data.parquet 경로 형식을 모두 호환한다", () => {
+  assert.equal(
+    buildErdDataReferencePath("/appdata/abnormal_trend/pic/erd/2026-08-25/result"),
+    "/appdata/abnormal_trend/pic/erd/2026-08-25/result/data.parquet",
+  )
+  assert.equal(
+    buildErdDataReferencePath("/appdata/abnormal_trend/pic/erd/2026-08-25/result/data.parquet"),
+    "/appdata/abnormal_trend/pic/erd/2026-08-25/result/data.parquet",
+  )
+  assert.equal(buildErdDataReferencePath(""), "")
+})
 
 test("MY EQP의 EQP ALL SKIP 대상은 My EQP 전용 API로 조회한다", async (t) => {
   const originalFetch = globalThis.fetch
