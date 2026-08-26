@@ -34,7 +34,7 @@ SPIDER는 L0 공정의 이상감지 결과를 조회하고 개인 모니터링 �
 | 동일성 이상감지 | 동일 조건의 분석 완료 이미지 비교 |
 | 공통부 이상감지 | 공통부 이상 이미지와 설비 비교 차트 확인 |
 | 사용자 메뉴얼 | 현재 문서 확인 |
-| Hard Limit·Defect·L1·L3 SPIDER | 별도 서비스로 이동 |
+| 공통부 동일성·Hard Limit·Defect·L1·L3 SPIDER | 개발 예정 안내 화면 확인 |
 
 ## 2. 메인 화면과 라인별 대시보드
 
@@ -198,7 +198,9 @@ SDWT와 기준정보의 `sdwt_prod`는 대소문자, 앞뒤 공백, 전각·반�
 
 ### 6.3 공통부 동일성 이상감지
 
-메인 화면의 **공통부 동일성 이상감지** 카드를 선택한 뒤 **Line Name → SDWT → EQP_MODEL → Sensor → ch_step** 순서로 선택하면 EQP_MODEL별 분석 완료 이미지가 표시됩니다.
+메인 화면의 **공통부 동일성 이상감지** 카드는 현재 **Under Construction** 개발 대기 안내 화면으로 이동합니다.
+
+기존 호환 경로인 `/common-commonality-anomaly`로 직접 접속한 경우에는 조회 화면이 유지됩니다. 이 화면에서 **Line Name → SDWT → EQP_MODEL → Sensor → ch_step** 순서로 선택하면 EQP_MODEL별 분석 완료 이미지가 표시됩니다. 다만 이 직접 경로는 현재 메인 카드의 서비스 진입 경로로 제공되지 않습니다.
 
 - Sensor의 `ALL`은 선택한 SDWT·EQP_MODEL 범위의 모든 Sensor를 조회합니다.
 - Sensor가 `ALL`이면 `ch_step`에는 `ALL`만 표시됩니다.

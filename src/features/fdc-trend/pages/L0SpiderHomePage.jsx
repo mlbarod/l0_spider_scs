@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils"
 
 import { fetchDashboardSummary } from "../api/dashboardApi"
 import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
+import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
 
 const spiderApps = [
   {
@@ -41,7 +42,7 @@ const spiderApps = [
     title: "공통부 동일성 이상감지",
     subtitle: "공통부 EQP Model별 신호 분포 차이를 비교해 이상 패턴을 찾습니다.",
     category: "Common Matching",
-    href: "/common-commonality-anomaly",
+    href: getUnderConstructionPath("common-commonality"),
     active: true,
     status: "개발 예정",
   },
@@ -50,9 +51,8 @@ const spiderApps = [
     title: "FDC Hard Limit추천",
     subtitle: "FDC 분포 기반 Hard Limit 후보를 추천합니다.",
     category: "Limit",
-    href: "http://mem-etch-spider.samsungds.net:32603/",
+    href: getUnderConstructionPath("fdc-hard-limit"),
     active: true,
-    external: true,
     status: "개발 예정",
     gridClassName: "2xl:col-start-1 2xl:row-start-2",
   },
@@ -86,9 +86,8 @@ const spiderSuites = [
     title: "Defect SPIDER",
     subtitle: "Defect 신호 기반 이상 패턴을 탐색합니다.",
     category: "Defect",
-    href: "https://go/defect-spider",
+    href: getUnderConstructionPath("defect-spider"),
     active: true,
-    external: true,
     status: "개발 예정",
   },
   {
@@ -96,9 +95,8 @@ const spiderSuites = [
     title: "L1 SPIDER",
     subtitle: "L1 설비/공정 신호를 추적합니다.",
     category: "Level 1",
-    href: "https://go/spider1",
+    href: getUnderConstructionPath("l1-spider"),
     active: true,
-    external: true,
     status: "개발 예정",
   },
   {
@@ -106,9 +104,8 @@ const spiderSuites = [
     title: "L3 SPIDER",
     subtitle: "L3 연계 지표와 이상 흐름을 확인합니다.",
     category: "Level 3",
-    href: "https://plane.samsungds.net/spider/l3",
+    href: getUnderConstructionPath("l3-spider"),
     active: true,
-    external: true,
     status: "개발 예정",
   },
 ]
@@ -167,17 +164,7 @@ function SpiderAppCard({ app, animationIndex = 0 }) {
     </div>
   )
 
-  return app.external ? (
-    <a
-      href={app.href}
-      target="_blank"
-      rel="noreferrer"
-      className={cn("spider-app-enter group relative block h-full", app.gridClassName)}
-      style={animationStyle}
-    >
-      {content}
-    </a>
-  ) : (
+  return (
     <Link
       to={app.href}
       className={cn("spider-app-enter group relative block h-full", app.gridClassName)}

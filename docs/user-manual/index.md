@@ -42,7 +42,7 @@
 | Self Equipment | 자설비 이상감지 | `/self-equipment` | `/fdc_trend/self-equipment` | `Confirmed` | `routes.jsx:16-19`; `L0SpiderHomePage.jsx:11-19` |
 | 동일성 이상감지 | 동일성 이상감지 | `/matching-anomaly` | `/fdc_trend/matching-anomaly` | `Confirmed` | `routes.jsx:28-31`; `L0SpiderHomePage.jsx:20-28` |
 | 공통부 이상감지 | 공통부 이상감지 | `/common-anomaly` | `/fdc_trend/common-anomaly` | `Confirmed` | `routes.jsx:32-35`; `L0SpiderHomePage.jsx:29-37` |
-| 공통부 동일성 이상감지 | 공통부 동일성 이상감지 | `/common-commonality-anomaly` | `/fdc_trend/common-commonality-anomaly` | `Confirmed` | `routes.jsx`; `L0SpiderHomePage.jsx` |
+| 공통부 동일성 이상감지 | 공통부 동일성 이상감지 | `/under-construction/common-commonality` | 직접 호환 `/common-commonality-anomaly`, `/fdc_trend/common-commonality-anomaly` | `Confirmed` | `routes.jsx`; `L0SpiderHomePage.jsx` |
 | 등록 Hub | My EQP 등록 | `/registration` | `/my-eqp`, `/recipients` 및 `/fdc_trend/...` | `Confirmed` | `routes.jsx`; `L0SpiderHomePage.jsx` |
 | 사용자 메뉴얼 | 사용자 메뉴얼 | `/manual` | `/fdc_trend/manual` | `Confirmed` | `routes.jsx:36-39`; `L0SpiderHomePage.jsx:61-69` |
 

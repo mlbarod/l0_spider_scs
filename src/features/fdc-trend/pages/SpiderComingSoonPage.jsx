@@ -1,44 +1,49 @@
-import { ArrowLeft, Construction } from "lucide-react"
-import { Link } from "react-router-dom"
+import { ArrowLeft, CalendarClock, Construction } from "lucide-react"
+import { Link, useParams } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
-export function SpiderComingSoonPage({ title, category }) {
+import { getUnderConstructionApp } from "../utils/underConstructionApps.mjs"
+
+const FALLBACK_APP = Object.freeze({
+  title: "SPIDER App",
+  category: "Development",
+})
+
+export function SpiderComingSoonPage() {
+  const { appId } = useParams()
+  const app = getUnderConstructionApp(appId) ?? FALLBACK_APP
+
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col bg-background">
-      <header className="shrink-0 border-b bg-card px-6 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="mb-2 flex items-center gap-2">
-              <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
-              <Badge variant="outline">{category}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              SPIDER 메인에서 선택한 기능 화면입니다.
-            </p>
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-background">
+      <main className="grid min-h-full flex-1 place-items-center px-4 py-10 sm:px-6">
+        <section className="w-full max-w-2xl rounded-3xl border border-border/70 bg-card p-8 text-center shadow-sm sm:p-12">
+          <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+            <Construction className="size-8" aria-hidden="true" />
           </div>
-          <Button type="button" variant="outline" size="sm" asChild>
+
+          <Badge variant="outline" className="mt-6">{app.category}</Badge>
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+            Under Construction
+          </h1>
+          <p className="mt-4 text-lg font-medium text-foreground">{app.title}</p>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
+            해당 App은 현재 개발 대기중입니다. 개발이 완료되면 이 화면에서 서비스를 이용할 수 있습니다.
+          </p>
+
+          <div className="mx-auto mt-7 flex max-w-md items-center justify-center gap-3 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
+            <CalendarClock className="size-4 shrink-0" aria-hidden="true" />
+            <span>서비스 제공 일정은 추후 안내될 예정입니다.</span>
+          </div>
+
+          <Button type="button" variant="outline" className="mt-8" asChild>
             <Link to="/">
               <ArrowLeft className="size-4" aria-hidden="true" />
               SPIDER 메인
             </Link>
           </Button>
-        </div>
-      </header>
-
-      <main className="grid min-h-0 flex-1 place-items-center px-6 py-8">
-        <div className="grid max-w-md justify-items-center gap-4 rounded-2xl border bg-card p-8 text-center shadow-sm">
-          <div className="flex size-12 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10">
-            <Construction className="size-6 text-primary" aria-hidden="true" />
-          </div>
-          <div className="space-y-2">
-            <h2 className="text-base font-semibold">화면 준비 중</h2>
-            <p className="text-sm leading-6 text-muted-foreground">
-              현재 기능은 메인화면 이동 흐름만 연결되어 있습니다.
-            </p>
-          </div>
-        </div>
+        </section>
       </main>
     </div>
   )

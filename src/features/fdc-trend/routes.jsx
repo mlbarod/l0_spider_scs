@@ -5,6 +5,7 @@ import { CommonAnomalyPage } from "./pages/CommonAnomalyPage"
 import { FdcTrendPage } from "./pages/FdcTrendPage"
 import { L0SpiderHomePage } from "./pages/L0SpiderHomePage"
 import { RegistrationHubPage } from "./pages/RegistrationHubPage"
+import { SpiderComingSoonPage } from "./pages/SpiderComingSoonPage"
 import { SpiderFeaturePage } from "./pages/SpiderFeaturePage"
 import { UserManualPage } from "./pages/UserManualPage"
 
@@ -40,6 +41,10 @@ const fdcTrendChildren = [
   {
     path: "manual",
     element: <UserManualPage />,
+  },
+  {
+    path: "under-construction/:appId",
+    element: <SpiderComingSoonPage />,
   },
   {
     path: "recipients",

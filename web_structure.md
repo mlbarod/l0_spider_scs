@@ -220,6 +220,7 @@ flowchart TD
     ALIAS["/my-eqp · /recipients<br/>RegistrationHubPage alias"]
     MANUAL["/manual<br/>UserManualPage"]
     INTERNAL["/defect-spider · /l1-spider · /l3-spider<br/>SpiderFeaturePage"]
+    PLANNED["/under-construction/:appId<br/>SpiderComingSoonPage"]
 
     ROOT --> SHELL
     SHELL --> HOME
@@ -231,6 +232,7 @@ flowchart TD
     SHELL --> ALIAS
     SHELL --> MANUAL
     SHELL --> INTERNAL
+    SHELL --> PLANNED
 ```
 
 | URL | 화면 파일 | 주요 역할 | 실제 데이터 상태 |
@@ -244,12 +246,13 @@ flowchart TD
 | `/my-eqp`, `/recipients` | `RegistrationHubPage.jsx` | `/registration`과 같은 화면의 호환 alias | DB |
 | `/manual` | `UserManualPage.jsx` | `docs/user-manual/USER_MANUAL.md`를 HTML로 렌더링 | 빌드 리소스 |
 | `/defect-spider`, `/l1-spider`, `/l3-spider` | `SpiderFeaturePage.jsx` | 직접 URL 접근 시 mock 기반 공통 화면 | mock/prototype |
+| `/under-construction/:appId` | `SpiderComingSoonPage.jsx` | 개발 예정 App의 개발 대기 안내 | 빌드 리소스 |
 
 추가 사항:
 
 - `/fdc_trend/self-equipment`처럼 모든 내부 경로는 `/fdc_trend` prefix로도 접근할 수 있습니다.
-- 메인 화면의 Defect/L1/L3 카드는 위 내부 route가 아니라 별도 외부 서비스 URL로 이동합니다.
-- Hard Limit 추천 카드는 5열 기준 두 번째 줄 첫 칸에 배치되며 외부 서비스로 이동합니다.
+- 메인 화면에서 `개발 예정` 상태인 공통부 동일성·Hard Limit·Defect·L1·L3 카드는 외부 서비스 URL을 보유하지 않으며 `/under-construction/:appId` 안내 화면으로 이동합니다.
+- Hard Limit 추천 카드는 5열 기준 두 번째 줄 첫 칸에 배치됩니다.
 - `SpiderFeaturePage.jsx`가 지원하는 `hardSpec`, `yieldSpec`, `recipients` 타입 중 일부는 현재 route에 직접 연결되어 있지 않은 prototype 코드입니다.
 
 ## 5. 화면 → API → 서버 → 저장소 연결
