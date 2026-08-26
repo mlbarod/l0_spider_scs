@@ -225,10 +225,10 @@ test("path_xian 최신 파일은 날짜와 시각이 가장 큰 이름을 선택
   ]), "2026-08-25 18:30:00")
 })
 
-test("path_xian index는 reicpe_id를 포함한 7개 컬럼만 projection한다", () => {
+test("path_xian index는 recipe_id를 포함한 7개 컬럼만 projection한다", () => {
   assert.deepEqual(TEAM_ERD_COLUMNS, [
     "sdwt",
-    "reicpe_id",
+    "recipe_id",
     "priority",
     "sensor",
     "step",
@@ -237,10 +237,10 @@ test("path_xian index는 reicpe_id를 포함한 7개 컬럼만 projection한다"
   ])
 })
 
-test("path_xian reicpe_id는 RECIPE_ID 필터와 row 호환 필드로 정규화한다", () => {
+test("path_xian recipe_id는 RECIPE_ID 필터와 row 호환 필드로 정규화한다", () => {
   assert.deepEqual(normalizeSelfEquipmentIndexRow({
     sdwt: " SDWT-1 ",
-    reicpe_id: " RECIPE-1 ",
+    recipe_id: " RECIPE-1 ",
     priority: " A ",
     sensor: " TEMP ",
     step: " 10@MAIN ",

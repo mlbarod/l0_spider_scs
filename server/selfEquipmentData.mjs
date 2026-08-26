@@ -26,7 +26,7 @@ import { listPassHistoryRecords } from "./passHistory.mjs"
 
 export const TEAM_ERD_COLUMNS = Object.freeze([
   "sdwt",
-  "reicpe_id",
+  "recipe_id",
   "priority",
   "sensor",
   "step",
@@ -86,7 +86,7 @@ export function normalizeSelfEquipmentFilePath(filePath) {
 
 export function normalizeSelfEquipmentIndexRow(row, latestDate) {
   const step = normalizeTextValue(row.step)
-  const recipeId = normalizeTextValue(row.reicpe_id)
+  const recipeId = normalizeTextValue(row.recipe_id)
   return {
     sdwt: normalizeTextValue(row.sdwt),
     desc: recipeId,

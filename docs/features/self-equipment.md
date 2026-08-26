@@ -231,13 +231,13 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 | `line` | URL 또는 Line 선택 | `line` | mapping의 `pathSdwt` 소유 Line 검증, 응답 `line_rev` | SDWT 범위 | 코드 `Confirmed` |
 | `sdwt` | URL 또는 SDWT 선택 | `pathSdwt`와 legacy display `sdwt` | 요청 display는 scope에 사용하지 않으며 mapping key/유일 display만 index row와 비교 | RECIPE_ID 범위 | 코드 `Confirmed` |
 | `grade` | URL 또는 복수 선택 | 반복 `priority` | row `priority` | 모든 하위 option | `Confirmed` |
-| `RECIPE_ID` | UI 선택 | legacy query 이름 `desc` | path_xian row `reicpe_id`를 내부 `recipe_id`로 정규화 | EQP option | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `RECIPE_ID` | UI 선택 | legacy query 이름 `desc` | path_xian row `recipe_id` | EQP option | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `eqpCh` | URL 또는 eqp_ch 선택 | `eqpCh` | row `eqp` 매칭 | sensor option | `Confirmed` |
 | `sensor` | UI 선택 | `sensor` | row `sensor`; chart axis prefix | ch_step·chart | `Confirmed` |
 | `ch_step` | UI 선택 | `chStep` | row `step`; chart axis는 schema의 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환 | rows·chart | 코드 `Confirmed` |
 | `file_path` | index row | chart API `path` | directory 아래 data/history path; `pic_server2` 정규화 | chart source | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `latest_date` | 최신 `path_xian` 파일명 | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
-| `recipe_id` | index `reicpe_id` 정규화 필드 | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `recipe_id` | index 원천값 | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ver` | 새 index에 없음 | 빈 compatibility 값 | 기존 Self SKIP 식별에 사용할 수 없음 | DB 기능 fail-close | `Mismatch` |
 
 `step_seq`와 `ppid`를 URL 또는 equipment API filter로 전달하는 흐름은 확인되지 않았다.
@@ -246,7 +246,7 @@ index row의 `file_path`를 후속 데이터 directory로 사용한다.
 
 | 입력 형태 | 처리 위치 | 변환·검증 | 조회 조건 | 화면 결과 | 상태 |
 |---|---|---|---|---|---|
-| UI RECIPE_ID label | `FdcTrendPage` | path_xian `reicpe_id`를 정규화해 만든 legacy `steps[].desc` 중 선택 | API legacy query `desc` | 다음 eqp_ch option | 코드 `Confirmed` |
+| UI RECIPE_ID label | `FdcTrendPage` | path_xian `recipe_id`에서 만든 legacy `steps[].desc` 중 선택 | API legacy query `desc` | 다음 eqp_ch option | 코드 `Confirmed` |
 | URL `step=ALL`, MY EQP | parser·legacy handler | 기존 구현 보존 | 현재 UI capability에서 미호출 | 화면 결과 없음 | `Blocked` — DB 식별 계약 `Unknown` |
 | URL `step=ALL`, 일반 SDWT | page·server | page state에는 ALL이나 일반 handler는 ALL 불허 | server `filters.desc=""` | STEP 재선택 필요 | `Confirmed` |
 | URL 비-ALL STEP 문자열 | parser·page | `stepToken`으로 읽지만 state에 반영 안 함 | API로 전달 안 함 | STEP 미선택 | `Mismatch` |
