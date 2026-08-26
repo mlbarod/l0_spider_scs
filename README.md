@@ -11,16 +11,17 @@ npm run dev
 
 The app opens directly at `/`.
 
-현재 SCS 분리 checkout은 UI shell이 기본값이다. `SCS_SELF_EQUIPMENT_DATA_ENABLED=1`을
-설정하면 자설비 이상감지의 read API(`mapping-config`, `self-equipment-data`,
-`erd-scatter-data`)만 활성화한다. 다른 App, image endpoint와 DB read/write API는 계속 안전한
-`503 DATA_CONNECTIONS_DISABLED`를 반환한다. `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체
-API를 한 번에 활성화하므로 다른 App의 새 경로와 DB 연결정보가 확정되기 전에는 설정하지 않는다.
+현재 SCS 분리 checkout은 별도 환경변수 없이 자설비 이상감지의 read API(`mapping-config`,
+`self-equipment-data`, `erd-scatter-data`)를 활성화한다. 다른 App, image endpoint와 DB
+read/write API는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환한다. 자설비 read까지
+차단한 UI shell이 필요하면 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`을 명시한다.
+`SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 API를 한 번에 활성화하므로 다른 App의 새 경로와
+DB 연결정보가 확정되기 전에는 설정하지 않는다.
 
-자설비 파일 연결을 활성화한 개발 실행 예시는 다음과 같다.
+기본 개발 실행은 다음과 같다.
 
 ```bash
-SCS_SELF_EQUIPMENT_DATA_ENABLED=1 npm run dev
+npm run dev
 ```
 
 ## Server
@@ -111,9 +112,9 @@ node server.mjs
 
 ## Database References
 
-이하 데이터·DB 설명 중 자설비 파일 read는 `SCS_SELF_EQUIPMENT_DATA_ENABLED=1`에서 활성화할 수 있다.
-DB 기능과 다른 App은 여전히 전체 gate 뒤의 재연결 기준선이며, 실제 배포 환경의 두 gate 값은
-저장소만으로 확인할 수 없어 `Unknown`이다.
+이하 데이터·DB 설명 중 자설비 파일 read는 기본 활성화된다. DB 기능과 다른 App은 여전히
+전체 gate 뒤의 재연결 기준선이며, 실제 배포 환경의 두 gate 값은 저장소만으로 확인할 수 없어
+`Unknown`이다.
 
 ### 메인 대시보드 데이터
 

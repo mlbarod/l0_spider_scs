@@ -1,5 +1,6 @@
 # L0 Spider 개발 검증 서브에이전트 도입 리포트
 
+> 현재 상태: `Superseded / Historical` — 이 문서의 상시 pre-build review와 조건부 전문 검증은 중단됐다. 현재 기준은 [개발 에이전트 최종 검수 workflow](../docs/operations/development-agent-workflow.md)다.<br>
 > 문서 목적: 메인 개발과 독립 검증의 책임을 분리하는 To-Be 업무 흐름과 운영 원칙 정의<br>
 > 문서 상태: `Implemented / Stage 4 Complete`<br>
 > 기준 branch: `main`<br>

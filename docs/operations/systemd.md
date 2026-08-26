@@ -63,7 +63,7 @@ systemd 실행 user는 다음 최소 범위만 가져야 한다.
 
 - `HOST`, `PORT`, `LIVE_RELOAD`, `BUILD_ON_START`
 - `SCS_DATA_CONNECTIONS_ENABLED` (전체 file·DB 연결 승인 전에는 `1` 설정 금지)
-- `SCS_SELF_EQUIPMENT_DATA_ENABLED` (자설비 file read 승인 배포에서만 `1`)
+- `SCS_SELF_EQUIPMENT_DATA_ENABLED` (기본 자설비 file read; UI shell 전환 시 `0`)
 - `SCS_SELF_EQUIPMENT_PATH_ROOT` (선택적 `path_xian` root override)
 - `VITE_SITE_URL`
 - `MAPPING_CONFIG_PATH`, `COMMONALITY_ROOT_PATH`, `COMMON_COMMONALITY_ROOT_PATH`, `SPIDER_DASHBOARD_PATH_ROOT`
@@ -145,8 +145,8 @@ systemctl status <unit-name> --no-pager
 1. `is-active` 결과가 active이고 반복 restart가 없다.
 2. `ExecStart`, working directory와 release commit이 계획과 일치한다.
 3. 승인된 port에 단일 기대 process가 listen한다.
-4. `/` liveness가 통과하고, UI shell이면 `/api` namespace에서 안전한 `503 DATA_CONNECTIONS_DISABLED`가 확인된다.
-5. 자설비 부분 연결이면 mapping GET/HEAD와 Self·scatter GET만 통과하고 image·다른 App·DB API는 503인지 확인한다.
+4. `/` liveness가 통과하고, 기본 자설비 부분 연결이면 mapping GET/HEAD와 Self·scatter GET만 통과하고 image·다른 App·DB API는 503인지 확인한다.
+5. 명시적 UI shell이면 `/api` namespace에서 안전한 `503 DATA_CONNECTIONS_DISABLED`가 확인된다.
 6. 데이터 연결을 승인해 활성화한 경우에만 해당 범위의 read-only 기능 점검이 통과한다.
 7. journal에 `MODULE_NOT_FOUND`, `EADDRINUSE`, build 실패, DB·file permission 오류가 반복되지 않는다.
 8. log에 secret·credential·운영 token이 출력되지 않는다.

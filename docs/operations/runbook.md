@@ -34,8 +34,8 @@
 
 ## 3. 교대·작업 전 사전 점검
 
-SCS UI shell 운영 중에는 두 connection gate를 `1`로 설정하지 않는다. 자설비 file read 승인 배포는
-`SCS_SELF_EQUIPMENT_DATA_ENABLED=1`만 사용하며 다른 App·DB API의 503은 정상이다.
+SCS 기본 실행은 자설비 file read만 허용하며 다른 App·DB API의 503은 정상이다. 전체 UI shell이
+필요하면 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`을 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 file·DB 승인 전에는 설정하지 않는다. 실제 배포 값은 `Unknown`이다.
 장애 시에도 gate 도입 이전 artifact로 rollback하지 않는다. shell-safe artifact가 없으면 service·traffic을 격리하고 owner 승인을 받은 뒤 다음 조치를 결정한다.
 

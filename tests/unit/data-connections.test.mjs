@@ -30,15 +30,16 @@ test("SCS 데이터 연결은 명시적으로 1을 설정하기 전까지 비활
   assert.equal(areDataConnectionsEnabled({ SCS_DATA_CONNECTIONS_ENABLED: "1" }), true)
 })
 
-test("자설비 파일 연결도 별도 환경변수가 정확히 1일 때만 활성화된다", () => {
-  assert.equal(areSelfEquipmentDataConnectionsEnabled({}), false)
+test("자설비 파일 연결은 기본 활성화되고 명시적인 비-1 값으로 차단할 수 있다", () => {
+  assert.equal(areSelfEquipmentDataConnectionsEnabled({}), true)
+  assert.equal(areSelfEquipmentDataConnectionsEnabled({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "0" }), false)
   assert.equal(areSelfEquipmentDataConnectionsEnabled({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "true" }), false)
   assert.equal(areSelfEquipmentDataConnectionsEnabled({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }), true)
 })
 
 test("mapping capability는 전체 gate에서도 호환되지 않는 Self DB 기능을 fail-close한다", () => {
   assert.deepEqual(getDataConnectionCapabilities({}), {
-    selfEquipmentFileRead: false,
+    selfEquipmentFileRead: true,
     selfEquipmentDb: false,
   })
   assert.deepEqual(getDataConnectionCapabilities({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }), {
@@ -135,8 +136,8 @@ test("정적 UI 요청과 명시적으로 활성화한 API 요청은 기존 흐�
   assert.equal(enabledResponse.statusCode, null)
 })
 
-test("자설비 연결은 필요한 read API만 열고 다른 App과 write API는 계속 차단한다", () => {
-  const environment = { SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }
+test("기본 실행은 자설비 read API만 열고 다른 App과 write API는 계속 차단한다", () => {
+  const environment = {}
   for (const pathname of [
     "/api/mapping-config",
     "/api/self-equipment-data",
@@ -167,5 +168,22 @@ test("자설비 연결은 필요한 read API만 열고 다른 App과 write API�
       () => {},
     ), true, `${method} ${pathname}`)
     assert.equal(response.statusCode, 503)
+  }
+})
+
+test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
+  for (const pathname of [
+    "/api/mapping-config",
+    "/api/self-equipment-data",
+    "/api/erd-scatter-data",
+  ]) {
+    const response = createResponse()
+    assert.equal(blockDisabledDataRequest(
+      { method: "GET", url: pathname, headers: { host: "localhost" } },
+      response,
+      { SCS_SELF_EQUIPMENT_DATA_ENABLED: "0" },
+      () => {},
+    ), true, pathname)
+    assert.equal(response.statusCode, 503, pathname)
   }
 })

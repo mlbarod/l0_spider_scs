@@ -1,7 +1,10 @@
 import assert from "node:assert/strict"
 import { spawn } from "node:child_process"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { createServer as createNetServer } from "node:net"
 import { once } from "node:events"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import test from "node:test"
 
 import viteConfig from "../../vite.config.mjs"
@@ -44,7 +47,44 @@ async function stopServer(child) {
   ])
 }
 
-test("통합 서버는 외부 경로·DB helper보다 먼저 API를 차단하고 UI route를 유지한다", async (context) => {
+test("기본 실행은 별도 Self 환경변수 없이 자설비 mapping read를 허용한다", async (context) => {
+  const temporaryDirectory = await mkdtemp(join(tmpdir(), "l0-spider-scs-mapping-"))
+  const mappingPath = join(temporaryDirectory, "mapping_config.json")
+  await writeFile(mappingPath, JSON.stringify({
+    line_mapping: { TEAM_A: "LINE_A" },
+    sdwt_mapping: {},
+  }))
+  context.after(() => rm(temporaryDirectory, { recursive: true, force: true }))
+
+  const port = await findAvailablePort()
+  const inheritedEnvironment = { ...process.env }
+  delete inheritedEnvironment.SCS_SELF_EQUIPMENT_DATA_ENABLED
+  const child = spawn(process.execPath, ["server.mjs"], {
+    cwd: projectRoot,
+    env: {
+      ...inheritedEnvironment,
+      HOST: "127.0.0.1",
+      PORT: String(port),
+      LIVE_RELOAD: "1",
+      BUILD_ON_START: "0",
+      SCS_DATA_CONNECTIONS_ENABLED: "0",
+      MAPPING_CONFIG_PATH: mappingPath,
+    },
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+  context.after(() => stopServer(child))
+
+  await waitForServer(child)
+  const response = await fetch(`http://127.0.0.1:${port}/api/mapping-config`)
+  const payload = await response.json()
+
+  assert.equal(response.status, 200)
+  assert.deepEqual(payload.line_mapping, { TEAM_A: "LINE_A" })
+  assert.equal(payload.capabilities.selfEquipmentFileRead, true)
+  assert.equal(payload.capabilities.selfEquipmentDb, false)
+})
+
+test("명시적 UI shell은 외부 경로·DB helper보다 먼저 API를 차단하고 UI route를 유지한다", async (context) => {
   const port = await findAvailablePort()
   const child = spawn(process.execPath, ["server.mjs"], {
     cwd: projectRoot,
@@ -55,6 +95,7 @@ test("통합 서버는 외부 경로·DB helper보다 먼저 API를 차단하고
       LIVE_RELOAD: "1",
       BUILD_ON_START: "0",
       SCS_DATA_CONNECTIONS_ENABLED: "0",
+      SCS_SELF_EQUIPMENT_DATA_ENABLED: "0",
       SPIDER_DASHBOARD_PATH_ROOT: "/synthetic-path-must-not-be-read",
       DB_INFO_PATH: "/synthetic-db-info-must-not-be-read",
     },

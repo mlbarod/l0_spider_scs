@@ -19,8 +19,8 @@
 
 SPIDER는 L0 공정의 이상감지 결과를 조회하고 개인 모니터링 설비와 Mailing 수신 조건을 관리하는 PC용 웹서비스입니다.
 
-현재 SCS ETCH SPIDER는 기본적으로 UI shell로 실행됩니다. 운영자가 자설비 file read를 별도로
-활성화한 배포에서는 자설비 필터·Scatter·동일성·변경점 이력 차트만 사용할 수 있습니다.
+현재 SCS ETCH SPIDER는 기본적으로 자설비 file read가 활성화되어 자설비
+필터·Scatter·동일성·변경점 이력 차트를 사용할 수 있습니다.
 이때 My EQP, SKIP LIST, SKIP, 클릭이력과 이력저장은 새 DB 식별 계약이 정의될 때까지 화면에서 비활성화됩니다.
 다른 App은 각 데이터 경로가 연결되기 전까지 사용할 수 없습니다.
 

@@ -4,8 +4,8 @@
 > 기준일/브랜치: 2026-08-20 / `main`<br>
 > 기준 파일: `server.mjs`, `vite.config.mjs`, `src/`, `server/`, `scripts/`, `src/config/spiderDataPaths.mjs`
 
-현재 SCS 분리 checkout은 기본적으로 `/api` namespace를 차단하는 UI shell이다.
-`SCS_SELF_EQUIPMENT_DATA_ENABLED=1`은 mapping과 자설비 index/chart read allowlist만 열고,
+현재 SCS 분리 checkout은 별도 환경변수 없이 mapping과 자설비 index/chart read allowlist를
+연다. `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`은 이 allowlist도 차단하고,
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 다른 App API를 포함한 전역 gate를 연다. 다만 새 Self
 `path_xian` 7-column 계약에는 기존 DB 식별자 `ver`가 없어 두 mode 모두
 `capabilities.selfEquipmentDb=false`이며 Self의 MY EQP·SKIP·이력 UI는 dormant다. 실제 배포

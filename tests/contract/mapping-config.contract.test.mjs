@@ -28,9 +28,7 @@ test("synthetic mapping success payload가 Schema와 runtime 계약을 만족한
 })
 
 test("mapping capability는 Schema를 만족하고 DB 기능을 fail-close한다", () => {
-  const fileOnlyMapping = buildMappingConfigResponse(validMapping, {
-    SCS_SELF_EQUIPMENT_DATA_ENABLED: "1",
-  })
+  const fileOnlyMapping = buildMappingConfigResponse(validMapping, {})
   const fullMapping = buildMappingConfigResponse(validMapping, {
     SCS_DATA_CONNECTIONS_ENABLED: "1",
   })

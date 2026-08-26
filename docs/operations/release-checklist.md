@@ -228,8 +228,8 @@ service·unit·port가 확인되지 않으면 실제 배포 단계로 진행하�
 
 ## 14. 배포 후 검증
 
-- [ ] 이번 배포가 SCS UI shell, 자설비 file read 부분 연결, 전체 데이터 연결 중 어느 범위인지 release 기록에 명시했다.
-- [ ] UI shell이면 두 gate가 비활성인지, 자설비 부분 연결이면 Self gate만 활성인지 값 노출 없이 확인했다.
+- [ ] 이번 배포가 기본 자설비 file read 부분 연결, 명시적 SCS UI shell, 전체 데이터 연결 중 어느 범위인지 release 기록에 명시했다.
+- [ ] 기본 자설비 부분 연결이면 Self gate가 미설정 또는 `1`인지, UI shell이면 비-`1` 값인지 값 노출 없이 확인했다.
 - [ ] UI shell이면 `/api`와 `/api/*`의 `503 DATA_CONNECTIONS_DISABLED`, `requestId`, `HEAD` 무본문을 확인했다.
 - [ ] 자설비 부분 연결이면 mapping GET/HEAD와 Self·scatter GET만 통과하고 image·다른 App·DB API는 503이다.
 - [ ] service가 active이고 restart count가 증가하지 않는다.

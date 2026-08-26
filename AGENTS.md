@@ -102,11 +102,13 @@ Core에서는 확인된 lint, build, unit과 contract 명령만 실행하며 moc
 
 상세 역할, 입력, 권한, gate와 업무 경계의 단일 기준은 [개발 에이전트 검증 workflow](docs/operations/development-agent-workflow.md)를 따른다.
 
-- 모든 코드 변경은 확정된 diff를 대상으로 build 전에 `pre-build-review`의 독립 정적 검토를 받아야 한다.
-- `BLOCKER`가 해결되지 않으면 build하거나 완료를 선언하지 않는다. 메인 에이전트가 수정한 뒤 diff를 다시 확정하고 영향받은 항목을 독립 재검토한다.
-- `SPECIALIST_REQUIRED`가 반환되거나 공유 API·Schema·집계·보안·운영 경계, cross-layer 공통 모듈, 실행 확인이 필요한 비동기·browser·성능 위험 또는 그 밖의 구체적 고위험 근거가 있으면 메인 에이전트가 정확히 한 프로필을 지정해 `specialist-validator`를 호출한다.
+- 중간 구현과 수정 도중에 `pre-build-review`를 호출하지 않는다. 구현, 관련 test·lint·build, 문서 일관성 확인과 가능한 실행 확인을 마친 안정된 최종 diff에서만 호출한다.
+- 독립 검수는 업무당 최대 1회다. 권한·환경 문제로 `Not Run` 또는 `Blocked`가 나와도 자동 재호출하지 않고 그 상태를 보고한다.
+- 검수자는 첫 번째 차단 사항에서 조기 종료하지 않고, 허용된 정적 범위의 모든 조치 가능한 발견 사항을 한 번의 보고서에 모은다.
+- `BLOCKER`가 발견되면 메인 에이전트가 발견 사항을 일괄 수정하고 관련 검증을 수행하되, 독립 검수를 자동 재호출하지 않는다. 수정 후 독립 PASS는 주장하지 않고 수정·검증 결과를 구분해 보고한다.
+- `specialist-validator`는 호출하지 않는다. 고위험·운영 확인이 필요한 항목은 메인 에이전트의 비파괴적 검증 결과와 `Unknown`, `Blocked` 또는 사용자 확인 필요 상태로 보고한다.
 - 메인 에이전트는 검증 결과를 근거 없이 무시하거나 통과를 위해 test·계약 기준을 완화하지 않는다.
-- 검증 서브에이전트는 어떤 파일도 수정하지 않으며 지정된 검증이나 실패 test를 skip·완화하지 않는다.
+- 최종 검수 서브에이전트는 어떤 파일도 수정하지 않으며 실패 test를 skip·완화하지 않는다.
 
 ## 8. Documentation and Reporting
 

@@ -1,5 +1,6 @@
 # L0 Spider 개발 검증 서브에이전트 1~3단계 인수인계
 
+> 현재 상태: `Superseded / Historical` — 과거 1~3단계 실행 기록이며 현재 검수 절차로 사용하지 않는다. 현재 기준은 [개발 에이전트 최종 검수 workflow](../docs/operations/development-agent-workflow.md)다.<br>
 > 문서 목적: 4단계를 시작하지 않은 상태에서 1~3단계의 저장소 상태와 실제 실행 결과를 다음 Codex 세션에 전달<br>
 > 작성일: 2026-08-03<br>
 > 현재 branch: `main`<br>

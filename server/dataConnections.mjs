@@ -17,7 +17,8 @@ export function areDataConnectionsEnabled(environment = process.env) {
 }
 
 export function areSelfEquipmentDataConnectionsEnabled(environment = process.env) {
-  return environment[SELF_EQUIPMENT_DATA_ENABLED_ENV] === DATA_CONNECTIONS_ENABLED_VALUE
+  const configuredValue = environment[SELF_EQUIPMENT_DATA_ENABLED_ENV]
+  return configuredValue === undefined || configuredValue === DATA_CONNECTIONS_ENABLED_VALUE
 }
 
 export function getDataConnectionCapabilities(environment = process.env) {

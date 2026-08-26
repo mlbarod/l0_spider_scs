@@ -18,8 +18,9 @@
 이 문서는 Self Equipment 화면, URL query, 프론트엔드 상태, API, 서버 처리와 데이터 원천의 연결을 현재 코드 기준으로 정의한다. 사용자 조작의 상세 절차는 `docs/user-manual/USER_MANUAL.md`를 기준으로 하며 여기서는 기능 계약과 추적성에 집중한다.
 실제 운영 데이터 내용·실행 결과·생산 작업은 확인하지 않았고, HMAC 상세와 `mock-agent` 전용 흐름도 현재 기능 근거에서 제외한다.
 
-SCS 분리 checkout에서는 `SCS_SELF_EQUIPMENT_DATA_ENABLED=1`일 때 자설비 파일 read API만
-활성화된다. 새 `path_xian` 7-column 계약에는 기존 Self DB 이력 식별자 `ver`가 없으므로,
+SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read API가 활성화된다.
+`SCS_SELF_EQUIPMENT_DATA_ENABLED=0`을 명시하면 이 read allowlist도 차단된다. 새 `path_xian`
+7-column 계약에는 기존 Self DB 이력 식별자 `ver`가 없으므로,
 전역 gate와 무관하게 mapping 응답은 `capabilities.selfEquipmentDb=false`를 반환한다. 화면은
 MY EQP·SKIP LIST·SKIP·클릭이력·이력저장을 노출하거나 호출하지 않고 일반 자설비 파일 chart만
 제공한다. 다른 App과 DB API의 전체 gate 동작은 별도이며 실제 target server mount와 Parquet
