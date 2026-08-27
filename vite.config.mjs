@@ -33,6 +33,7 @@ import { handlePassHistoryRequest } from "./server/passHistory.mjs"
 import {
   handleErdFileRequest,
   handleErdScatterDataRequest,
+  handleMyEqpEquipmentDataRequest,
   handleSelfEquipmentDataRequest,
 } from "./server/selfEquipmentData.mjs"
 
@@ -145,6 +146,11 @@ function mappingConfigApi() {
 
         if (url.pathname === "/api/self-equipment-data") {
           handleSelfEquipmentDataRequest(req, res, url)
+          return
+        }
+
+        if (url.pathname === "/api/my-eqp-equipment-data") {
+          handleMyEqpEquipmentDataRequest(req, res, url)
           return
         }
 

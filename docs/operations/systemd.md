@@ -65,14 +65,15 @@ systemd 실행 user는 다음 최소 범위만 가져야 한다.
 - `SCS_DATA_CONNECTIONS_ENABLED` (전체 file·DB 연결 승인 전에는 `1` 설정 금지)
 - `SCS_DASHBOARD_DATA_ENABLED` (기본 Dashboard read; UI shell 전환 시 `0`)
 - `SCS_SELF_EQUIPMENT_DATA_ENABLED` (기본 자설비 file read; UI shell 전환 시 `0`)
-- `SCS_DB_CONNECTIONS_ENABLED` (전체 gate 비활성 mode의 credential 기반 세 이력 API; allowlist 차단·UI shell 전환 시 `0`)
+- `SCS_DB_CONNECTIONS_ENABLED` (전체 gate 비활성 mode의 credential 기반 사용자·My EQP·세 이력 API; allowlist 차단·UI shell 전환 시 `0`)
 - `SCS_SELF_EQUIPMENT_PATH_ROOT` (선택적 `path_xian` root override)
 - `VITE_SITE_URL`
 - `MAPPING_CONFIG_PATH`, `COMMONALITY_ROOT_PATH`, `COMMON_COMMONALITY_ROOT_PATH`, `SPIDER_DASHBOARD_PATH_ROOT`
 - `SENSOR_EXCLUSION_CONFIG_PATH`
 - `DB_INFO_PATH`
 
-접속 IP는 Node가 request마다 직접 확인하므로 별도 사용자 식별 환경변수를 static unit 설정에 두지 않는다.
+접속 IP는 Node가 request header/socket에서 직접 확인한다. 호환 Python helper를 별도로 실행할 때만
+`REMOTE_ADDR`를 입력으로 사용하며 static unit에 고정값으로 설정하지 않는다.
 실제 HMAC secret과 mail sender 환경변수는 구현·이름이 확인되지 않았다.
 
 `EnvironmentFile`을 사용한다면 실제 값은 문서·journal·Git에 출력하지 않고 file owner와 mode를 제한한다.
@@ -147,7 +148,7 @@ systemctl status <unit-name> --no-pager
 1. `is-active` 결과가 active이고 반복 restart가 없다.
 2. `ExecStart`, working directory와 release commit이 계획과 일치한다.
 3. 승인된 port에 단일 기대 process가 listen한다.
-4. `/` liveness가 통과하고, 기본 부분 연결이면 Dashboard GET/HEAD와 mapping·Self·scatter GET이 통과하며 다른 App은 503인지 확인한다. credential이 읽기 가능하면 접속 IP와 세 이력 API만 handler에 진입한다.
+4. `/` liveness가 통과하고, 기본 부분 연결이면 Dashboard GET/HEAD와 mapping·Self·scatter GET이 통과하며 다른 App은 503인지 확인한다. credential이 읽기 가능하면 사용자·My EQP와 세 이력 API가 handler에 진입한다.
 5. 명시적 UI shell이면 Dashboard·Self·DB 범위를 모두 `0`으로 설정한 뒤 `/api` namespace에서 안전한 `503 DATA_CONNECTIONS_DISABLED`가 확인된다.
 6. 데이터 연결을 승인해 활성화한 경우에만 해당 범위의 read-only 기능 점검이 통과한다.
 7. journal에 `MODULE_NOT_FOUND`, `EADDRINUSE`, build 실패, DB·file permission 오류가 반복되지 않는다.

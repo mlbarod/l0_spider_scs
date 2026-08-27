@@ -1,7 +1,8 @@
 import { spawn } from "node:child_process"
+import { isIP } from "node:net"
 import { fileURLToPath, URL } from "node:url"
 
-import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
+import { getRemoteIp, normalizeRemoteIp } from "./currentUser.mjs"
 import {
   MAPPING_CONFIG_UNAVAILABLE_CODE,
   MAPPING_SCOPE_MISMATCH_CODE,
@@ -15,9 +16,6 @@ import { createSafeApiError } from "./safeApiError.mjs"
 const helperPath = fileURLToPath(new URL("../scripts/my_eqp_registration.py", import.meta.url))
 const MAX_EQP_COUNT = 500
 const MAX_COMMENT_LENGTH = 90
-const MAX_KNOX_ID_COUNT = 100
-const MAX_KNOX_ID_LENGTH = 128
-const KNOX_ID_PATTERN = /^[A-Za-z0-9._-]+$/
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -34,11 +32,6 @@ function normalizeText(value) {
 function uniqueTextValues(values) {
   if (!Array.isArray(values)) return []
   return Array.from(new Set(values.map(normalizeText).filter(Boolean)))
-}
-
-function normalizeKnoxId(value) {
-  const text = normalizeText(value)
-  return text.includes("@") ? text.slice(0, text.indexOf("@")) : text
 }
 
 function formatDatabaseTimestamp(date = new Date()) {
@@ -76,11 +69,7 @@ export function buildMyEqpRegistrationPayload(body, knoxId) {
   const prcGroup = normalizeText(body?.prcGroup)
   const eqps = uniqueTextValues(body?.eqps)
   const periode = Number(body?.periode)
-  const defaultKnoxId = normalizeKnoxId(knoxId)
-  const requestedKnoxIds = Array.isArray(body?.knoxIds) && body.knoxIds.length
-    ? body.knoxIds
-    : [defaultKnoxId]
-  const knoxIds = Array.from(new Set(requestedKnoxIds.map(normalizeKnoxId).filter(Boolean)))
+  const registrationIp = normalizeRemoteIp(knoxId)
   const comment = String(body?.comment ?? "").trim()
   const isPublic = false
 
@@ -96,12 +85,7 @@ export function buildMyEqpRegistrationPayload(body, knoxId) {
   if (comment.length > MAX_COMMENT_LENGTH) {
     throw new Error(`Comment는 ${MAX_COMMENT_LENGTH}자 이내로 입력해야 합니다.`)
   }
-  if (!knoxIds.length || knoxIds.length > MAX_KNOX_ID_COUNT) {
-    throw new Error(`열람 및 메일수신인은 1명 이상 ${MAX_KNOX_ID_COUNT}명 이하로 입력해야 합니다.`)
-  }
-  if (knoxIds.some((value) => value.length > MAX_KNOX_ID_LENGTH || !KNOX_ID_PATTERN.test(value))) {
-    throw new Error("knox_id 형식이 올바르지 않습니다.")
-  }
+  if (!isIP(registrationIp)) throw new Error("접속자 IP 형식이 올바르지 않습니다.")
 
   return {
     line,
@@ -111,8 +95,8 @@ export function buildMyEqpRegistrationPayload(body, knoxId) {
     execDate: formatDatabaseTimestamp(),
     periode,
     comment,
-    knoxId: knoxIds[0],
-    knoxIds,
+    knoxId: registrationIp,
+    knoxIds: [registrationIp],
     isPublic,
   }
 }
@@ -170,13 +154,10 @@ export function groupMyEqpRegistrationRecords(records, nowMs = Date.now()) {
   }).sort((left, right) => right.execDate.localeCompare(left.execDate))
 }
 
-export async function resolveRegistrationUserId(remoteIp, resolver = resolveCurrentUser) {
-  try {
-    const currentUser = await resolver(remoteIp)
-    return normalizeText(currentUser?.knoxId) || remoteIp
-  } catch {
-    return remoteIp
-  }
+export async function resolveRegistrationUserId(remoteIp) {
+  const registrationIp = normalizeRemoteIp(remoteIp)
+  if (!isIP(registrationIp)) throw new Error("접속자 IP를 확인하지 못했습니다.")
+  return registrationIp
 }
 
 function runRegistrationHelper(action, payload) {

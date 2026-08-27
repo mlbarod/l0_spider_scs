@@ -42,9 +42,9 @@
 | Parquet | 저장 형식 | Dashboard·index·point·history 결과를 저장하고 서버가 필요한 column을 읽는 columnar 파일 형식 | `.parquet`, 일부 stats `.parquets` | Dashboard, Self Equipment, 이상 데이터 | 전체 파일 Schema, producer, 보존기간은 `Unknown`; 이미지 PNG와 역할이 다르다. | 사용 `Confirmed`, 운영 계약 `Unknown` — `abnormal-data.md:188-215`; `ADR-002-parquet-storage.md` |
 | `latest_date` | 경로·시각 식별자 | 파일명·디렉터리 또는 index path에서 결정되는 최신 결과 날짜 segment | `latest_date`, `latestDate`, `latestDateTime` | Dashboard, 동일성, ERD | 모든 기능이 같은 최신성·timezone 규칙을 공유한다고 확정하지 않는다. | 전파 `Confirmed`, 공통 timezone `Unknown` — `data-flow.md:165`; `abnormal-data.md:167` |
 | `pathSdwt` | 내부 경로 식별자 | mapping key로부터 얻어 index 파일 경로 조립에 사용하는 SDWT 값 | `pathSdwt` | Self Equipment, 공통부 | 사용자 표시 `sdwt`와 값이 항상 같다고 가정하지 않는다. | `Confirmed` — `data-flow.md:159` |
-| `MY EQP` | 예약 업무 값 | 현재 사용자의 유효 등록 설비를 모으는 legacy virtual SDWT | query `sdwt=MY_EQP`, 내부 `__MY_EQP__` | 등록, 메일 링크, dormant Self handler | 실제 filesystem SDWT가 아니며 현재 Self UI에는 표시되지 않는다. | legacy `Documented`; Self 화면 `Blocked` |
-| `SKIP LIST` | 예약 업무 값 | 활성 SKIP 이력 기반 legacy virtual SDWT | UI 후보 `SKIP LIST`, DB `pass_history` | dormant Self DB 흐름 | 현재 Self UI에는 표시되지 않으며 새 식별 계약이 필요하다. | legacy `Documented`; Self 화면 `Blocked` |
-| `ALL` | 예약 선택값 | 해당 상위 필터 범위의 모든 하위 값을 선택하는 literal | sensor/ch_step `ALL`, dormant `ALL_STEPS` | Self Equipment, 동일성 | sensor/ch_step에는 활성; `step=ALL` MY EQP 흐름은 현재 Blocked다. | 부분 `Confirmed`; MY EQP `Blocked` |
+| `MY EQP` | 예약 업무 값 | 현재 사용자의 유효 등록 설비를 모으는 virtual SDWT | query `sdwt=MY_EQP`, 내부 `__MY_EQP__` | 등록, 메일 링크, Self handler | 실제 filesystem SDWT가 아니며 활성 등록이 있을 때 UI에 표시된다. | 코드 `Confirmed`; 운영 DB `Unknown` |
+| `SKIP LIST` | 예약 업무 값 | 활성 SKIP 이력 기반 virtual SDWT | UI `SKIP LIST`, DB `pass_history` | Self DB 흐름 | credential DB capability가 있을 때 UI에 표시된다. | 코드 `Confirmed`; 운영 DB `Unknown` |
+| `ALL` | 예약 선택값 | 해당 상위 필터 범위의 모든 하위 값을 선택하는 literal | sensor/ch_step `ALL`, `ALL_STEPS` | Self Equipment, 동일성 | sensor/ch_step과 `step=ALL` MY EQP에 사용한다. | `Confirmed` |
 | `prc_group` | 데이터·화면 식별자 | 공통부 이상감지에서 SDWT 아래의 PRC Group 필터 | `prc_group`, API `prcGroup` | 공통부 이상감지 | ERD 경로의 `ppid` 또는 Self의 `recipe_id`와 동일하다고 확정할 근거가 없다. | 사용 `Confirmed`, 관계 `Unknown` — `abnormal-data.md:181` |
 | `lineDashboard` | API 객체 | Dashboard 화면·메일 요약에 필요한 filter, summary와 배열을 묶는 응답 객체 | `lineDashboard` | `GET /api/dashboard-data` | 상위 `summary`·`metrics`와 같은 객체가 아니다. | `Confirmed` — `dashboard.md:150-169` |
 

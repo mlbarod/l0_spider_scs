@@ -20,6 +20,11 @@ const DB_METHODS = new Map([
   ["/api/hit-history", new Set(["POST"])],
   ["/api/clicked-category-history", new Set(["POST"])],
   ["/api/pass-history", new Set(["GET", "POST", "DELETE"])],
+  ["/api/my-eqp-reference", new Set(["GET", "HEAD"])],
+  ["/api/my-eqp-registration", new Set(["GET", "POST", "DELETE"])],
+])
+const SELF_EQUIPMENT_DB_METHODS = new Map([
+  ["/api/my-eqp-equipment-data", new Set(["GET"])],
 ])
 
 export const DATA_CONNECTIONS_ENABLED_ENV = "SCS_DATA_CONNECTIONS_ENABLED"
@@ -70,12 +75,12 @@ export function getDataConnectionCapabilities(
   canReadDbInfo = isDbInfoReadable,
 ) {
   const allEnabled = areDataConnectionsEnabled(environment)
+  const dbConnections = areDbConnectionsEnabled(environment, canReadDbInfo)
+  const selfEquipmentFileRead = allEnabled || areSelfEquipmentDataConnectionsEnabled(environment)
   return {
-    dbConnections: areDbConnectionsEnabled(environment, canReadDbInfo),
-    selfEquipmentFileRead: allEnabled || areSelfEquipmentDataConnectionsEnabled(environment),
-    // path_xian의 7-column 계약에는 기존 Self PASS/SKIP 식별자인 ver가 없다.
-    // 새 식별 계약이 정의되기 전까지 Self 화면의 DB 기능은 fail-close한다.
-    selfEquipmentDb: false,
+    dbConnections,
+    selfEquipmentFileRead,
+    selfEquipmentDb: selfEquipmentFileRead && dbConnections,
   }
 }
 
@@ -109,12 +114,19 @@ export function blockDisabledDataRequest(
     && isExactPath
     && DB_METHODS.get(normalizedPathname)?.has(req.method)
   )
+  const isAllowedSelfEquipmentDbRequest = (
+    areSelfEquipmentDataConnectionsEnabled(environment)
+    && areDbConnectionsEnabled(environment, canReadDbInfo)
+    && isExactPath
+    && SELF_EQUIPMENT_DB_METHODS.get(normalizedPathname)?.has(req.method)
+  )
   if (
     !isApiPath(url.pathname)
     || areDataConnectionsEnabled(environment)
     || isAllowedDashboardRead
     || isAllowedSelfEquipmentRead
     || isAllowedDbRequest
+    || isAllowedSelfEquipmentDbRequest
   ) return false
 
   const payload = createSafeApiError({

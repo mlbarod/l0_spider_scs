@@ -8,12 +8,11 @@ export async function createMyEqpRegistration({
   periode,
   comment,
   isPublic,
-  knoxIds,
 }) {
   const response = await fetch("/api/my-eqp-registration", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ line, sdwt, prcGroup, eqps, periode, comment, isPublic, knoxIds }),
+    body: JSON.stringify({ line, sdwt, prcGroup, eqps, periode, comment, isPublic }),
   })
   const payload = await response.json().catch(() => ({}))
 

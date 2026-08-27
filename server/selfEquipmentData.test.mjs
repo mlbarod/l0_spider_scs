@@ -2,14 +2,17 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  ERD_PATH_REFERENCE_COLUMNS,
   SKIP_EXCLUSION_DURATION_MS,
   TEAM_ERD_COLUMNS,
+  attachErdPathReferences,
   authorizeSelfEquipmentDataPath,
   buildSelfEquipmentPayload,
   excludeRecentlySkippedRows,
   filterMyEqpRows,
   handleErdScatterDataRequest,
   isSelfEquipmentDataPathAllowed,
+  normalizeErdPathReferenceRow,
   normalizeSelfEquipmentIndexRow,
   normalizeSelfEquipmentFilePath,
   resolveErdScatterProjection,
@@ -256,9 +259,80 @@ test("path_xian recipe_id는 RECIPE_ID 필터와 row 호환 필드로 정규화�
     step: "10@MAIN",
     eqp: "EQP-1",
     file_path: "/appdata/abnormal_trend/pic/erd/path",
+    history_file_path: "",
     line_rev: "",
     latest_date: "2026-08-27",
   })
+})
+
+test("ERD 경로 테이블은 기존 이력 식별 컬럼을 projection한다", () => {
+  assert.deepEqual(ERD_PATH_REFERENCE_COLUMNS, [
+    "sdwt",
+    "desc",
+    "ver",
+    "recipe_id",
+    "priority",
+    "sensor",
+    "step",
+    "eqp",
+    "file_path",
+    "line_rev",
+  ])
+})
+
+test("path_xian row는 동일 file_path의 ERD 경로 테이블 ver를 참조한다", () => {
+  const indexRow = normalizeSelfEquipmentIndexRow({
+    sdwt: "SDWT-1",
+    recipe_id: "RECIPE-FILTER",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1.png",
+    file_path: "/appdata/abnormal_trend/pic_server2/erd/chart/EQP-1.png",
+  }, "2026-08-27")
+
+  const referenceRow = normalizeErdPathReferenceRow({
+    sdwt: "SDWT-1",
+    desc: "ETCH",
+    ver: "V1",
+    recipe_id: "PPID-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1.png",
+    file_path: "/appdata/abnormal_trend/pic/erd/chart/EQP-1.png",
+    line_rev: "P1L",
+  })
+  const [row] = attachErdPathReferences([indexRow], [referenceRow])
+
+  assert.equal(row.desc, "ETCH")
+  assert.equal(row.ver, "V1")
+  assert.equal(row.recipe_id, "PPID-1")
+  assert.equal(row.line_rev, "P1L")
+  assert.equal(row.history_file_path, referenceRow.file_path)
+})
+
+test("ERD 경로 테이블에 동일 file_path 또는 ver가 없으면 DB 이력 경로를 열지 않는다", () => {
+  const indexRow = normalizeSelfEquipmentIndexRow({
+    sdwt: "SDWT-1",
+    recipe_id: "RECIPE-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+    file_path: "/appdata/abnormal_trend/pic/erd/chart/EQP-1.png",
+  }, "2026-08-27")
+  const referenceWithoutVersion = normalizeErdPathReferenceRow({
+    ...indexRow,
+    file_path: indexRow.file_path,
+    ver: "",
+  })
+
+  assert.equal(attachErdPathReferences([indexRow], [])[0].history_file_path, "")
+  assert.equal(
+    attachErdPathReferences([indexRow], [referenceWithoutVersion])[0].history_file_path,
+    "",
+  )
 })
 
 test("ERD scatter는 실제 schema의 underscore axis와 eqp_cb를 선택한다", () => {

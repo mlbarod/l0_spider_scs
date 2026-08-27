@@ -96,7 +96,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | SCS data gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite 선행 middleware | 정확히 `"1"`인 경우만 handler 활성 | 단일 변수 오설정으로 모든 file·DB read/write 재활성화 | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; server·Vite 진입점 |
 | SCS Dashboard read gate | `SCS_DASHBOARD_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; Dashboard와 latest-date GET/HEAD만 활성 | 운영 filename·집계 노출, mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; Dashboard API |
 | SCS Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; mapping GET/HEAD와 Self·scatter GET만 handler 활성 | 기본 file read에 따른 source path 노출·mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; self read API |
-| SCS DB gate | `SCS_DB_CONNECTIONS_ENABLED`, `DB_INFO_PATH` | Node·Vite 선행 middleware | 전체 gate 비활성 mode에서 비-`1`이 아니고 credential file read 가능; 접속 IP와 세 이력 method allowlist만 활성 | 세 이력 read/write와 접속 IP API 활성 | `Implemented` / 운영 연결 `Unknown` | `server/dataConnections.mjs`; DB API |
+| SCS DB gate | `SCS_DB_CONNECTIONS_ENABLED`, `DB_INFO_PATH` | Node·Vite 선행 middleware | 전체 gate 비활성 mode에서 비-`1`이 아니고 credential file read 가능; 사용자·My EQP·세 이력 allowlist 활성 | My EQP와 history read/write 활성 | `Implemented` / 운영 연결 `Unknown` | `server/dataConnections.mjs`; DB API |
 | 메일 link | Dashboard·Self URL | 외부 renderer 후보 | template `urlencode`; 실제 renderer 미확인 | 수신자 혼합·URL 노출 | `Policy` / `Needs Validation` | mail template |
 
 ## 7. 인증과 권한 경계
@@ -107,10 +107,10 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | session·인증 cookie | 인증 session 없음; sidebar 상태 cookie만 있음 | browser UI | 인증에 사용하지 않음 | `Confirmed` | `src/components/ui/sidebar.jsx:27-70` |
 | route guard | 사용자 route에 guard component 없음 | React Router | 직접 route rendering | `Not Implemented` | `src/features/fdc-trend/routes.jsx:11-68` |
 | API auth middleware | global middleware·Bearer/JWT 확인 안 됨 | `server.mjs` direct dispatch | handler별 처리 | `Not Implemented` in application | `server.mjs:131-273` |
-| 접속자 이력 식별 | forwarded/socket IP를 정규화·검증하고 호환 key `knoxId`로 반환 | `getRemoteIp`, `resolveCurrentUser` | IP 확인 실패 시 400 | `Implemented` | `server/currentUser.mjs` |
-| history write identity | body `knoxId` 대신 server가 확인한 IP 사용 | hit·click·pass handlers | IP 확인 실패 시 write 실패 | `Implemented` | `hitHistory.mjs`; `clickedCategoryHistory.mjs`; `passHistory.mjs` |
-| My EQP 조회 | 접속 IP와 `is_public=1` 조건 | Node·Python helper | 조회 오류 500 | 일부 `Implemented` | `myEqpRegistration.mjs`; Python query |
-| My EQP 등록 | 접속 IP를 owner 비교값으로 사용; 복수 직접 입력 `knoxIds` 허용 | Node handler | helper 오류 500 | `Needs Validation` | `myEqpRegistration.mjs` |
+| 접속자 이력 식별 | forwarded/socket IP 정규화 후 같은 IP 반환 | `getRemoteIp`, `resolveCurrentUser`, Python helper | IP 없음·형식 오류 400 | `Implemented` | current user Node/Python |
+| history write identity | body `knoxId` 대신 server가 확인한 접속 IP 사용 | hit·click·pass handlers | IP 확인 실패 시 write 실패 | `Implemented` | history handlers |
+| My EQP 조회 | 접속 IP를 저장한 `knox_id`와 `is_public=1` 조건 | Node·Python helper | 조회 오류 500 | 일부 `Implemented` | `myEqpRegistration.mjs`; Python query |
+| My EQP 등록 | 접속 IP를 owner 비교값으로 사용; 브라우저 `knoxIds` 입력 없음 | Node handler | helper 오류 500 | `Needs Validation` | `myEqpRegistration.mjs` |
 | Mailing 등록 | caller가 `knoxId`·`knoxIds`를 지정 | Node handler | 형식 오류도 catch에서 500 | `Needs Validation` | `mailingRegistration.mjs:53-75,160-217` |
 | 역할·관리자 권한 | role·permission check 미확인 | 해당 없음 | 미확인 | `Unknown` | code search |
 | 외부 gateway·SSO | repository에 연동 설정 없음 | 저장소 밖 후보 | 미확인 | `Unknown` / `Needs Validation` | architecture·environment docs |
@@ -118,7 +118,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 저장소에 인증 코드가 없다는 사실만으로 운영 서비스가 인터넷에 익명 노출되었다고 단정하지 않는다.
 다만 application 자체의 write API 권한 경계는 외부 proxy가 제공하는 접근 제한과 별개로 명시적 검증이 부족하다.
 SCS 기본 실행에서는 Dashboard와 자설비 read를 허용한다. 읽기 가능한 credential이 있으면
-접속 IP와 세 이력 API도 허용하지만 등록·Mailing·image endpoint와 다른 App은 계속 차단한다.
+사용자·My EQP와 세 이력 API도 허용하지만 Mailing·image endpoint와 다른 App은 계속 차단한다.
 전체 UI shell이 필요하면 Dashboard·Self·DB 범위 변수를 모두 `0`으로 명시한다.
 mapping capability가 DB query와 action을 프론트엔드에서도 비활성화한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 Parquet·이미지·DB read뿐 아니라 등록·이력 write까지
@@ -206,7 +206,7 @@ Contract test의 green 결과를 접근 통제나 운영 데이터 보호 증거
 | `sdwt`·`grade` | 중복 제거·option matching | team·grade filter | 유효하지 않으면 미선택·빈 결과 | `Implemented` | URL filter·payload builder |
 | `step` | MY EQP는 `ALL`; 일반은 비-`ALL` token을 선택에 사용하지 않음 | STEP filter | HMAC 후보와 Mismatch | `Mismatch` | STEP doc |
 | `eqpCh` | alias parsing, row EQP와 matching | 장비 범위 | HMAC 서명 포함 여부 미확인 | 처리 `Confirmed`, 보호 `Unknown` | URL filter·Self server |
-| MY EQP | 접속 IP로 active registration 조회 | 개인·public 등록 범위 | IP와 수신인 `knox_id` 의미 차이·proxy trust | `Risk` | `selfEquipmentData.mjs` |
+| MY EQP | 접속 IP가 `knox_id` 컬럼에 저장된 active registration 조회 | 개인·public 등록 범위 | proxy trust·NAT 공유 | `Risk` | `selfEquipmentData.mjs` |
 | chart path | API payload의 absolute path를 다음 API에 전달 | Parquet·history | URL·response path 노출 | `Risk` | Self API·server |
 | image | 허용 root image stream endpoint | 운영 image | page 소비 위치와 접근 분류 미확인 | endpoint `Confirmed` | `handleErdFileRequest` |
 | 데이터 없음 | 빈 filter 또는 file error | 화면 empty/error | file 존재·path detail 구분 | 일부 `Implemented` | Self docs·handlers |
@@ -247,7 +247,7 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 | data connection gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite | API 응답에 간접 영향 | 비활성 | 정확히 `1`이 아니면 Dashboard·Self·DB allowlist 외 `/api` 차단 | secret 아님; owner 승인 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 | Dashboard read gate | `SCS_DASHBOARD_DATA_ENABLED` | Node·Vite | Portal·Dashboard read | 활성 | 비-`1`이면 Dashboard GET/HEAD 차단 | secret 아님 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 | Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite | mapping GET/HEAD, Self·scatter GET에 직접 영향 | 활성 | 미설정 또는 정확히 `1`이면 자설비 read allowlist 통과; 그 외 값은 차단 | secret 아님; 부분 연결 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
-| DB connection gate | `SCS_DB_CONNECTIONS_ENABLED` | Node·Vite | 전체 gate 비활성 mode의 접속 IP·세 이력 API handler 진입 | credential read 가능 시 활성 | 비-`1` 또는 credential read 불가이면 allowlist 차단 | secret 아님; 범위 통제 | `Implemented` / 실제 연결 `Unknown` | `server/dataConnections.mjs` |
+| DB connection gate | `SCS_DB_CONNECTIONS_ENABLED` | Node·Vite | 전체 gate 비활성 mode의 사용자·My EQP·세 이력 API handler 진입 | credential read 가능 시 활성 | 비-`1` 또는 credential read 불가이면 allowlist 차단 | secret 아님; 범위 통제 | `Implemented` / 실제 연결 `Unknown` | `server/dataConnections.mjs` |
 | Self Equipment index root | `SCS_SELF_EQUIPMENT_PATH_ROOT` | Node | path_xian 탐색 root | `/appdata/abnormal_trend/pic/path_xian` | 설정 root의 최신 file 사용 | 경로 주의 | `Implemented` / 실제 값 `Unknown` | `server/selfEquipmentData.mjs` |
 
 `.env.example`과 `.env.mock.example`은 현재 `main`에서 확인되지 않았다.
@@ -386,11 +386,11 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 
 | 영역 | 통제 목적 | 현재 통제 | 통제 상태 | 증거 상태 | 주요 공백 |
 |---|---|---|---|---|---|
-| 인증 | 이력 식별 | 접속 IP를 이력 `knox_id`에 직접 기록; 인증 수단 아님 | `Implemented` | `Confirmed` | trusted proxy·NAT 영향 |
+| 인증 | 이력 식별 | 접속 IP를 이력 `knox_id` 컬럼에 기록 | `Implemented` | `Confirmed` | trusted proxy·NAT 영향 |
 | 권한 | 기능·row 접근 제한 | history identity 고정, My EQP owner/public query | 일부 `Implemented` | `Confirmed` | role, mailing·recipient authorization |
 | API 입력 | 비정상 입력 차단 | 필수값·형식·body·개수 제한 | 일부 `Implemented` | `Confirmed` | global schema·rate limit·Content-Type |
 | 파일 경로 | root 밖 접근 방지 | segment·resolve·root·extension 검사 | `Implemented` | `Confirmed` | symlink·realpath·운영 ACL |
-| DB query | injection·무결성 | value parameterization·transaction | 일부 `Implemented` | `Confirmed` | runtime DDL·TLS·minimum grant |
+| DB query | injection·무결성 | value parameterization·transaction; My EQP runtime DDL 제거 | 일부 `Implemented` | `Confirmed` | TLS·minimum grant |
 | secret | client·Git 노출 방지 | DB file·gitignore | 일부 `Implemented` | `Confirmed` | HMAC·mail key·rotation |
 | STEP/HMAC | link 무결성 | `step=ALL` 동작만 확인 | HMAC `Unknown` | `Mismatch` | 생성·검증·key·expiry |
 | mail recipient | 오발송 방지 | template recipient filter 요구 | `Policy` | `Documented` | sender-side enforcement |
@@ -421,7 +421,7 @@ Node가 직접 외부에 노출되는지, proxy가 모든 forwarded header를 �
 |---|---|---|---|---|
 | 개별 STEP HMAC | 생성·검증·key·비-`ALL` 적용 확인 안 됨 | `{HMAC_TOKEN}` 개별 STEP link 후보 | link 무결성 경계를 정의할 수 없음 | 요구·서명 계약·ADR을 먼저 확정 |
 | 비-`ALL` `step` | browser가 읽지만 일반 화면 초기 STEP으로 적용하지 않음 | token→STEP 선택 후보 | invalid·변조·정상 token을 구분하지 못함 | producer·consumer·error contract 결정 |
-| Vite API surface | dev middleware가 full `server.mjs`의 일부 등록·MY EQP route를 포함하지 않음 | full server와 같은 application 후보 | 실행 mode별 보안·기능 검증 범위가 다름 | deployment 문서에서 기준 entrypoint 확정 |
+| Vite API surface | MY EQP·history route parity 보완 | route 수동 등록 구조 | 후속 route 누락 가능 | route parity 회귀 확인 |
 
 Dashboard `lineDashboard.summary.mailingSummary` 후보와 실제 sibling `lineDashboard.mailingSummary` 차이는 보안 구현 Mismatch라기보다 API 계약 Mismatch이며 Dashboard 문서를 기준으로 유지한다.
 
@@ -431,10 +431,10 @@ Dashboard `lineDashboard.summary.mailingSummary` 후보와 실제 sibling `lineD
 |---|---|---|---|---|---|---|
 | SEC-R01 | identity | `Risk` / `Needs Validation` | client forwarded header를 신뢰할 proxy 검증 없이 우선 사용 | 다른 사용자로 오식별될 조건 | `High` | proxy 설정·직접 Node 접근 차단 확인 |
 | SEC-R02 | authorization | `Risk` / `Needs Validation` | Mailing 등록이 caller 지정 수신자 ID를 받음 | 무단 등록·삭제 가능성 | `High` | 요구·gateway·row authorization review |
-| SEC-R03 | My EQP | `Risk` / `Needs Validation` | 접속 IP owner 비교와 복수 수신자 `knox_id`의 의미가 다름 | owner 경계 혼동 | `High` | 실패 정책·권한 요구 확정 |
+| SEC-R03 | My EQP | `Risk` / `Needs Validation` | 조회 사용자는 DB에서 확인하지만 복수 수신자 지정 권한은 별도 role 검증 없음 | owner 경계 혼동 | `High` | 실패 정책·권한 요구 확정 |
 | SEC-R04 | HMAC | `Mismatch` / `Unknown` | 개별 STEP 생성·검증·secret·expiry 부재 | link 무결성 요구 미충족 | `High` | ADR·unit·integration |
 | SEC-R05 | error | `Partial` | error/debug/DB detail은 제거됐으나 성공 source path는 유지 | 운영 file topology 노출 | `High` | CORE-03B opaque resource 전환 |
-| SEC-R06 | DB privilege | `Risk` / `Unknown` | runtime DDL과 read/write가 같은 credential 후보 | 과권한 blast radius | `High` | DB grant·migration 책임 확인 |
+| SEC-R06 | DB privilege | `Risk` / `Unknown` | read/write가 같은 credential 후보 | 과권한 blast radius | `High` | DB grant·migration 책임 확인 |
 | SEC-R07 | filesystem | `Unknown` | `/appdata` ACL·read-only·symlink 구성 미확인 | 무단 read/write·root 우회 조건 | `Medium` | owner·mode·mount·realpath 점검 |
 | SEC-R08 | network | `Unknown` | TLS·firewall·reverse proxy·security header 미확인 | 전송·browser 보호 공백 | `High` | 운영 proxy·TLS configuration review |
 | SEC-R09 | logging | `Unknown` / `Risk` | access log에 query·token, journal에 stderr가 남을 수 있음 | 민감정보 장기 보존 | `High` | log format·mask·retention 확인 |

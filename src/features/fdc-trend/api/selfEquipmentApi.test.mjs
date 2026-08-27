@@ -31,7 +31,12 @@ test("MY EQP의 EQP ALL SKIP 대상은 My EQP 전용 API로 조회한다", async
     requestedUrl = String(url)
     return {
       ok: true,
-      json: async () => ({ rows: [{ file_path: "/appdata/erd/chart.png" }] }),
+      json: async () => ({
+        rows: [{
+          file_path: "/appdata/erd/data.parquet",
+          history_file_path: "/appdata/erd/chart.png",
+        }],
+      }),
     }
   }
   t.after(() => {

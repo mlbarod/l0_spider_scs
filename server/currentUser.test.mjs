@@ -36,7 +36,7 @@ function runCompatibilityHelper(remoteIp) {
   })
 }
 
-test("forwarded IPv4를 정규화해 이력 knox_id 값으로 사용한다", async () => {
+test("forwarded IPv4를 정규화해 DB knox_id 컬럼 값으로 사용한다", async () => {
   const req = {
     headers: { "x-forwarded-for": "::ffff:10.20.30.40, 10.20.30.1" },
     socket: { remoteAddress: "127.0.0.1" },
@@ -50,7 +50,7 @@ test("forwarded IPv4를 정규화해 이력 knox_id 값으로 사용한다", asy
   })
 })
 
-test("IPv6 접속 주소도 그대로 이력 knox_id 값으로 보존한다", async () => {
+test("IPv6 접속 주소도 DB knox_id 컬럼 값으로 보존한다", async () => {
   const remoteIp = "2001:db8::42"
 
   assert.equal(normalizeRemoteIp(remoteIp), remoteIp)

@@ -70,7 +70,7 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `SCS_DATA_CONNECTIONS_ENABLED` | 모든 `/api` namespace 요청 | 비활성 | 새 Parquet·DB 연결 승인 전에는 미설정; `1`은 기존 file·DB handler를 다시 활성화하므로 shell 배포에서 금지 |
 | `SCS_DASHBOARD_DATA_ENABLED` | Dashboard GET/HEAD | 활성 | 명시적 UI shell에서만 `0`; 기본 Portal 최신시각·Dashboard read에 필요 |
 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | mapping GET/HEAD와 자설비 index·chart GET allowlist | 활성 | UI shell이 필요할 때 `0`; 미설정 또는 `1`이면 image와 다른 App을 제외한 자설비 read만 허용 |
-| `SCS_DB_CONNECTIONS_ENABLED` | credential 기반 접속 IP·세 이력 API allowlist | 활성 후보 | 전체 gate 비활성 mode에서 `DB_INFO_PATH`가 읽기 가능해야 활성; allowlist 차단 또는 UI shell은 `0` |
+| `SCS_DB_CONNECTIONS_ENABLED` | credential 기반 사용자·My EQP·세 이력 API allowlist | 활성 후보 | 전체 gate 비활성 mode에서 `DB_INFO_PATH`가 읽기 가능해야 활성; allowlist 차단 또는 UI shell은 `0` |
 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 index root | `/appdata/abnormal_trend/pic/path_xian` | 다른 mount 경로를 사용할 때만 명시하고 read-only 권한 확인 |
 | `VITE_SITE_URL` | Vite 시작·build | 빈 값 | client-visible 설정에 secret 금지 |
 | `MAPPING_CONFIG_PATH` | API 요청 | `/appdata/l0_spider_scs/mapping_config.json` | 실제 file 접근 사전 확인; 기본 경로와 다를 때만 override |
@@ -139,7 +139,7 @@ npm run build
 5. traffic 처리: proxy·무중단 전환 방식은 `Unknown`이므로 운영 승인 없이 변경하지 않는다.
 6. service 반영: 확인된 manager 절차로 한 instance씩 반영한다. 실제 instance 수는 `Unknown`이다.
 7. liveness 확인: `/`가 정상 HTTP 응답을 반환하는지 확인한다.
-8. 기본 부분 연결이면 Dashboard GET/HEAD와 mapping·Self·scatter GET이 통과하고 다른 App은 503인지 확인한다. 읽기 가능한 credential이 있으면 접속 IP와 세 이력 API만 handler에 진입한다.
+8. 기본 부분 연결이면 Dashboard GET/HEAD와 mapping·Self·scatter GET이 통과하고 다른 App은 503인지 확인한다. 읽기 가능한 credential이 있으면 사용자·My EQP와 세 이력 API가 handler에 진입한다.
 9. 명시적 UI shell이면 Dashboard·Self·DB 범위 변수를 모두 `0`으로 설정하고 정적 화면 route는 유지되며 `/api`와 `/api/*`가 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환하는지 확인한다.
 10. 데이터 연결을 별도 승인해 활성화한 배포만 해당 화면 API의 read-only 흐름을 확인한다.
 11. DB write·mail 기능은 실제 데이터를 생성하지 않고 담당자 확인과 기존 운영 증거로 판정한다.
@@ -158,7 +158,7 @@ npm run build
 | API gate | 기본 부분 연결은 Dashboard·Self read와 조건부 DB allowlist만 통과; 명시적 UI shell은 전체 503; 전체 연결은 승인 범위 계약 확인 | 네 gate와 credential read 가능 여부 확인 |
 | Dashboard | 연결 승인 배포에서 read-only 조회가 정상 또는 계약된 빈 상태 | data root·latest file 확인 |
 | Self·abnormal | 연결 승인 배포에서 mapping·index·image/scatter read 경계 정상 | `/appdata`와 path 권한 확인 |
-| DB 연계 | 연결 승인 배포에서 접속 IP 확인과 `pass_history` read 흐름 정상 | proxy·credential·network·helper log 확인 |
+| DB 연계 | 연결 승인 배포에서 접속 IP 기반 MY EQP와 `pass_history` read 흐름 정상 | proxy·credential·network·helper log 확인 |
 | STEP | `step=ALL` MY EQP 호환 유지 | 비-ALL HMAC은 현재 구현 `Unknown` |
 | Mailing | 등록 기능과 template 자산만 현재 범위 | 실제 sender는 별도 owner로 escalation |
 | log | 새 반복 오류·비밀·절대 path 노출 없음 | 즉시 영향 격리·보안 escalation |

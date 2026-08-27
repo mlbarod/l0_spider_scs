@@ -92,7 +92,7 @@ test("DB credential read 가능 여부는 파일 내용을 노출하지 않고 �
   assert.equal(isDbInfoReadable(join(directory, "missing.pkl")), false)
 })
 
-test("mapping capability는 DB 연결과 호환되지 않는 Self DB 작업을 구분한다", () => {
+test("mapping capability는 자설비 file과 DB가 모두 준비된 경우 Self DB 작업을 연다", () => {
   assert.deepEqual(getDataConnectionCapabilities({}, () => false), {
     dbConnections: false,
     selfEquipmentFileRead: true,
@@ -101,11 +101,16 @@ test("mapping capability는 DB 연결과 호환되지 않는 Self DB 작업을 �
   assert.deepEqual(getDataConnectionCapabilities({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }, () => true), {
     dbConnections: true,
     selfEquipmentFileRead: true,
-    selfEquipmentDb: false,
+    selfEquipmentDb: true,
   })
   assert.deepEqual(getDataConnectionCapabilities({ SCS_DATA_CONNECTIONS_ENABLED: "1" }, () => true), {
     dbConnections: true,
     selfEquipmentFileRead: true,
+    selfEquipmentDb: true,
+  })
+  assert.deepEqual(getDataConnectionCapabilities({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "0" }, () => true), {
+    dbConnections: true,
+    selfEquipmentFileRead: false,
     selfEquipmentDb: false,
   })
 })
@@ -234,7 +239,7 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
   }
 })
 
-test("읽기 가능한 credential이 있으면 접속 IP와 세 이력 API만 열고 다른 DB API는 차단한다", () => {
+test("읽기 가능한 credential이 있으면 사용자·이력·My EQP API를 제한적으로 연다", () => {
   const environment = { DB_INFO_PATH: "/synthetic/db_info.pkl" }
   for (const [method, pathname] of [
     ["GET", "/api/current-user"],
@@ -243,6 +248,12 @@ test("읽기 가능한 credential이 있으면 접속 IP와 세 이력 API만 �
     ["GET", "/api/pass-history"],
     ["POST", "/api/pass-history"],
     ["DELETE", "/api/pass-history"],
+    ["GET", "/api/my-eqp-reference"],
+    ["HEAD", "/api/my-eqp-reference"],
+    ["GET", "/api/my-eqp-registration"],
+    ["POST", "/api/my-eqp-registration"],
+    ["DELETE", "/api/my-eqp-registration"],
+    ["GET", "/api/my-eqp-equipment-data"],
   ]) {
     assert.equal(blockDisabledDataRequest(
       { method, url: pathname, headers: { host: "localhost" } },
@@ -254,10 +265,9 @@ test("읽기 가능한 credential이 있으면 접속 IP와 세 이력 API만 �
   }
 
   for (const [method, pathname] of [
-    ["GET", "/api/my-eqp-reference"],
-    ["POST", "/api/my-eqp-registration"],
     ["DELETE", "/api/mailing-registration"],
-    ["GET", "/api/my-eqp-equipment-data"],
+    ["POST", "/api/my-eqp-equipment-data"],
+    ["GET", "/api/commonality-data"],
   ]) {
     const response = createResponse()
     assert.equal(blockDisabledDataRequest(
@@ -269,6 +279,22 @@ test("읽기 가능한 credential이 있으면 접속 IP와 세 이력 API만 �
     ), true, `${method} ${pathname}`)
     assert.equal(response.statusCode, 503)
   }
+})
+
+test("My EQP 조회는 DB와 자설비 file gate가 모두 열려야 한다", () => {
+  const environment = {
+    DB_INFO_PATH: "/synthetic/db_info.pkl",
+    SCS_SELF_EQUIPMENT_DATA_ENABLED: "0",
+  }
+  const response = createResponse()
+  assert.equal(blockDisabledDataRequest(
+    { method: "GET", url: "/api/my-eqp-equipment-data", headers: { host: "localhost" } },
+    response,
+    environment,
+    () => {},
+    () => true,
+  ), true)
+  assert.equal(response.statusCode, 503)
 })
 
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {

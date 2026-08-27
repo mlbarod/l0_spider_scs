@@ -26,7 +26,7 @@ STEP 딥링크, Dashboard 응답 계약과 보안 원칙은 각 기준 문서를
 |---|---|---|---|---|---|
 | Line Dashboard | `/`, `/fdc_trend` | detail·stats Parquet, mapping JSON | 날짜별 최신 detail과 최신 시각 stats | KPI, 막대, 추이, 상세표 | `Confirmed` |
 | Self Equipment | `/self-equipment`, `/fdc_trend/self-equipment` | 최신 `path_xian`, `file_path`에서 해석한 data/history Parquet | mapping scope와 종속 필터 | scatter, 동일성 chart, 변경이력 | 코드 `Confirmed`; 운영 file `Unknown` |
-| MY EQP | 같은 route의 `sdwt=MY_EQP` | legacy handler 보존 | UI capability 비활성 | 현재 화면 출력 없음 | `Blocked` — 새 DB 식별 계약 `Unknown` |
+| MY EQP | 같은 route의 `sdwt=MY_EQP` | active registration·mapping·최신 index·PASS | MY EQP 종속 필터 | 등록 EQP chart | 코드 `Confirmed`; 운영 DB/file `Unknown` |
 | 동일성 이상감지 | `/matching-anomaly` | `erd_commonality` 디렉터리·PNG | 최신 시각 디렉터리와 계층 필터 | 페이지된 분석 이미지 | `Confirmed` |
 | 공통부 이상감지 | `/common-anomaly` | `path_common` Parquet, common `data.parquet`·PNG, SKIP DB | index row와 종속 필터 | 이미지, scatter, 동일성 chart | `Confirmed` |
 | 공통부 동일성 이상감지 | `/common-commonality-anomaly` | `path_common_commonality` 디렉터리·PNG | 최신 `YYYY-MM-DD` 디렉터리와 EQP_MODEL 계층 필터 | 페이지된 분석 이미지 | `Confirmed` |
@@ -73,6 +73,7 @@ FdcTrendPage
 → GET /api/self-equipment-data 또는 /api/my-eqp-equipment-data
 → readLatestSelfEquipmentRows() + mapping scope
 → path_xian/{latest_date}
+→ /pic/path/{line}/{sdwt}/df_path.parquet에서 동일 file_path의 ver 참조
 → buildSelfEquipmentPayload()
 → path row의 file_path
 → GET /api/erd-scatter-data
@@ -84,9 +85,9 @@ FdcTrendPage
 최신 `path_xian` row는 최종 chart의 위치와 metadata를 제공하고, 선택 row의 `file_path`는 다음 scatter 요청의 `path`가 된다.
 서버는 `/pic_server2/`를 `/pic/`로 정규화하고 두 gate mode 모두 Line·SDWT·EQP·latest date·sensor·step이 최신 scoped row와 일치하는지 확인한다. 이후 `file_path`가 `.png`이면 sibling `data.parquet`, directory이면 하위 `data.parquet`, 직접 파일이면 해당 `data.parquet`를 선택한다.
 
-MY EQP handler의 legacy 구현은 남아 있지만 새 7-column index에 기존 Self DB 식별자 `ver`가 없다.
-따라서 현재 SCS mapping capability는 전역 gate에서도 Self DB 기능을 비활성화하고 화면에서
-MY EQP·SKIP 흐름을 호출하지 않는다. 재연결에는 별도의 DB 식별 계약이 필요하며 현재 `Unknown`이다.
+새 7-column index에는 기존 Self DB 식별자 `ver`가 없다. 서버는 mapping으로 검증한
+분임조별 ERD 경로 테이블에서 동일 `file_path` row를 찾아 `ver`와 이력 원본 경로를 참조한다.
+참조 row가 없는 chart는 file chart는 유지하지만 DB action을 표시하지 않는다.
 
 ### 3.3 동일성 이상감지
 
@@ -149,7 +150,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 최신 날짜 directory가 없을 때와 선택 SDWT directory가 없을 때는 서로 다른 안전한 오류 코드·문구를 반환한다.
 
 동일성·공통부·공통부 동일성의 각 결과 카드에는 자설비와 같은 **이력저장** action이 있다.
-브라우저는 카드의 결과 이미지 경로와 선택 Line을 `POST /api/hit-history`로 보내며, 서버는 확인한 접속 IP를 결합해 기존 `hit_history`의
+브라우저는 카드의 결과 이미지 경로와 선택 Line을 `POST /api/hit-history`로 보내며, 서버는 접속 IP를 `knox_id` 컬럼에 결합해 기존 `hit_history`의
 `update_date`, `line_id`, `sdwt`, `file_path`, `knox_id`, `exec_date` 여섯 column에 저장한다.
 공통부는 같은 data path를 공유하는 EQP를 구분하기 위해 `data.parquet`가 아니라 카드별 `{eqp_cb}.png` 경로를 저장한다.
 
@@ -158,8 +159,8 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | 메서드 | API | handler | 주요 원천 | 결과 |
 |---|---|---|---|---|
 | `GET/HEAD` | `/api/dashboard-data` | `handleDashboardDataRequest` | detail·stats Parquet, mapping | Dashboard JSON |
-| `GET` | `/api/self-equipment-data` | `handleSelfEquipmentDataRequest` | 최신 `path_xian`; Self DB history 미결합 | filter option·chart row |
-| `GET` | `/api/my-eqp-equipment-data` | dormant legacy handler | registration DB, mapping, 최신 `path_xian` | 현재 UI 미호출; 새 DB 식별 계약 `Unknown` |
+| `GET` | `/api/self-equipment-data` | `handleSelfEquipmentDataRequest` | 최신 `path_xian`, team ERD 경로 table, active PASS | filter option·chart row |
+| `GET` | `/api/my-eqp-equipment-data` | `handleMyEqpEquipmentDataRequest` | registration DB, mapping, 최신 `path_xian`, team ERD 경로 table, active PASS | MY EQP option·chart row |
 | `GET` | `/api/erd-scatter-data` | `handleErdScatterDataRequest` | ERD `data.parquet`, history Parquet | scatter·identity JSON |
 | `GET/HEAD` | `/api/erd-file` | `handleErdFileRequest` | ERD image | image stream |
 | `GET/HEAD` | `/api/latest-commonality-path` | `handleLatestCommonalityPathRequest` | commonality root directory | 최신 path·date |
@@ -183,6 +184,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | `ABN-P01` | `/appdata/abnormal_trend/pic/path/{latest_date}` | Dashboard detail Parquet | root의 시각 파일명 나열 | `Confirmed` |
 | `ABN-P02` | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | Dashboard stats | 최신 detail 시각으로 조립 | `Confirmed` |
 | `ABN-P03` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | Self/MY EQP index | 날짜·시각 파일명 중 최신 선택 후 Line·SDWT mapping scope | 코드 `Confirmed`; 운영 file `Unknown` |
+| `ABN-P03-R` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | Self history `ver`·원본 경로 | index와 동일 `file_path` row 선택 | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P04` | index `file_path`에서 해석한 `data.parquet` | ERD point 원천 | `pic_server2` 정규화 후 png sibling·directory 하위·직접 file 구분 | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P05` | index row `file_path` | ERD data/image 위치 identity | 최신 scoped row 원문 | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ABN-P06` | 선택한 `data.parquet` sibling `{eqp}.parquet` | 변경점 이력 | 선택 EQP 이름으로 조립 | 코드 `Confirmed`; 운영 file `Unknown` |
@@ -212,9 +214,9 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 | `ch_step` | row `step`·directory suffix | query `chStep` | Self는 `${sensor}*${chStep}`, 공통부는 `${sensor}_${chStep}` column | filter·chart title | `Confirmed` |
 | `eqp` | index row·image basename·DB 등록 | query `eqp` 또는 `eqpCh` | EQP row filter, image·history filename | EQP group·chart | `Confirmed` |
 | `eqp_model` | 공통부 동일성 directory | query `eqpModel` | directory segment와 종속 filter | EQP_MODEL filter·group title | `Confirmed` |
-| `ver` | team index row·ERD path | query로 직접 전달하지 않음 | ERD path와 history identity | 일부 chart metadata·이력 | `Confirmed` |
+| `ver` | team ERD 경로 table | query로 직접 전달하지 않음 | index와 동일 `file_path` row에서 참조 | PASS/HIT 이력 | 코드 `Confirmed`; 운영 match `Unknown` |
 
-결과 이력의 `file_path`는 네 App 모두 slash를 `#`로 바꿔 보존한다. App별 image root는 다르지만 DB column 구조와 접속 IP를 `knox_id`에 저장하는 방식은 동일하다.
+결과 이력의 `file_path`는 네 App 모두 slash를 `#`로 바꿔 보존한다. App별 image root는 다르지만 DB column 구조와 접속 IP를 `knox_id` 컬럼에 저장하는 방식은 동일하다.
 
 ### 6.1 명칭 대응
 

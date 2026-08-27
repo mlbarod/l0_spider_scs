@@ -96,7 +96,7 @@ URL query는 page 또는 utility에서 정규화하며 화면은 loading·빈 �
 | Dashboard 응답 | `handleDashboardDataRequest` | `getDashboardSummary` | Confirmed | `server/dashboardData.mjs` |
 | Self Equipment | `handleSelfEquipmentDataRequest`, scatter·file handler | Parquet, 이미지, 이력 DB | Confirmed | `server/selfEquipmentData.mjs` |
 | 동일성·공통부 | `handleCommonality*`, `handleCommonAnomaly*` | 디렉터리, Parquet와 PNG | Confirmed | 대응 data 모듈 |
-| 접속 IP·등록·이력 | IP resolver, registration, history handler | Node IP 처리와 Python DB helper | Confirmed | 대응 Node·Python 파일 |
+| 사용자·등록·이력 | IP resolver, DB user lookup, registration, history handler | Node IP 처리와 Python DB helper | Confirmed | 대응 Node·Python 파일 |
 | 정적 제공 | Vite middleware 또는 `dist` fallback | SPA asset | Confirmed | `server.mjs` |
 | 오류 처리 | handler별 status와 JSON, 최상위 catch | 브라우저 | Confirmed | `sendJson`, route catch |
 
@@ -111,7 +111,7 @@ Node는 파일에 직접 접근하고 DB는 `python3 -B` helper를 실행하며,
 | Dashboard detail·stats | Node | hyparquet 집계와 metadata cache | `dashboardData.mjs` | Unknown | Confirmed |
 | Self Equipment Parquet | Node | 허용 경로 변환, hyparquet와 LRU | `selfEquipmentData.mjs` | Unknown | Confirmed |
 | 동일성·공통부 데이터 | Node | 디렉터리 index, Parquet 조회와 PNG stream | `commonalityData.mjs`, `commonAnomalyData.mjs` | Unknown | Confirmed |
-| 접속 IP·기준정보 | Node 직접 IP 처리 / Python helper | IP 정규화·검증 / SELECT | `currentUser.mjs`, `my_eqp_reference.py` | IP는 요청에서 수집; 기준 DB 주체 Unknown | Confirmed |
+| 사용자·기준정보 | Node IP 처리 / Python helper | IP 정규화·접속 IP 식별·기준정보 SELECT | `currentUser.mjs`, `current_user.py`, `my_eqp_reference.py` | IP는 요청에서 수집; DB 주체 Unknown | Confirmed |
 | 등록·이력 | Python helper | SELECT·INSERT·UPDATE·DELETE, 일부 runtime DDL | registration·history helper | L0 Spider 쓰기 | Confirmed |
 | 사용자 메뉴얼 | Vite·브라우저 | build resource import | `UserManualPage.jsx` | 저장소 문서 | Confirmed |
 

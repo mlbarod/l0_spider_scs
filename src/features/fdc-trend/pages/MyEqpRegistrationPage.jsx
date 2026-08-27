@@ -11,7 +11,6 @@ import {
   Settings2,
   Trash2,
   UserRound,
-  X,
 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
@@ -48,14 +47,8 @@ const EMPTY_MAPPING = Object.freeze({})
 const EMPTY_LIST = Object.freeze([])
 const ALL_EQP = "ALL"
 const MAX_COMMENT_LENGTH = 90
-const KNOX_ID_PATTERN = /^[A-Za-z0-9._-]+$/
 function matchesQuery(value, query) {
   return String(value).toLocaleLowerCase("ko").includes(query.trim().toLocaleLowerCase("ko"))
-}
-
-function normalizeKnoxId(value) {
-  const text = String(value ?? "").trim()
-  return text.includes("@") ? text.slice(0, text.indexOf("@")) : text
 }
 
 function FilterPanel({
@@ -197,7 +190,7 @@ function RegisteredMyEqpSection({ activeLine, registrationsQuery, onDelete }) {
         <div>
           <h2 id="registered-my-eqp-title" className="text-base font-semibold">등록된 My EQP 조건</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            {formatLineDisplayName(activeLine)} Line에서 내게 지정됐거나 과거 전체 공개된 기준정보입니다.
+            {formatLineDisplayName(activeLine)} Line에서 현재 접속 IP에 등록됐거나 과거 전체 공개된 기준정보입니다.
           </p>
         </div>
         <Badge variant="secondary">
@@ -224,7 +217,7 @@ function RegisteredMyEqpSection({ activeLine, registrationsQuery, onDelete }) {
                       {registration.active ? "모니터링 중" : "기간 만료"}
                     </Badge>
                     <Badge variant="outline">
-                      {registration.isPublic ? "과거 전체 공개" : "지정 사용자"}
+                      {registration.isPublic ? "과거 전체 공개" : "접속 IP 등록"}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       등록 {registration.execDate} · 만료 {registration.expiresAt || "-"}
@@ -280,8 +273,6 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
   const [selectedEqps, setSelectedEqps] = useState([])
   const [monitoringDays, setMonitoringDays] = useState("")
   const [comment, setComment] = useState("")
-  const [recipientKnoxInput, setRecipientKnoxInput] = useState("")
-  const [recipientKnoxIds, setRecipientKnoxIds] = useState([])
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [queries, setQueries] = useState({ line: "", sdwt: "", prcGroup: "", eqp: "" })
 
@@ -302,7 +293,7 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["my-eqp-registrations"] })
       toast.success("My EQP 기준정보를 저장했습니다.", {
-        description: `${result.knoxIds?.length?.toLocaleString() ?? 1}명 · ${result.requestedRows?.toLocaleString() ?? 0}행 저장 완료`,
+        description: `현재 접속 IP · ${result.requestedRows?.toLocaleString() ?? 0}행 저장 완료`,
       })
     },
     onError: (error) => toast.error(error.message),
@@ -394,8 +385,7 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
       && activeSdwt
       && activePrcGroup
       && activeEqps.length > 0
-      && hasValidMonitoringDays
-      && recipientKnoxIds.length > 0,
+      && hasValidMonitoringDays,
   )
 
   const changeQuery = (key, value) => {
@@ -436,22 +426,6 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
     ))
   }
 
-  const addRecipientKnoxId = () => {
-    const knoxId = normalizeKnoxId(recipientKnoxInput)
-    if (!knoxId || knoxId.length > 128 || !KNOX_ID_PATTERN.test(knoxId)) {
-      toast.error("knox_id 형식을 확인해 주세요.", {
-        description: "영문, 숫자, 점(.), 밑줄(_), 하이픈(-)만 입력할 수 있습니다.",
-      })
-      return
-    }
-    setRecipientKnoxIds((current) => current.includes(knoxId) ? current : [...current, knoxId])
-    setRecipientKnoxInput("")
-  }
-
-  const removeRecipientKnoxId = (knoxId) => {
-    setRecipientKnoxIds((current) => current.filter((value) => value !== knoxId))
-  }
-
   const buildSavePayload = useCallback(() => {
     const eqps = activeEqps.includes(ALL_EQP)
       ? eqpRows.map((row) => row.label)
@@ -463,7 +437,6 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
       eqps,
       periode: parsedMonitoringDays,
       comment,
-      knoxIds: recipientKnoxIds,
     }
   }, [
     activeEqps,
@@ -473,7 +446,6 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
     comment,
     eqpRows,
     parsedMonitoringDays,
-    recipientKnoxIds,
   ])
 
   const handleSave = () => {
@@ -709,76 +681,25 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
             <CardHeader className="gap-1 px-5 sm:px-6">
               <div className="flex items-center gap-2">
                 <UserRound className="size-4 text-primary" aria-hidden="true" />
-                <CardTitle className="text-base">열람 및 메일수신인 지정</CardTitle>
+                <CardTitle className="text-base">등록 사용자</CardTitle>
               </div>
               <CardDescription className="text-xs">
-                knox_id를 입력하고 Enter를 누르세요. 지정된 사용자별로 My EQP 기준정보가 저장됩니다.
+                My EQP 기준정보는 별도 knox_id 입력 없이 현재 접속 IP로 등록됩니다.
               </CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 px-5 sm:px-6">
-              <div className="max-w-2xl">
-                <label htmlFor="my-eqp-recipient-knox-id" className="mb-2 block text-xs font-medium">
-                  knox_id 입력
-                </label>
-                <Input
-                  id="my-eqp-recipient-knox-id"
-                  value={recipientKnoxInput}
-                  onChange={(event) => setRecipientKnoxInput(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key !== "Enter") return
-                    event.preventDefault()
-                    addRecipientKnoxId()
-                  }}
-                  placeholder="knox_id 입력 후 Enter"
-                  className="h-12 text-base font-semibold"
-                />
-                <p className="mt-2 text-xs text-muted-foreground">
-                  복수 등록할 수 있으며, 각 사용자에게 자설비 이상감지의 MY EQP 열람 권한이 부여됩니다.
-                </p>
+            <CardContent className="px-5 sm:px-6">
+              <div className="rounded-xl border bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
+                서버가 요청의 접속 IP를 확인해 기존 DB의 <code>knox_id</code> 컬럼에 저장합니다.
+                브라우저에서 사용자 식별값을 입력하거나 변경할 수 없습니다.
               </div>
-
-              {recipientKnoxIds.length ? (
-                <div className="grid gap-3 rounded-xl border bg-muted/20 p-4">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <SelectionItem label="Line Name" value={formatLineDisplayName(activeLine)} complete={Boolean(activeLine)} />
-                    <SelectionItem label="SDWT" value={activeSdwtLabel} complete={Boolean(activeSdwt)} />
-                    <SelectionItem label="PRC Group" value={activePrcGroup} complete={Boolean(activePrcGroup)} />
-                    <SelectionItem label="EQP" value={selectedEqpLabel} complete={activeEqps.length > 0} />
-                  </div>
-                  <div>
-                    <p className="mb-2 text-xs font-semibold text-foreground">
-                      지정된 knox_id {recipientKnoxIds.length.toLocaleString()}명
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {recipientKnoxIds.map((knoxId) => (
-                        <Badge key={knoxId} variant="secondary" className="gap-1.5 py-1 pl-2.5 pr-1.5">
-                          {knoxId}
-                          <button
-                            type="button"
-                            className="grid size-5 place-items-center rounded-full hover:bg-background/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label={`${knoxId} 삭제`}
-                            onClick={() => removeRecipientKnoxId(knoxId)}
-                          >
-                            <X className="size-3" aria-hidden="true" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-dashed px-4 py-6 text-center text-sm text-muted-foreground">
-                  열람 및 메일수신인으로 지정할 knox_id를 1명 이상 등록하세요.
-                </div>
-              )}
             </CardContent>
           </Card>
 
           <section className="flex flex-col items-stretch justify-between gap-4 rounded-2xl border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
             <div>
-              <h2 className="text-sm font-semibold">지정한 사용자에게 기준정보를 저장합니다.</h2>
+              <h2 className="text-sm font-semibold">현재 접속 IP에 기준정보를 저장합니다.</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                모든 조건과 모니터링 기간, knox_id를 입력하면 저장할 수 있습니다.
+                모든 조건과 모니터링 기간을 입력하면 현재 접속 IP로 저장할 수 있습니다.
               </p>
             </div>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">

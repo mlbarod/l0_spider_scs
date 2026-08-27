@@ -1,9 +1,14 @@
 import unittest
+from pathlib import Path
 
 from scripts.my_eqp_registration import MY_EQP_COLUMNS, build_insert_values, build_list_query
 
 
 class MyEqpRegistrationQueryTest(unittest.TestCase):
+    def test_helper_never_runs_runtime_ddl(self):
+        source = Path("scripts/my_eqp_registration.py").read_text(encoding="utf-8")
+        self.assertNotIn("ALTER TABLE", source)
+
     def test_insert_values_create_each_knox_id_and_eqp_combination(self):
         values = build_insert_values({
             "line": "P1D",

@@ -35,12 +35,11 @@
 ## 3. 교대·작업 전 사전 점검
 
 SCS 기본 실행은 Dashboard와 자설비 file read를 허용하고, 읽기 가능한 `DB_INFO_PATH`가 있으면
-접속 IP와 세 이력 DB API만 허용한다. 등록·Mailing과 다른 App의 503은 정상이다. 전체 UI shell이 필요하면
+사용자·My EQP와 세 이력 DB API를 허용한다. Mailing과 다른 App의 503은 정상이다. 전체 UI shell이 필요하면
 `SCS_DASHBOARD_DATA_ENABLED=0`, `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`,
 `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
-`SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 file·DB 승인 전에는 설정하지 않는다. 세 이력 테이블만
-있는 SCS DB에서는 등록·Mailing API가 존재하지 않는 테이블에 접근할 수 있으므로 전역 gate를
-열지 않는다. 실제 배포 값은 `Unknown`이다.
+`SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 file·DB 승인 전에는 설정하지 않는다. My EQP와 history는
+credential 기반 좁은 allowlist를 사용하므로 전역 gate를 열 필요가 없다. 실제 배포 값은 `Unknown`이다.
 장애 시에도 gate 도입 이전 artifact로 rollback하지 않는다. shell-safe artifact가 없으면 service·traffic을 격리하고 owner 승인을 받은 뒤 다음 조치를 결정한다.
 
 1. 작업 ticket, 승인 범위, 대상 환경과 영향 시간을 확인한다.

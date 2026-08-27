@@ -47,26 +47,6 @@ def connect(db_info):
     )
 
 
-def ensure_public_column(connection, db_name):
-    query = """
-        SELECT COUNT(*)
-        FROM `information_schema`.`COLUMNS`
-        WHERE `TABLE_SCHEMA` = %s
-          AND `TABLE_NAME` = 'myeqp_regist'
-          AND `COLUMN_NAME` = 'is_public'
-    """
-    with connection.cursor() as cursor:
-        cursor.execute(query, (db_name,))
-        exists = int(cursor.fetchone()[0]) > 0
-        if exists:
-            return
-        cursor.execute(
-            "ALTER TABLE `myeqp_regist` "
-            "ADD COLUMN `is_public` TINYINT(1) NOT NULL DEFAULT 0"
-        )
-    connection.commit()
-
-
 def build_insert_values(payload):
     eqps = payload["eqps"]
     knox_ids = payload.get("knoxIds") or [payload["knoxId"]]
@@ -96,7 +76,6 @@ def insert_registration(payload, db_info):
     """
 
     with connect(db_info) as connection:
-        ensure_public_column(connection, db_info["DB_NAME"])
         with connection.cursor() as cursor:
             affected_rows = cursor.executemany(query, values)
         connection.commit()
@@ -126,7 +105,6 @@ def list_registrations(payload, db_info):
     query, values = build_list_query(payload)
 
     with connect(db_info) as connection:
-        ensure_public_column(connection, db_info["DB_NAME"])
         with connection.cursor() as cursor:
             cursor.execute(query, values)
             rows = cursor.fetchall()
@@ -165,7 +143,6 @@ def delete_registration(payload, db_info):
     )
 
     with connect(db_info) as connection:
-        ensure_public_column(connection, db_info["DB_NAME"])
         with connection.cursor() as cursor:
             affected_rows = cursor.execute(query, values)
         connection.commit()

@@ -59,7 +59,7 @@
 | 메뉴얼 생성 프로세스 | `scripts/generate-user-manual-screenshots.mjs` | 합성 데이터 기반 화면 이미지 생성 | 애플리케이션 운영 프로세스 아님 | `Confirmed` |
 | 메일 발송 프로세스 | 해당 진입점 미확인 | 실제 메일 생성·발송 | 전체 동작 미확인 | `Unknown` |
 
-- Node 서버는 DB 작업별 Python helper를 요청마다 생성하며 history helper는 10초, 등록 계열은 주로 15초 timeout을 둔다. 접속 IP 확인은 Node 내부에서 처리한다.
+- Node 서버는 DB 작업별 Python helper를 요청마다 생성하며 history helper는 10초, 등록 계열은 주로 15초 timeout을 둔다. current user는 Node에서 IP를 직접 반환한다.
 - health check, readiness probe, process restart 정책과 무중단 종료 처리는 확인되지 않았다.
 
 ## 6. Build-time과 Runtime 구분
@@ -72,10 +72,10 @@
 | `SCS_DATA_CONNECTIONS_ENABLED` | 아니오 | 예 | 명시적으로 `1`인 경우에만 `/api` namespace의 파일·DB handler 진입을 허용한다. |
 | `SCS_DASHBOARD_DATA_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이면 Dashboard GET/HEAD read allowlist를 허용하고, 그 외 값이면 차단한다. |
 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이면 mapping GET/HEAD와 자설비 index·chart GET allowlist를 허용하고, 그 외 값이면 차단한다. |
-| `SCS_DB_CONNECTIONS_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이고 `DB_INFO_PATH` 파일이 읽기 가능할 때 접속 IP와 세 이력 API allowlist를 허용한다. |
+| `SCS_DB_CONNECTIONS_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이고 `DB_INFO_PATH` 파일이 읽기 가능할 때 사용자·My EQP와 세 이력 API allowlist를 허용한다. |
 | 데이터 root 설정 | 아니오 | 예 | API 요청 처리 중 파일 탐색 위치를 결정한다. |
 | `SENSOR_EXCLUSION_CONFIG_PATH` | 아니오 | 예 | 기본 `config/sensor-exclusions.json` 대신 사용할 App별 sensor 제외 JSON 위치를 지정한다. |
-| `DB_INFO_PATH` | 아니오 | 예 | Python DB helper가 credential 파일을 해석한다. 접속 IP는 Node request에서 직접 처리한다. |
+| `DB_INFO_PATH` | 아니오 | 예 | DB 작업용 Python helper가 credential 파일을 해석한다. current user IP 확인에는 사용하지 않는다. |
 | `dist/` | build 결과 | 정적 모드 입력 | build 결과가 없으면 정적 모드 시작이 실패할 수 있다. |
 | `public/` 자산 | build 입력 | 정적 URL | Vite가 template, 이미지 등 공개 자산을 다룬다. |
 
@@ -84,9 +84,9 @@
 
 ## 7. 설정 로딩과 우선순위
 
-1. `SCS_DATA_CONNECTIONS_ENABLED=1`이면 전체 API가 활성화된다. 그렇지 않은 상태에서는 Dashboard와 자설비 file read allowlist가 기본 통과한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 접속 IP와 세 이력 API allowlist도 통과하며, 각 범위는 대응하는 `SCS_*_ENABLED=0`으로 명시 차단할 수 있다. 나머지 `/api` 요청은 `503 DATA_CONNECTIONS_DISABLED`로 종료된다.
+1. `SCS_DATA_CONNECTIONS_ENABLED=1`이면 전체 API가 활성화된다. 그렇지 않은 상태에서는 Dashboard와 자설비 file read allowlist가 기본 통과한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 사용자·My EQP와 세 이력 API allowlist도 통과하며, 각 범위는 대응하는 `SCS_*_ENABLED=0`으로 명시 차단할 수 있다. 나머지 `/api` 요청은 `503 DATA_CONNECTIONS_DISABLED`로 종료된다.
 2. 연결이 활성화된 경우 Node 프로세스에 주입된 환경변수가 해당 코드 기본값보다 우선한다.
-3. Node가 Python DB helper child process를 만들 때 기존 환경을 전달한다. 이력 payload에는 Node가 확인한 접속 IP가 `knoxId` 값으로 포함된다.
+3. Node가 Python DB helper child process를 만들 때 기존 환경을 전달한다. 이력 payload에는 Node가 검증한 접속 IP가 기존 `knoxId` 필드명으로 포함된다.
 4. 환경변수가 없으면 각 모듈의 코드 기본값 또는 `SPIDER_DATA_PATH_TEMPLATES`가 사용된다.
 5. `DB_INFO_PATH`, `MAPPING_CONFIG_PATH`가 가리키는 파일 내용은 파일을 읽는 시점에 적용된다. `SENSOR_EXCLUSION_CONFIG_PATH`의 경로 값은 프로세스 시작 시, 동일 경로의 파일 내용은 API 요청 시 적용된다.
 6. 실제 서비스 관리자, shell 또는 배포 플랫폼이 환경변수를 주입하는 방식과 그 우선순위는 `Unknown`이다.
@@ -106,7 +106,7 @@
 | 서버 | `SCS_DATA_CONNECTIONS_ENABLED` | Parquet·이미지·DB API handler 전체 활성화 gate | 비활성 | 새 전체 연결 전에는 설정 금지 | API 요청 | `server/dataConnections.mjs`, `server.mjs`, `vite.config.mjs` | 아니오 | Dashboard·Self·DB 전용 allowlist 외 `/api`에 `503 DATA_CONNECTIONS_DISABLED` 반환 | `Confirmed` |
 | 서버 | `SCS_DASHBOARD_DATA_ENABLED` | Dashboard GET/HEAD read allowlist override | 활성 | UI shell 전환 시 선택 | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | Dashboard read 통과 | 코드 `Confirmed`; 운영값 `Unknown` |
 | 서버 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 자설비 mapping·Parquet read API override | 활성 | UI shell 전환 시 선택 | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | 자설비 read allowlist 통과 | 코드 `Confirmed`; 운영값 `Unknown` |
-| 서버 | `SCS_DB_CONNECTIONS_ENABLED` | 읽기 가능한 credential 기반 접속 IP·세 이력 API allowlist override | 활성 후보 | 전체 gate 비활성 mode에서 allowlist 차단 시 `0` | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | credential 누락·읽기 불가 또는 비-`1`이면 해당 API 503 | 코드 `Confirmed`; 운영값 `Unknown` |
+| 서버 | `SCS_DB_CONNECTIONS_ENABLED` | 읽기 가능한 credential 기반 사용자·My EQP·세 이력 API allowlist override | 활성 후보 | 전체 gate 비활성 mode에서 allowlist 차단 시 `0` | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | credential 누락·읽기 불가 또는 비-`1`이면 해당 API 503 | 코드 `Confirmed`; 운영값 `Unknown` |
 | Vite | `VITE_SITE_URL` | 허용 host와 HMR 조건 | 빈 값 | 선택 | Vite 시작/build | `vite.config.mjs:29-30,129-140` | 아니오 | 조건부 설정 미적용 | `Confirmed` |
 | 데이터 | `MAPPING_CONFIG_PATH` | mapping 설정 파일 override | `/appdata/l0_spider_scs/mapping_config.json` | 선택 | API 요청 | `server/mappingConfig.mjs:5-7` | 경로 주의 | SCS 코드 기본 경로 사용 | `Confirmed` |
 | 데이터 | `COMMONALITY_ROOT_PATH` | commonality root override | 코드 경로 template | 선택 | API 요청 | `server/latestCommonalityPath.mjs:9-11` | 경로 주의 | 코드 root 사용 | `Confirmed` |
@@ -115,13 +115,13 @@
 | 데이터 | `SENSOR_EXCLUSION_CONFIG_PATH` | 기본 sensor 제외 JSON 경로 override | `config/sensor-exclusions.json` | 선택 | 경로는 프로세스 시작; 내용은 API 요청 | `server/sensorExclusionConfig.mjs` | 경로 주의 | 기본 파일 사용 | `Confirmed` |
 | 데이터 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 `path_xian` root override | `/appdata/abnormal_trend/pic/path_xian` | 선택 | 프로세스 시작 | `server/selfEquipmentData.mjs` | 경로 주의 | 코드 기본 root 사용 | 코드 `Confirmed`; 운영값 `Unknown` |
 | DB | `DB_INFO_PATH` | DB credential pickle 위치 | `/appdata/l0_spider_scs/db_info.pkl` | DB 기능에 조건부 | helper 실행 | `scripts/*.py` | 값 자체는 아니나 민감 경로 | 코드 경로 사용 | `Confirmed` |
-| 호환 | `REMOTE_ADDR` | 이전 Node artifact용 접속 IP 전달값 | 없음 | 혼합 배포 호환 시에만 사용 | legacy helper 실행 | `scripts/current_user.py` | 개인정보 주의 | IP 오류 JSON 반환; DB 조회 없음 | `Confirmed` |
+| 사용자 | `REMOTE_ADDR` | current user helper의 접속 IP 전달값 | 없음 | helper 실행 시 내부 주입 | helper 실행 | `scripts/current_user.py` | 개인정보 주의 | IP 형식 검증 후 같은 IP 반환 | `Confirmed` |
 | 메뉴얼 | `MANUAL_BASE_URL` | 기존 UI 서버 사용 여부 | 코드 기본 loopback URL, port `4173` | 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:11-12` | 아니오 | 자체 Vite 시작 | `Confirmed` |
 | 메뉴얼 | `PLAYWRIGHT_LD_LIBRARY_PATH` | Playwright 동적 library 경로 보완 | 없음 | 환경별 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:19-20` | 경로 주의 | 변경 없음 | `Confirmed` |
 | 메뉴얼 | `LD_LIBRARY_PATH` | 기존 동적 library 검색 경로 | 실행 환경 상속 | 환경별 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:20` | 경로 주의 | 시스템 기본 사용 | `Confirmed` |
 
 - HMAC 비밀키와 SMTP 관련 환경변수 이름은 코드에서 확인되지 않았으므로 레지스트리에 가상의 이름을 추가하지 않았다.
-- 현재 `server/currentUser.mjs`는 `REMOTE_ADDR`나 Python helper를 사용하지 않는다. 이 변수는 이전
+- 현재 `server/currentUser.mjs`는 request header/socket에서 IP를 직접 처리한다. `REMOTE_ADDR`는 이전
   Node artifact와 새 파일이 혼재한 배포에서 `scripts/current_user.py`가 IP를 그대로 반환하기 위한
   호환 입력이며 systemd에 고정값으로 설정하지 않는다.
 
@@ -187,7 +187,7 @@
 
 ### 13.1 데이터 경로와 화면 연결
 
-- 현재 코드는 Dashboard와 자설비 파일 read allowlist를 기본 활성화한다. 접속 IP와 세 이력 API는 credential read 가능 시 활성화되고 등록·Mailing과 다른 App은 계속 차단된다. 전체 UI shell은 세 범위의 `SCS_*_ENABLED=0`을 명시해 전환한다. 실제 배포 환경의 변수 존재·값, DB와 target mount는 `Unknown`이다.
+- 현재 코드는 Dashboard와 자설비 파일 read allowlist를 기본 활성화한다. 사용자·My EQP와 세 이력 API는 credential read 가능 시 활성화되고 Mailing과 다른 App은 계속 차단된다. 전체 UI shell은 세 범위의 `SCS_*_ENABLED=0`을 명시해 전환한다. 실제 배포 환경의 변수 존재·값, DB와 target mount는 `Unknown`이다.
 - 화면의 상대 `/api/*` 요청은 Node 또는 Vite handler를 거쳐 코드 경로 template, root override 4개와 file/config override 2개를 사용한다.
 - Self Equipment의 `path_xian` root는 `SCS_SELF_EQUIPMENT_PATH_ROOT`로 선택적으로 override하며 기본값은 코드 template이다.
 - 읽기 권한, mount 준비, 데이터 생성 주체와 운영별 경로 차이는 `Unknown`이다.

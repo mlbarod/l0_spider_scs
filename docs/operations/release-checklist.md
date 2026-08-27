@@ -140,7 +140,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 
 - [ ] 실제 file을 수정·순회하지 않고 코드 path contract와 변경 diff를 검토했다.
 - [ ] Dashboard detail·stats·mapping 경로와 latest 선택 규칙을 유지했다.
-- [ ] 일반 Self 최신 `path_xian/{latest_date}`의 `file_path`가 png·directory·직접 `data.parquet`인 경우의 data/history sibling 변환과 `pic_server2` 정규화를 확인하고 MY EQP 소비가 `Blocked`임을 유지했다.
+- [ ] 일반 Self 최신 `path_xian/{latest_date}`의 chart 경로 변환과 team `path/{line}/{sdwt}/df_path.parquet` 동일 `file_path` row의 `ver`·이력 경로 참조를 확인했다.
 - [ ] 동일성 `erd_commonality`, 공통부 동일성 `path_common_commonality`와 공통부 `path_common`·common data/image 관계를 확인했다.
 - [ ] `latest_date`, `line`, `sdwt`, `grade`, `step_seq`, `step_desc`, `eqp_model`, `ppid`, `sensor`, `ch_step`, `eqp`, `ver` 전파 영향을 검토했다.
 - [ ] Parquet column·type·nullable·dynamic axis 변경을 producer와 consumer가 함께 승인했다.
@@ -157,15 +157,15 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 - [ ] `GET /api/dashboard-data`의 request·response·empty·error 계약을 유지했다.
 - [ ] `lineDashboard.mailingSummary`가 `summary`의 sibling이라는 실제 위치를 유지했다.
 - [ ] Self·commonality·common-commonality·common anomaly API의 query·option·부분 결과를 유지했다.
-- [ ] DB 등록·history API의 body limit·validation과 history `knox_id=접속 IP` 영향을 확인했다.
-- [ ] Vite 단독 mode와 통합 `server.mjs` route 범위 `Mismatch`를 배포 mode에서 고려했다.
+- [ ] DB 등록·history API의 body limit·validation과 접속 IP를 저장하는 `knox_id` 컬럼 영향을 확인했다.
+- [ ] Vite 단독 mode와 통합 `server.mjs`의 MY EQP·history route parity를 확인했다.
 - [ ] frontend와 server를 서로 다른 incompatible version으로 반영하지 않는다.
 - [ ] 오류 status·body·path masking 변경을 보안 문서와 함께 검토했다.
 
 ## 10. STEP 딥링크·HMAC
 
 - [ ] 일반 `/self-equipment` link의 `line`, 반복 `sdwt`, 반복 `grade`가 보존된다.
-- [ ] legacy MY EQP template의 `sdwt=MY_EQP`, `step=ALL`, `eqpCh` 형식은 보존되며 현재 Self 화면에서는 `selfEquipmentDb=false`로 소비되지 않는다.
+- [ ] MY EQP template의 `sdwt=MY_EQP`, `step=ALL`, `eqpCh` 형식과 Self 화면 소비를 확인했다.
 - [ ] `eqpCh`와 호환 alias `eqp_ch`의 parser 우선순위가 유지된다.
 - [ ] URL encoding·`URLSearchParams` round trip 결과를 확인했다.
 - [ ] `step=ALL`을 HMAC token으로 검증하거나 만료시키지 않는다.
@@ -231,17 +231,17 @@ service·unit·port가 확인되지 않으면 실제 배포 단계로 진행하�
 - [ ] 이번 배포가 기본 Dashboard·Self read 및 조건부 DB 부분 연결, 명시적 SCS UI shell, 전체 데이터 연결 중 어느 범위인지 release 기록에 명시했다.
 - [ ] 기본 부분 연결이면 Dashboard·Self gate가 미설정 또는 `1`인지, DB credential read 가능 여부와 DB gate를 확인했으며, UI shell이면 세 범위 gate가 비-`1` 값인지 값 노출 없이 확인했다.
 - [ ] UI shell이면 `/api`와 `/api/*`의 `503 DATA_CONNECTIONS_DISABLED`, `requestId`, `HEAD` 무본문을 확인했다.
-- [ ] 기본 부분 연결이면 Dashboard GET/HEAD와 mapping·Self·scatter GET이 통과하고, credential이 읽기 가능할 때 접속 IP와 세 이력 API가 handler에 진입하며 등록·Mailing·image·다른 App은 503이다.
+- [ ] 기본 부분 연결이면 Dashboard GET/HEAD와 mapping·Self·scatter GET이 통과하고, credential이 읽기 가능할 때 사용자·My EQP와 세 이력 API가 handler에 진입하며 Mailing·image·다른 App은 503이다.
 - [ ] service가 active이고 restart count가 증가하지 않는다.
 - [ ] 승인된 port에 예상 process 하나가 listen한다.
 - [ ] `/` liveness가 정상이다.
 - [ ] 전용 health endpoint가 없으므로 dependency readiness를 별도로 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 Dashboard 성공·빈 상태와 latest 시각을 확인했다.
-- [ ] 자설비 부분 연결 배포에서는 일반 Self filter·chart read만 확인하고, MY EQP·SKIP·HIT·click 요청이 발생하지 않으며 `selfEquipmentDb=false`임을 확인했다.
-- [ ] readable `DB_INFO_PATH`가 있으면 mapping의 `dbConnections=true`와 접속 IP 확인 API gate가 일치하고, credential이 없으면 둘 다 비활성임을 확인했다.
+- [ ] readable `DB_INFO_PATH`가 있으면 `selfEquipmentDb=true`와 MY EQP·SKIP·HIT·click UI/API가 일치하고, credential이 없으면 DB 기능만 비활성임을 확인했다.
+- [ ] current user의 검증된 접속 IP가 기존 `knoxId` 응답 필드와 DB `knox_id` 컬럼에 사용되고 브라우저 body의 식별값을 신뢰하지 않는지 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 동일성·공통부 image·scatter의 정상·부분 결과를 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 `pass_history` read 흐름을 확인했다.
-- [ ] `step=ALL`, `eqpCh` legacy link 형식은 보존되며 현재 Self 화면에서 MY EQP 조회로 활성화되지 않는다.
+- [ ] `step=ALL`, `eqpCh` link 형식이 Self 화면의 MY EQP 조회로 연결된다.
 - [ ] Mailing 등록·template asset을 확인하고 실제 sender 상태는 외부 owner가 판정했다.
 - [ ] journal·log에 새 fatal·반복 `500`, secret·개인정보·내부 path 노출이 없다.
 - [ ] DB test write, 실제 mail, `/appdata` 변경 없이 검증했다.

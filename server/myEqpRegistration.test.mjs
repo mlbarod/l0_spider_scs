@@ -35,7 +35,7 @@ test("My EQP 등록 요청을 DB 컬럼용 값으로 정규화한다", () => {
     eqps: ["EQP01_CH_A", " EQP01_CH_A ", "EQP02_CH_B"],
     periode: "15",
     comment: " 점검 대상 ",
-  }, " user01 ")
+  }, " 10.20.30.40 ")
 
   assert.match(payload.execDate, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/)
   delete payload.execDate
@@ -47,13 +47,13 @@ test("My EQP 등록 요청을 DB 컬럼용 값으로 정규화한다", () => {
     eqps: ["EQP01_CH_A", "EQP02_CH_B"],
     periode: 15,
     comment: "점검 대상",
-    knoxId: "user01",
-    knoxIds: ["user01"],
+    knoxId: "10.20.30.40",
+    knoxIds: ["10.20.30.40"],
     isPublic: false,
   })
 })
 
-test("전체 공개 요청이 포함되어도 신규 My EQP는 지정 사용자 전용으로 저장한다", () => {
+test("전체 공개 요청이 포함되어도 신규 My EQP는 접속 IP 전용으로 저장한다", () => {
   const payload = buildMyEqpRegistrationPayload({
     line: "P1D",
     sdwt: "DREAMS P1D",
@@ -61,12 +61,12 @@ test("전체 공개 요청이 포함되어도 신규 My EQP는 지정 사용자 
     eqps: ["EQP01_CH_A"],
     periode: 15,
     isPublic: true,
-  }, "user01")
+  }, "10.20.30.40")
 
   assert.equal(payload.isPublic, false)
 })
 
-test("복수 knox_id를 정규화하고 중복 제거한다", () => {
+test("브라우저의 knoxIds 입력을 무시하고 접속 IP 한 건만 사용한다", () => {
   const payload = buildMyEqpRegistrationPayload({
     line: "P1D",
     sdwt: "DREAMS P1D",
@@ -74,9 +74,9 @@ test("복수 knox_id를 정규화하고 중복 제거한다", () => {
     eqps: ["EQP01", "EQP02"],
     periode: 7,
     knoxIds: ["user01", " user02@samsung.com ", "user01"],
-  }, "owner")
+  }, "10.20.30.40")
 
-  assert.deepEqual(payload.knoxIds, ["user01", "user02"])
+  assert.deepEqual(payload.knoxIds, ["10.20.30.40"])
   assert.deepEqual(payload.eqps, ["EQP01", "EQP02"])
 })
 
@@ -105,10 +105,8 @@ test("동일 저장 조건의 EQP 행을 하나의 등록 조건으로 묶고 �
   assert.equal(expiredGroups[0].active, false)
 })
 
-test("knox_id 조회에 실패하면 접속 IP를 사용한다", async () => {
-  const userId = await resolveRegistrationUserId("10.20.30.40", async () => {
-    throw new Error("사용자 없음")
-  })
+test("My EQP 등록 식별자는 접속 IP를 그대로 사용한다", async () => {
+  const userId = await resolveRegistrationUserId("::ffff:10.20.30.40")
 
   assert.equal(userId, "10.20.30.40")
 })
@@ -120,7 +118,7 @@ test("잘못된 모니터링 기간은 거부한다", () => {
     prcGroup: "OXIDE ETCH",
     eqps: ["EQP01_CH_A"],
     periode: 0,
-  }, "user01"), /1 이상의 정수/)
+  }, "10.20.30.40"), /1 이상의 정수/)
 })
 
 test("Comment가 90자를 초과하면 거부한다", () => {
@@ -131,7 +129,7 @@ test("Comment가 90자를 초과하면 거부한다", () => {
     eqps: ["EQP01_CH_A"],
     periode: 15,
     comment: "가".repeat(91),
-  }, "user01"), /90자 이내/)
+  }, "10.20.30.40"), /90자 이내/)
 })
 
 test("My EQP 등록 API는 GET, POST, DELETE 외 요청을 거부한다", async () => {
@@ -173,7 +171,7 @@ test("mapping 범위 밖 Line과 SDWT의 My EQP write를 DB 요청 전에 거부
 
   await handleMyEqpRegistrationRequest(request, response, undefined, {
     mappingReader: async () => syntheticMapping,
-    registrationUserResolver: async () => "user01",
+    registrationUserResolver: async () => "10.20.30.40",
   })
 
   const payload = JSON.parse(response.body)

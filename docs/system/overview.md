@@ -20,7 +20,8 @@
 L0 Spider는 L0 공정의 이상감지 결과를 Line, SDWT, 자설비 RECIPE_ID 또는 기능별 STEP, 설비와 sensor 조건으로 조회하는 웹서비스다.
 사용자는 메인 대시보드에서 Line별 현황을 확인하고, 자설비·동일성·공통부 화면에서 Parquet 기반 차트와 분석 이미지를 상세 조회한다.
 MY EQP·Mailing 조건 등록과 비-Self App의 SKIP·HIT·클릭 이력은 DB에 관리한다. 현재
-자설비 화면의 MY EQP·SKIP·HIT·클릭 이력은 새 DB 식별 계약이 없어 `Blocked`다.
+자설비 화면의 MY EQP·SKIP·HIT·클릭 이력은 file과 credential DB capability가 모두 준비되면
+활성화된다. 코드·synthetic 계약은 `Confirmed`, 실제 운영 DB write는 `Unknown`이다.
 React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와 이미지 제공을 담당하며, DB 작업은 Python helper를 통해 수행한다.
 메일용 요약 집계와 HTML 템플릿은 확인되지만 실제 메일 renderer, scheduler와 sender는 현재 저장소에서 확인되지 않았다.
 
@@ -29,7 +30,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 관점 | 목적 | 상태 |
 |---|---|---|
 | 업무 | 분산된 이상감지 결과를 Line·설비 조건별로 조회하고 대시보드와 상세 화면의 기준을 연결한다. | Confirmed |
-| 사용자 | 현황에서 차트·이미지로 이동하고 비-Self SKIP·이력을 남기며 MY EQP·Mailing 조건을 등록한다. Self의 DB 기능과 MY EQP 딥링크 소비는 현재 `Blocked`다. | 부분 `Confirmed`; Self DB `Blocked` |
+| 사용자 | 현황에서 차트·이미지로 이동하고 SKIP·이력을 남기며 MY EQP·Mailing 조건을 등록한다. MY EQP `step=ALL` 딥링크도 소비한다. | 코드 `Confirmed`; 운영 DB `Unknown` |
 | 운영·유지보수 | 기존 동작과 API 호환성을 보존하고 화면·API·데이터 근거와 운영 자원 비의존 Core 검증을 축적한다. | 프로젝트 운영 정책 |
 
 ## 4. 주요 사용자와 사용 시나리오
@@ -51,7 +52,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 기능 | 사용자에게 제공하는 결과 | 주요 진입점 | 상세 문서 |
 |---|---|---|---|
 | Line 대시보드 | 최신 KPI, Line별 건수와 기간 추이 | `/`, `GET /api/dashboard-data` | [dashboard.md](../features/dashboard.md) — `Active Baseline` |
-| Self Equipment | 일반 조건별 Scatter·동일성 차트와 변경점 이력; MY EQP·SKIP·HIT·클릭은 미제공 | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) — file read `Confirmed`, Self DB `Blocked` |
+| Self Equipment | 일반·MY EQP Scatter·동일성·변경점, SKIP·HIT·클릭 이력 | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) — 코드 `Confirmed`, 운영 DB `Unknown` |
 | 동일성 이상감지 | STEP·sensor 조건별 분석 이미지 | `/matching-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
 | 공통부 이상감지 | 공통부 이미지와 설비 비교 차트 | `/common-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
 | 공통부 동일성 이상감지 | EQP_MODEL·sensor 조건별 공통부 분석 이미지 | `/common-commonality-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |

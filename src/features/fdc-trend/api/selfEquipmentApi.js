@@ -91,7 +91,9 @@ export async function fetchEqpAllSkipTargets({
     ? await fetchMyEqpEquipmentData(filters)
     : await fetchSelfEquipmentData({ ...filters, pathSdwt, sdwt })
 
-  return (payload.rows ?? []).map((row) => ({ filePath: row.file_path }))
+  return (payload.rows ?? [])
+    .map((row) => ({ filePath: row.history_file_path }))
+    .filter(({ filePath }) => Boolean(filePath))
 }
 
 export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, latestDate, line, pathSdwt }) {

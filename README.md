@@ -14,15 +14,15 @@ The app opens directly at `/`.
 현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard와 자설비 이상감지의 read API
 (`dashboard-data`, `dashboard-latest-date`, `mapping-config`, `self-equipment-data`,
 `erd-scatter-data`)를 활성화한다.
-`DB_INFO_PATH`의 credential 파일이 읽기 가능하면 접속 IP 확인 API와 세 이력 DB API도
-활성화하고 mapping 응답의 `capabilities.dbConnections=true`로 이를 알린다. 자설비 화면은
-이 값이 `true`일 때 접속 IP를 조회한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
+`DB_INFO_PATH`의 credential 파일이 읽기 가능하면 사용자·My EQP·세 이력 DB API도
+활성화하고 mapping 응답의 `capabilities.dbConnections=true`와
+`capabilities.selfEquipmentDb=true`로 이를 알린다. 자설비 화면은 접속 IP를 사용자 식별값으로
+사용해 My EQP·SKIP·HIT·클릭이력을 활성화한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
 반환한다. UI shell이 필요하면 `SCS_DASHBOARD_DATA_ENABLED=0`,
 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`, `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 API를 한 번에 활성화하므로 다른 App의 새 경로와
-DB 연결정보가 확정되기 전에는 설정하지 않는다. 특히 `pass_history`, `hit_history`,
-`clicked_category_history`만 있는 SCS DB에서는 등록·Mailing helper가 존재하지 않는 테이블을
-조회하지 않도록 이 전역 변수를 설정하지 않는다.
+DB 연결정보가 확정되기 전에는 설정하지 않는다. My EQP와 history 기능은 이 전역 변수를
+설정하지 않아도 credential 기반 좁은 allowlist로 동작한다.
 
 기본 개발 실행은 다음과 같다.
 
@@ -47,29 +47,29 @@ LIVE_RELOAD=0 PORT=5173 node server.mjs
 
 정적 모드에서 `BUILD_ON_START=0`을 설정하면 기존 `dist`를 재빌드하지 않고 제공한다.
 
-## SCS 접속 IP 이력 식별 구조
+## SCS 사용자·이력 식별 구조
 
-SCS는 별도 사용자 테이블을 조회하지 않는다. Node 서버가 요청에서 접속 IP를 추출하고 IP 형식을
-검증한 뒤, 해당 문자열을 세 이력 테이블의 기존 `knox_id` 컬럼 값으로 직접 사용한다.
+Node 서버는 요청에서 접속 IP를 추출하고 IP 형식을 검증한다. SCS에는 `knox_id` 조회가
+없으므로 기존 DB의 `knox_id` 컬럼에는 접속 IP 문자열을 저장한다. My EQP 등록도 브라우저에서
+별도 사용자를 입력받지 않고 현재 접속 IP 한 건으로만 저장한다.
 
 ```text
 PASS/HIT/클릭이력 요청
   → x-forwarded-for → x-real-ip → socket IP 순서로 접속 주소 선택
   → 첫 번째 forwarded 주소 선택 및 IPv4-mapped IPv6 정규화
   → IPv4/IPv6 형식 검증
-  → pass_history / hit_history / clicked_category_history의 knox_id에 IP 저장
+  → 검증된 접속 IP를 사용자 식별값으로 확정
+  → pass_history / hit_history / clicked_category_history의 knox_id 컬럼에 IP 저장
 ```
 
-- 브라우저 request body의 `knoxId`는 신뢰하지 않으며 세 이력 handler가 서버에서 확인한 IP로 덮어쓴다.
-- `/api/current-user`의 호환 응답 key는 `knoxId`를 유지하지만 그 값은 사용자 ID가 아니라 접속 IP다.
+- 브라우저 request body의 `knoxId`는 신뢰하지 않으며 history handler가 서버에서 조회한 값으로 덮어쓴다.
+- `/api/current-user` 응답의 기존 필드명 `knoxId`에는 접속 IP가 들어간다.
 - 역방향 프록시 환경에서는 proxy가 `x-forwarded-for` 또는 `x-real-ip`를 신뢰할 수 있는 값으로
   덮어쓰고 애플리케이션 직접 접근을 통제해야 한다. 그렇지 않으면 유효한 다른 IP로 위장할 수 있다.
-- NAT·공용 IP 환경에서는 여러 접속자가 같은 값으로 기록될 수 있다. 이 값은 인증·인가 수단이
-  아니라 이력 추적용 접속 주소다.
+- NAT·공용 IP와 proxy header 정책은 My EQP 소유권과 이력 식별 결과에 영향을 줄 수 있다.
 - Node 처리: `server/currentUser.mjs`; DB 저장 helper: `scripts/pass_history.py`,
   `scripts/hit_history.py`, `scripts/clicked_category_history.py`.
-- `scripts/current_user.py`는 이전 Node artifact가 배포 중 남아 있어도 같은 IP 응답을 돌려주기 위한
-  호환 helper다. `REMOTE_ADDR`만 검증하며 DB credential과 사용자 테이블을 읽지 않는다.
+- `scripts/current_user.py`도 DB 조회 없이 `REMOTE_ADDR`의 IP 형식만 검증해 같은 값을 반환한다.
 
 Python helper가 사용하는 PyMySQL을 설치한다.
 
@@ -77,7 +77,7 @@ Python helper가 사용하는 PyMySQL을 설치한다.
 python3 -m pip install -r scripts/requirements.txt
 ```
 
-DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider_scs/db_info.pkl`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. 전체 gate가 비활성인 기본 mode에서는 읽기 가능한 credential 파일이 확인되면 `/api/current-user`와 `pass_history`, `hit_history`, `clicked_category_history` 전용 API allowlist가 활성화되며, `SCS_DB_CONNECTIONS_ENABLED=0`으로 차단할 수 있다. `db_info.pkl`은 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
+DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider_scs/db_info.pkl`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. 전체 gate가 비활성인 기본 mode에서도 읽기 가능한 credential 파일이 확인되면 `/api/current-user`, My EQP 조회·등록, `pass_history`, `hit_history`, `clicked_category_history` 전용 API allowlist가 활성화되며, `SCS_DB_CONNECTIONS_ENABLED=0`으로 차단할 수 있다. `db_info.pkl`은 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
 
 ```bash
 node server.mjs
@@ -86,8 +86,8 @@ node server.mjs
 ## Database References
 
 이하 데이터·DB 설명 중 Dashboard와 자설비 파일 read는 기본 활성화된다. DB 전용 API는
-credential 파일 read 가능 여부와 `SCS_DB_CONNECTIONS_ENABLED`에 따라 세 이력 API만 활성화된다.
-등록·Mailing DB API와 다른 App은
+credential 파일 read 가능 여부와 `SCS_DB_CONNECTIONS_ENABLED`에 따라 사용자·My EQP·세 이력 API가 활성화된다.
+Mailing DB API와 다른 App은
 여전히 전체 gate 뒤의 재연결 기준선이며 실제 배포 환경 값과 운영 연결 결과는 `Unknown`이다.
 
 ### 메인 대시보드 데이터
@@ -126,8 +126,9 @@ L0 Spider의 DB 접속정보는 `/appdata/l0_spider_scs/db_info.pkl`에서 읽�
 
 ### `pass_history`
 
-아래 자설비 PASS/SKIP 설명은 `ver`를 포함하던 기존 DB 계약의 dormant legacy다. 현재
-`path_xian` Self 화면은 이 API를 호출하지 않는다.
+자설비 PASS/SKIP은 최신 `path_xian` row와 분임조별
+`/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet`의 동일 `file_path` row를
+매칭하고, 해당 ERD 경로 테이블의 `ver`를 사용해 원본 `l0_spider`와 같은 테이블 구조를 사용한다.
 
 | 컬럼 | 타입 |
 | --- | --- |
@@ -145,8 +146,8 @@ L0 Spider의 DB 접속정보는 `/appdata/l0_spider_scs/db_info.pkl`에서 읽�
 | `exec_date` | `TIMESTAMP` |
 | `comment` | `VARCHAR` |
 
-legacy SKIP 흐름은 `/api/pass-history`를 사용한다. GET은 필터의 `line_id`, `sdwt`, `desc`에
-해당하는 상태를 조회하고 POST/DELETE로 등록·해제하지만, 현재 Self UI에서는 미호출이다.
+SKIP 흐름은 `/api/pass-history`를 사용한다. GET은 선택 Line의 상태를 조회하고
+POST/DELETE로 등록·해제한다.
 
 | `pass_history` 컬럼 | SKIP 저장값 |
 | --- | --- |
@@ -160,7 +161,7 @@ legacy SKIP 흐름은 `/api/pass-history`를 사용한다. GET은 필터의 `lin
 | `sensor` | ERD 경로의 `{sensor}` |
 | `step` | ERD 경로의 `{ch_step}` |
 | `eqp` | 차트의 eqp_ch (`.png` 확장자 제외) |
-| `knox_id` | 현재 접속자의 `knox_id` |
+| `knox_id` | 현재 접속 IP |
 | `exec_date` | SKIP 버튼을 눌러 팝업을 연 시각 |
 | `comment` | 팝업에서 입력한 한 줄 comment, 미입력 시 빈 문자열 |
 
@@ -187,7 +188,7 @@ SKIP 상태인 차트는 상단에 `이상감지 SKIP 건` 배지와 하단에 `
 | `sensor` | 공통부 데이터 경로의 `{sensor}` |
 | `step` | 공통부 데이터 경로의 `{ch_step}` |
 | `eqp` | 선택 EQP (`.png` 확장자 제외) |
-| `knox_id` | 현재 접속자의 `knox_id` |
+| `knox_id` | 현재 접속 IP |
 | `exec_date` | SKIP 버튼을 눌러 팝업을 연 시각 |
 | `comment` | 팝업에서 입력한 한 줄 comment, 미입력 시 빈 문자열 |
 
@@ -204,7 +205,7 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 
 ### `hit_history`
 
-아래 HIT 이력도 현재 Self UI에서 미호출인 dormant legacy 계약이다.
+HIT 이력은 원본 `l0_spider`와 같은 6-column 계약을 사용한다.
 
 | 컬럼 | 타입 |
 | --- | --- |
@@ -215,7 +216,7 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 | `knox_id` | `VARCHAR` |
 | `exec_date` | `TIMESTAMP` |
 
-legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다.
+Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다.
 서버는 Chart drawing에 사용한 ERD 이미지 경로를 파싱하고 아래 규칙으로 저장한다.
 `knox_id`는 요청 본문이 아니라 서버가 확인한 접속 IP를 사용한다.
 
@@ -225,7 +226,7 @@ legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다
 | `line_id` | 화면에서 선택한 Line Name |
 | `sdwt` | Chart 경로의 `{sdwt}` |
 | `file_path` | Chart drawing 원본 파일 경로의 모든 `/`를 `#`으로 치환한 값 |
-| `knox_id` | 현재 접속자의 IPv4 또는 IPv6 주소 |
+| `knox_id` | 현재 접속 IP |
 | `exec_date` | 이력저장 버튼 클릭 시각 |
 
 예를 들어 `/appdata/abnormal_trend/pic/erd/.../EQP-1.png`는
@@ -234,8 +235,8 @@ legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다
 
 ### `clicked_category_history`
 
-동일성·공통부·공통부 동일성 App에서 마지막 필터를 선택해 Chart Drawing을 시작한
-클릭이력을 저장한다. 현재 Self UI의 클릭이력 호출은 dormant 상태다.
+자설비·동일성·공통부·공통부 동일성 App에서 마지막 필터를 선택해 Chart Drawing을 시작한
+클릭이력을 저장한다.
 
 | 컬럼 | 타입 |
 | --- | --- |
@@ -247,12 +248,12 @@ legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다
 | `knox_id` | `VARCHAR` |
 
 `POST /api/clicked-category-history`는 실제 Drawing 결과 경로를 서버에서 파싱하고 서버가
-확인한 접속 IP를 결합해 한 행을 INSERT한다. 동일성은 `ch_step`, 공통부는 마지막
+확인한 접속 IP를 `knox_id` 컬럼에 결합해 한 행을 INSERT한다. 자설비·동일성은 `ch_step`, 공통부는 마지막
 필터인 `sensor`를 새로 선택할 때 호출한다. 필터를 다시 클릭해 선택 해제하거나 SKIP
 LIST를 조회하는 동작은 저장하지 않는다.
 
-legacy Self client에는 `MY EQP` 진입 이력과 `ch_step` 클릭 이력 생성 코드가 남아 있지만,
-현재 `selfEquipmentDb=false` capability에서 MY EQP·클릭이력 UI와 요청은 비활성이다.
+MY EQP 진입은 `sdwt='MY EQP'`, 전체 Grade, `sensor='ALL'`로 한 번 기록하며 이후 ch_step
+변경에서는 같은 가상 이력을 다시 저장하지 않는다.
 
 | App | `line_id` | `sdwt` | `grade` | `sensor` | `update_date` |
 | --- | --- | --- | --- | --- | --- |
@@ -275,9 +276,8 @@ Drawing 결과를 `sdwt`, `grade`, `sensor` 기준 대표 경로로 압축해 �
 - 최초버전: `src/features/fdc-trend/pages/versions/FdcTrendPage.initial.jsx.bak`
 - 개선버전(현재 사용): `src/features/fdc-trend/pages/FdcTrendPage.jsx`
 
-legacy My EQP 딥링크 형식은 STEP 이름 대신 `step=ALL`과 선택적 `eqpCh`를 사용한다.
-parser 호환성은 남아 있지만 현재 Self 화면에는 `MY EQP` option이 없으므로 이 URL로
-MY EQP chart를 조회하는 동작은 `Blocked`다.
+My EQP 딥링크 형식은 STEP 이름 대신 `step=ALL`과 선택적 `eqpCh`를 사용한다.
+활성 등록과 DB capability가 있으면 이 URL로 MY EQP chart를 조회한다.
 
 원복 절차는 `src/features/fdc-trend/pages/versions/README.md`를 참조한다.
 
@@ -289,7 +289,8 @@ MY EQP chart를 조회하는 동작은 `Blocked`다.
 | 구분 | 참조 파일 | 참조 경로 | 참조 컬럼/키 |
 | --- | --- | --- | --- |
 | `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
-| ERD 이상감지 경로 테이블 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` |
+| 최신 자설비 index | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` |
+| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | 위 index와 동일 `file_path` row의 `desc`, `ver`, `recipe_id`, `line_rev` 및 이력 원본 경로 |
 | 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
 | 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
 | EQP 변경점 이력 | `{eqp}.parquet` | 선택한 `data.parquet`와 같은 디렉터리의 `{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
@@ -303,10 +304,10 @@ MY EQP chart를 조회하는 동작은 `Blocked`다.
 호환하며, 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series는 `eqp_cb`를 사용한다.
 hover 보조 컬럼은 존재하는 항목만 projection한다. 두 gate mode 모두 chart 요청의
 Line·SDWT·EQP·sensor·step·경로가
-최신 `path_xian`의 scoped row와 모두 일치할 때만 후속 Parquet를 읽는다. 새 7-column index에는
-기존 Self DB 식별자 `ver`가 없으므로 전역 gate와 무관하게 Self 화면은
-My EQP·SKIP·클릭이력·이력저장을 숨기고 file chart만 제공한다. 이 DB 기능들의 재연결 계약은
-현재 `Unknown`이다.
+최신 `path_xian`의 scoped row와 모두 일치할 때만 후속 Parquet를 읽는다. DB 이력에는
+분임조별 ERD 경로 테이블에서 같은 `file_path`로 찾은 row의 `ver`와 원본 이력 경로를 사용한다.
+참조 row가 없으면 해당 chart의 DB action을 표시하지 않는다. file 또는 DB capability가 없으면
+DB 기능만 fail-close한다.
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와
 `src/config/spiderDataPaths.mjs`를 함께 업데이트한다.

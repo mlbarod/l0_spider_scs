@@ -283,12 +283,16 @@ function buildChartPassHistoryKey(lineId, row) {
     row.sdwt,
     row.desc,
     row.recipe_id,
-    normalizePassHistoryDate(getLatestDateFromErdPath(row.file_path)),
+    normalizePassHistoryDate(getLatestDateFromErdPath(getHistoryFilePath(row))),
     row.priority,
     row.sensor,
     row.step,
     stripPngExtension(row.eqp),
   ].map((value) => String(value ?? "")).join("\u0000")
+}
+
+function getHistoryFilePath(row) {
+  return Object.hasOwn(row, "history_file_path") ? row.history_file_path : row.file_path
 }
 
 function buildRecordPassHistoryKey(record) {
@@ -1151,6 +1155,8 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const [isNearViewport, setIsNearViewport] = useState(false)
   const [zoomDomain, setZoomDomain] = useState(null)
   const isSkipped = Boolean(passRecord)
+  const historyFilePath = getHistoryFilePath(row)
+  const historyActionsEnabled = dbActionsEnabled && Boolean(historyFilePath)
 
   const refreshPassHistory = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ["pass-history", lineId] }),
@@ -1166,7 +1172,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
     onError: (error) => toast.error(error.message),
   })
   const handleSkipDelete = () => {
-    deleteSkipMutation.mutate({ lineId, filePath: row.file_path })
+    deleteSkipMutation.mutate({ lineId, filePath: historyFilePath })
   }
   const saveHitHistoryMutation = useMutation({
     mutationFn: createHitHistory,
@@ -1176,7 +1182,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const handleHistorySave = () => {
     saveHitHistoryMutation.mutate({
       lineId,
-      filePath: row.file_path,
+      filePath: historyFilePath,
       execDate: new Date().toISOString(),
     })
   }
@@ -1419,16 +1425,16 @@ const ErdScatterCard = memo(function ErdScatterCard({
       </div>
       <footer className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-2.5">
         <div className="flex flex-wrap items-center gap-2">
-          {dbActionsEnabled ? (
+          {historyActionsEnabled ? (
             <SkipChartDialog
               eqp={eqp}
-              filePath={row.file_path}
+              filePath={historyFilePath}
               lineId={lineId}
               dataQueryKeyPrefix={dataQueryKeyPrefix}
               disabled={isSkipped}
             />
           ) : null}
-          {dbActionsEnabled && allSkipLoadTargets ? (
+          {historyActionsEnabled && allSkipLoadTargets ? (
             <EqpAllSkipDialog
               eqp={eqp}
               sensor={row.sensor}
@@ -1437,7 +1443,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               loadTargets={allSkipLoadTargets}
             />
           ) : null}
-          {dbActionsEnabled && isSkipped ? (
+          {historyActionsEnabled && isSkipped ? (
             <Button
               type="button"
               variant="outline"
@@ -1513,7 +1519,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
             )}
             </DialogContent>
           </Dialog>
-          {dbActionsEnabled ? (
+          {historyActionsEnabled ? (
             <Button
               type="button"
               variant="outline"
@@ -1698,11 +1704,11 @@ export function FdcTrendPage() {
     ? expandedChSteps.eqps
     : EMPTY_EQP_SET
   const passHistoryQuery = useQuery({
-    queryKey: ["pass-history", activeLine, activeTeamLabel, activeDesc],
+    queryKey: ["pass-history", activeLine],
     queryFn: () => fetchPassHistory({
       lineId: activeLine,
-      sdwt: activeTeamLabel,
-      desc: activeDesc,
+      sdwt: "",
+      desc: "",
     }),
     enabled: Boolean(
       mappingReady
@@ -1957,7 +1963,7 @@ export function FdcTrendPage() {
           chStep: nextChStep,
         }),
       })
-      const filePaths = (payload.rows ?? []).map((row) => row.file_path)
+      const filePaths = (payload.rows ?? []).map(getHistoryFilePath).filter(Boolean)
       if (!filePaths.length) return
       await createClickedCategoryHistory({
         app: "self",
@@ -2235,7 +2241,7 @@ export function FdcTrendPage() {
       <main className="grid min-w-0 gap-4 p-4">
         {selfEquipmentFileReadEnabled && !selfEquipmentDbEnabled ? (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-800 dark:text-sky-200">
-            현재 자설비 파일 조회와 차트만 연결되어 있습니다. My EQP, SKIP, 클릭이력과 이력저장은 새 DB 식별 계약이 정의될 때까지 비활성화됩니다.
+            현재 자설비 파일 조회와 차트만 연결되어 있습니다. DB credential이 준비되면 My EQP, SKIP, 클릭이력과 이력저장이 활성화됩니다.
           </div>
         ) : null}
         {dataQuery.isError ? (

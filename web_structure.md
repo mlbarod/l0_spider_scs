@@ -1,16 +1,15 @@
 # SPIDER 웹 서비스 구조
 
 > 현재 저장소의 실제 코드 연결을 기준으로 정리한 구조 문서입니다.  
-> 기준일/브랜치: 2026-08-20 / `main`<br>
+> 기준일/브랜치: 2026-08-27 / `main`<br>
 > 기준 파일: `server.mjs`, `vite.config.mjs`, `src/`, `server/`, `scripts/`, `src/config/spiderDataPaths.mjs`
 
 현재 SCS 분리 checkout은 별도 환경변수 없이 mapping과 자설비 index/chart read allowlist를
 연다. `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`은 이 allowlist도 차단하고,
-`SCS_DATA_CONNECTIONS_ENABLED=1`은 다른 App API를 포함한 전역 gate를 연다. 다만 새 Self
-`path_xian` 7-column 계약에는 기존 DB 식별자 `ver`가 없어 두 mode 모두
-`capabilities.selfEquipmentDb=false`이며 Self의 MY EQP·SKIP·이력 UI는 dormant다. 실제 배포
-환경의 변수 값과 target file은 `Unknown`이다. 읽기 가능한 `DB_INFO_PATH`가 있으면 별도
-`capabilities.dbConnections=true`가 되어 접속 IP 확인 API를 사용할 수 있다.
+`SCS_DATA_CONNECTIONS_ENABLED=1`은 다른 App API를 포함한 전역 gate를 연다. 읽기 가능한
+`DB_INFO_PATH`가 있으면 My EQP·history 좁은 allowlist와
+`capabilities.selfEquipmentDb=true`가 활성화된다. `path_xian`에 없는 `ver` 등 DB 식별값은
+분임조별 ERD 경로 table의 동일 `file_path` row에서 참조한다. 실제 배포 환경의 변수 값과 target DB/file 결과는 `Unknown`이다.
 
 ## 0. 한 장 요약
 
@@ -35,7 +34,7 @@ flowchart TB
     PYTHON["Python DB helper"]
 
     subgraph DATABASE["업무 DB"]
-        CLIENTIP["이력 식별값<br/>서버가 확인한 접속 IP"]
+        CLIENTIP["사용자 식별값<br/>접속 IP"]
         CONDITION["조회·수신 조건<br/>myeqp_regist · email · erdtsum_info"]
         HISTORY["사용 이력<br/>pass_history · hit_history<br/>clicked_category_history"]
     end
@@ -131,7 +130,7 @@ flowchart LR
 - 브라우저는 `/appdata/...` 파일을 직접 읽지 않고 반드시 Node API를 통합니다.
 - Node는 Parquet·JSON·이미지를 직접 읽지만, 업무 DB에는 직접 접속하지 않습니다.
 - Python helper만 `db_info.pkl`을 읽고 PyMySQL로 DB에 접속합니다.
-- 세 이력 기능은 서버가 확인한 접속 IP를 기존 `knox_id` 컬럼에 직접 저장합니다.
+- 세 이력 기능은 접속 IP를 기존 `knox_id` 컬럼에 저장합니다.
 
 ## 2. 실행 구조
 
@@ -247,7 +246,7 @@ flowchart TD
 | URL | 화면 파일 | 주요 역할 | 실제 데이터 상태 |
 | --- | --- | --- | --- |
 | `/` | `L0SpiderHomePage.jsx` | 앱 메뉴, 최신 수행시각, 라인별 대시보드 | 운영 파일 API 사용 |
-| `/self-equipment` | `FdcTrendPage.jsx` | 일반 자설비 필터, Scatter/동일성·변경점 차트; MY EQP·SKIP/HIT/클릭이력은 dormant | `path_xian`·data/history Parquet; Self DB 미호출 |
+| `/self-equipment` | `FdcTrendPage.jsx` | 일반 자설비·MY EQP·SKIP LIST, Scatter/동일성·변경점, SKIP/HIT/클릭이력 | `path_xian`·data/history Parquet + DB |
 | `/matching-anomaly` | `CommonalityAnomalyPage.jsx` | 동일성 디렉터리 기반 필터와 `img.png` 카드 | 운영 파일 |
 | `/common-anomaly` | `CommonAnomalyPage.jsx` | 공통부 이미지, 동일성 차트, SKIP LIST | 운영 파일 + DB |
 | `/common-commonality-anomaly` | `CommonalityAnomalyPage.jsx` | 공통부 동일성 EQP_MODEL 필터와 `img.png` 카드 | 운영 파일 |
@@ -315,15 +314,16 @@ flowchart LR
 
 1. `mapping_config.json`으로 Line과 SDWT 선택지를 만듭니다.
 2. 최신 `path_xian/{latest_date}` 파일에서 RECIPE_ID → `eqp_ch` → sensor → `ch_step` 필터와 차트 경로를 만듭니다. RECIPE_ID는 index의 `recipe_id` 컬럼, `ch_step`은 `step` 컬럼을 사용합니다.
-3. sensor 목록이 있으면 `ALL`을 항상 제공하며, sensor가 `ALL`이면 `ch_step`은 `ALL`만 선택할 수 있습니다. 서버도 같은 규칙으로 필터 조합을 정규화합니다.
-4. index의 `file_path`에서 `/pic_server2/`를 `/pic/`로 정규화합니다. `{eqp}.png`이면 같은 디렉터리의 `data.parquet`, directory이면 하위 `data.parquet`, 이미 `data.parquet`이면 해당 파일을 읽습니다.
-5. 실제 schema에서 y축은 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`도 호환합니다. 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series 분리는 `eqp_cb`를 사용합니다.
-6. 같은 디렉터리의 `{eqp}.parquet`를 변경점 이력으로 읽습니다.
-7. EQP 그룹 순서를 유지하면서 실제 마운트되는 차트를 페이지당 최대 20개로 나눕니다.
+3. 분임조별 `/pic/path/{line}/{sdwt}/df_path.parquet`에서 동일 `file_path` row를 찾아 `ver`와 이력 원본 경로를 참조합니다.
+4. sensor 목록이 있으면 `ALL`을 항상 제공하며, sensor가 `ALL`이면 `ch_step`은 `ALL`만 선택할 수 있습니다. 서버도 같은 규칙으로 필터 조합을 정규화합니다.
+5. index의 `file_path`에서 `/pic_server2/`를 `/pic/`로 정규화합니다. `{eqp}.png`이면 같은 디렉터리의 `data.parquet`, directory이면 하위 `data.parquet`, 이미 `data.parquet`이면 해당 파일을 읽습니다.
+6. 실제 schema에서 y축은 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`도 호환합니다. 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series 분리는 `eqp_cb`를 사용합니다.
+7. 같은 디렉터리의 `{eqp}.parquet`를 변경점 이력으로 읽습니다.
+8. EQP 그룹 순서를 유지하면서 실제 마운트되는 차트를 페이지당 최대 20개로 나눕니다.
 
-현재 SCS `path_xian` 7-column 계약에는 기존 Self SKIP 식별자 `ver`가 없다. 따라서
-`capabilities.selfEquipmentDb=false`로 MY EQP·SKIP LIST·SKIP/HIT/클릭 이력을 숨기며,
-전역 gate가 켜져도 Self 화면에서는 DB 기능을 fail-close한다.
+현재 SCS `path_xian` 7-column 계약에는 기존 Self SKIP 식별자 `ver`가 없지만 team ERD
+경로 table의 동일 `file_path` row에서 `ver`를 참조한다. file과 DB가 모두 준비되면
+MY EQP·SKIP LIST·SKIP/HIT/클릭 이력을 활성화하고, 어느 한쪽이 없으면 DB 기능만 fail-close한다.
 
 `/api/erd-file`은 허용된 ERD 이미지 파일을 stream하는 endpoint지만 현재 주 Scatter 차트는 이미지 대신 `/api/erd-scatter-data`의 Parquet payload를 렌더링합니다.
 
@@ -334,14 +334,14 @@ flowchart LR
 - 페이지 밖 EQP 차트 컴포넌트와 데이터 query는 렌더링하지 않습니다.
 - 필터 또는 모아보기 범위가 바뀌면 첫 페이지로 돌아가고, 현재 페이지가 범위를 벗어나면 유효한 마지막 페이지로 보정합니다.
 
-### 5.3 MY EQP 조회 — dormant legacy
+### 5.3 MY EQP 조회
 
 ```mermaid
 flowchart LR
     PAGE["FdcTrendPage<br/>MY EQP 선택"]
     API["GET /api/my-eqp-equipment-data"]
     NODE["selfEquipmentData.mjs"]
-    IP["서버가 확인한 접속 IP"]
+    IP["접속 IP"]
     REG[("myeqp_regist")]
     MAP["mapping_config.json"]
     PATHS["최신 path_xian index"]
@@ -355,10 +355,9 @@ flowchart LR
     NODE --> SKIP
 ```
 
-- handler는 접속 IP와 `myeqp_regist`를 최신 `path_xian` index에 결합하는 legacy 구현을 보존한다.
-- 새 index에는 기존 Self PASS/SKIP 식별자 `ver`가 없으므로 UI capability는 항상
-  `selfEquipmentDb=false`이며 이 흐름을 호출하지 않는다.
-- 새 DB 식별 계약이 정의되기 전까지 MY EQP·EQP ALL SKIP의 화면 동작은 `Blocked`다.
+- handler는 접속 IP가 `knox_id` 컬럼에 저장된 활성 `myeqp_regist`와 최신 `path_xian` index를 결합한다.
+- team ERD 경로 table의 동일 `file_path` row에서 `ver`와 이력 경로를 참조해 MY EQP SKIP과 EQP ALL SKIP에도 같은 DB 구조를 사용한다.
+- 코드는 연결됐으며 실제 운영 DB·file 결합 결과는 `Unknown`이다.
 
 ### 5.4 동일성 이상감지
 
@@ -458,7 +457,7 @@ flowchart LR
 
 - 통합 저장 버튼은 펼쳐져 있고 입력이 완성된 두 영역의 저장 요청을 `Promise.allSettled`로 함께 처리합니다.
 - Mailing은 지정된 각 `knox_id`마다 `email` 테이블 한 행을 관리합니다.
-- My EQP는 `knox_id × EQP` 조합마다 `myeqp_regist` 행을 저장합니다.
+- My EQP는 `접속 IP × EQP` 조합마다 `myeqp_regist` 행을 저장하며 브라우저에서 별도 사용자 ID를 입력받지 않습니다.
 - My EQP의 Line/SDWT/공정그룹/EQP 후보는 `erdtsum_info` 기준정보에서 가져옵니다.
 
 ## 6. 전체 API 목록
@@ -467,17 +466,17 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | `/api/dashboard-data` | GET, HEAD | `dashboardApi.js` / 메인 대시보드 | `dashboardData.mjs` | `path/{date time}`, `stats`, mapping JSON |
 | `/api/dashboard-latest-date` | GET, HEAD | `dashboardApi.js` / 메인 우측 상단 | `dashboardData.mjs` | `path/{date time}` 파일명 목록 |
-| `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | 정규화·검증된 접속 IP를 호환 key `knoxId`로 반환 |
+| `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | 접속 IP를 검증해 기존 `knoxId` 필드로 반환 |
 | `/api/mapping-config` | GET, HEAD | `mappingConfigApi.js` / 대부분의 필터 화면 | `mappingConfig.mjs` | `mapping_config.json` |
-| `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}`; Self DB history 미결합 |
-| `/api/my-eqp-equipment-data` | GET | dormant legacy client | `selfEquipmentData.mjs` | 현재 Self UI capability에서 비활성; 새 DB 식별 계약 `Unknown` |
+| `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}` + 활성 PASS 제외 |
+| `/api/my-eqp-equipment-data` | GET | `selfEquipmentApi.js` / MY EQP | `selfEquipmentData.mjs` | 활성 등록·mapping·index·PASS 결합 |
 | `/api/erd-scatter-data` | GET | `selfEquipmentApi.js` / 자설비 Scatter·동일성 | `selfEquipmentData.mjs` | ERD `data.parquet`, `{eqp}.parquet` |
 | `/api/erd-file` | GET, HEAD | `buildErdFileUrl` 보유, 현재 주 화면 미사용 | `selfEquipmentData.mjs` | ERD 이미지 stream |
-| `/api/pass-history` | GET | dormant Self client, `commonAnomalyApi.js` | `passHistory.mjs` | 공통부 SKIP LIST; Self UI 미호출 |
-| `/api/pass-history` | POST | 공통부 및 dormant Self client | `passHistory.mjs` | `pass_history` INSERT 또는 기존 동일행 UPDATE |
-| `/api/pass-history` | DELETE | 공통부 및 dormant Self client | `passHistory.mjs` | `pass_history` DELETE |
-| `/api/hit-history` | POST | dormant Self client | `hitHistory.mjs` | `hit_history` INSERT |
-| `/api/clicked-category-history` | POST | 비-Self 이상감지 화면; Self client dormant | `clickedCategoryHistory.mjs` | `clicked_category_history` INSERT |
+| `/api/pass-history` | GET | Self·공통부 | `passHistory.mjs` | SKIP LIST·활성 PASS |
+| `/api/pass-history` | POST | Self·공통부 | `passHistory.mjs` | `pass_history` INSERT 또는 기존 동일행 UPDATE |
+| `/api/pass-history` | DELETE | Self·공통부 | `passHistory.mjs` | `pass_history` DELETE |
+| `/api/hit-history` | POST | 이상감지 결과 카드 | `hitHistory.mjs` | `hit_history` INSERT |
+| `/api/clicked-category-history` | POST | 이상감지 화면 | `clickedCategoryHistory.mjs` | `clicked_category_history` INSERT |
 | `/api/latest-commonality-path` | GET, HEAD | 직접 API 모듈은 있으나 화면은 서버 내부 탐색 사용 | `latestCommonalityPath.mjs` | 최신 동일성 디렉터리 |
 | `/api/commonality-data` | GET | `commonalityApi.js` / 동일성 이상감지 | `commonalityData.mjs` | 동일성 디렉터리 index |
 | `/api/commonality-image` | GET, HEAD | 동일성 이미지 URL builder | `commonalityData.mjs` | `img.png` stream |
@@ -501,6 +500,7 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 | `/appdata/l0_spider_scs/mapping_config.json` | `line_mapping`, `sdwt_mapping` | `mappingConfig.mjs`, `dashboardData.mjs`, `selfEquipmentData.mjs` | 전체 필터, 대시보드, MY EQP |
 | `/appdata/l0_spider_scs/db_info.pkl` | DB host/port/name/user/password | 모든 DB Python helper | DB 기능 전체 |
 | `pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | `selfEquipmentData.mjs` | 자설비 index |
+| `pic/path/{line}/{sdwt}/df_path.parquet` | `desc`, `ver`, `recipe_id`, `line_rev`, `file_path` 등 | `selfEquipmentData.mjs` | index 동일 `file_path`의 이력 식별값 참조 |
 | `pic/path_common/{line}/{sdwt}/df_path.parquet` | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | `commonAnomalyData.mjs` | 공통부 |
 | index `file_path`에서 해석한 `data.parquet` | `act_time`, schema에 존재하는 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환, `eqp_cb` 또는 `eqp`; hover 보조 컬럼은 선택 | `selfEquipmentData.mjs` | 자설비 Scatter/동일성; 실패 시 화면에 실제 참조 경로 표시 |
 | 위 ERD 디렉터리의 `{eqp}.parquet` | `date`, `work_type`, `ctttm_url`, `desc` | `selfEquipmentData.mjs` | 변경점 이력 |
@@ -534,7 +534,7 @@ Node handler
 
 ```mermaid
 flowchart LR
-    IP["서버가 확인한 접속 IP"]
+    IP["접속 IP"]
     REF[("erdtsum_info<br/>EQP 기준정보")]
     EMAIL[("email<br/>Mailing 조건")]
     MY[("myeqp_regist<br/>MY EQP 조건")]
@@ -542,11 +542,11 @@ flowchart LR
     HIT[("hit_history<br/>이력저장")]
     CLICK[("clicked_category_history<br/>Drawing 이력")]
 
-    IP -->|"knox_id 컬럼에 직접 저장"| PASS
-    IP -->|"knox_id 컬럼에 직접 저장"| HIT
-    IP -->|"knox_id 컬럼에 직접 저장"| CLICK
+    IP -->|"knox_id 컬럼에 저장"| PASS
+    IP -->|"knox_id 컬럼에 저장"| HIT
+    IP -->|"knox_id 컬럼에 저장"| CLICK
     REF -->|"등록 후보 제공"| MY
-    MY -.->|"입력 수신인 knox_id"| EMAIL
+    MY -.->|"접속 IP owner"| EMAIL
 ```
 
 ### 8.2 테이블별 사용처
@@ -554,12 +554,12 @@ flowchart LR
 | 테이블 | 읽기/쓰기 | Python helper | API | 화면 및 목적 |
 | --- | --- | --- | --- | --- |
 | `erdtsum_info` | SELECT DISTINCT | `my_eqp_reference.py` | `/api/my-eqp-reference` | My EQP 등록 후보: `main`, `disp_name`, `sdwt_prod`, `prc_group` |
-| `myeqp_regist` | SELECT, INSERT, DELETE, 조건부 ALTER | `my_eqp_registration.py` | `/api/my-eqp-registration`, 내부 MY EQP 조회 | 사용자별 EQP·기간·수신/열람 조건 |
+| `myeqp_regist` | SELECT, INSERT, DELETE | `my_eqp_registration.py` | `/api/my-eqp-registration`, 내부 MY EQP 조회 | 사용자별 EQP·기간·수신/열람 조건 |
 | `email` | SELECT, INSERT, UPDATE, DELETE | `mailing_registration.py` | `/api/mailing-registration` | Mailing 수신인의 SDWT·Grade 조건 |
-| `pass_history` | SELECT, INSERT, UPDATE, DELETE | `pass_history.py` | `/api/pass-history` | 공통부 SKIP·SKIP LIST; Self client는 dormant |
-| `hit_history` | INSERT | `hit_history.py` | `/api/hit-history` | 비-Self 결과 이력; Self client는 dormant |
-| `clicked_category_history` | INSERT | `clicked_category_history.py` | `/api/clicked-category-history` | 비-Self 이상감지 App의 Drawing 시작 이력; Self client는 dormant |
-| `information_schema.COLUMNS` | SELECT | `mailing_registration.py`, `my_eqp_registration.py` | 등록 API 내부 | `email` 컬럼 길이 확인, `myeqp_regist.is_public` 존재 확인 |
+| `pass_history` | SELECT, INSERT, UPDATE, DELETE | `pass_history.py` | `/api/pass-history` | Self·공통부 SKIP·SKIP LIST |
+| `hit_history` | INSERT | `hit_history.py` | `/api/hit-history` | 이상감지 결과 이력 |
+| `clicked_category_history` | INSERT | `clicked_category_history.py` | `/api/clicked-category-history` | 이상감지 App의 Drawing 시작 이력 |
+| `information_schema.COLUMNS` | SELECT | `mailing_registration.py` | Mailing 등록 API 내부 | `email` 컬럼 길이 확인 |
 
 ### 8.3 주요 저장 규칙
 
@@ -587,10 +587,10 @@ flowchart LR
 #### `myeqp_regist`
 
 - 컬럼: `line`, `sdwt`, `prc_group`, `eqp`, `exec_date`, `periode`, `comment`, `knox_id`, `is_public`.
-- 조회 조건은 선택 Line과 `knox_id = 접속 IP OR is_public = 1`입니다.
+- 조회 조건은 선택 Line과 `knox_id = 현재 접속 IP OR is_public = 1`입니다.
 - `activeOnly=true`는 `TIMESTAMPADD(DAY, periode, exec_date) > NOW()` 조건을 추가합니다.
 - 현재 신규 요청은 서버가 `isPublic=false`로 고정합니다.
-- helper 실행 시 `is_public` 컬럼이 없으면 자동 `ALTER TABLE ... ADD COLUMN`을 수행합니다.
+- `is_public`을 포함한 원본 `l0_spider` 테이블 구조를 전제로 하며 런타임 DDL은 수행하지 않습니다.
 
 #### `email`
 
@@ -612,14 +612,14 @@ sequenceDiagram
     B->>N: API 요청
     N->>N: x-forwarded-for → x-real-ip → socket IP
     N->>N: IPv4/IPv6 정규화·형식 검증
-    N-->>H: 접속 IP
-    H->>D: knox_id = 접속 IP로 저장
-    N-->>B: 호환 응답 knoxId = 접속 IP
+    N-->>H: 검증된 접속 IP
+    H->>D: knox_id 컬럼에 IP와 이력 저장
+    N-->>B: knoxId
 ```
 
 - 프록시가 `x-forwarded-for`/`x-real-ip`를 신뢰 가능한 값으로 덮어쓰는 운영 구성이 필요합니다.
-- PASS, HIT, 클릭이력의 `knox_id`는 브라우저 요청값을 사용하지 않고 서버가 확인한 IP를 직접 사용합니다.
-- My EQP 등록은 접속 사용자를 기본값으로 쓰지만, UI가 전달한 복수 `knoxIds`도 등록 대상으로 허용합니다.
+- PASS, HIT, 클릭이력의 `knox_id`는 브라우저 요청값을 사용하지 않고 서버가 확인한 접속 IP를 사용합니다.
+- My EQP 등록은 현재 접속 IP 한 건만 사용하며 브라우저의 `knoxIds` 입력은 허용하지 않습니다.
 - Mailing 등록은 요청으로 받은 `knoxId/knoxIds`를 형식 검증 후 사용합니다.
 - 일반 로그인 세션이나 JWT 기반 인증 계층은 현재 코드에 없습니다.
 
@@ -630,7 +630,7 @@ sequenceDiagram
 | 프런트 `QueryClient` | 기본 `staleTime=60초`, window focus 재조회 비활성 | mutation 성공 시 관련 query key invalidate |
 | My EQP 기준정보 `erdtsum_info` | 서버 메모리 | 5분 |
 | 동일성 디렉터리 index | 최신경로+SDWT별 cache + 동시 탐색 공유 | 5분, 최신 폴더 변경 시 key 변경 |
-| 자설비 최신 `path_xian` index·공통부 경로 Parquet | LRU 1개 | 파일 `mtimeMs`/size가 바뀌면 재조회 |
+| 자설비 최신 `path_xian` index·team ERD 경로 Parquet | LRU 최대 16개 | 파일 `mtimeMs`/size가 바뀌면 재조회 |
 | Scatter/변경이력 Parquet | LRU 1개 + 동시 read Promise 공유 | 파일 `mtimeMs`/size가 바뀌면 재조회 |
 | 대시보드 상세 집계 | LRU 최대 32개 | 파일 metadata와 mapping object 기준 |
 | 대시보드 파일 목록 | 디렉터리별 메모리 | 루트 디렉터리 `mtimeMs` 변경 시 |
@@ -691,10 +691,10 @@ sequenceDiagram
 
 ## 13. 현재 구조에서 특히 주의할 점
 
-1. `server.mjs`와 `vite.config.mjs`가 API route를 각각 수동 등록하여 이미 기능 범위가 다릅니다.
+1. `server.mjs`와 `vite.config.mjs`가 API route를 각각 수동 등록하므로 route parity 회귀를 주의해야 합니다.
 2. DB 비밀번호가 포함된 `db_info.pkl`은 저장소에 포함하거나 웹 정적 경로 아래에 두면 안 됩니다.
-3. IP 기반 이력 식별은 프록시 헤더 신뢰 설정에 의존하며 NAT 환경에서는 여러 접속자가 같은 값으로 기록될 수 있습니다.
-4. `myeqp_regist` helper가 런타임에 `ALTER TABLE`을 수행하므로 운영 DB 계정 권한과 배포 migration 정책을 확인해야 합니다.
+3. IP 기반 소유권은 프록시 헤더 신뢰 설정과 NAT·공용 IP 공유에 영향을 받습니다.
+4. `myeqp_regist.is_public`을 포함한 원본 schema가 사전에 준비돼야 하며 helper는 migration을 수행하지 않습니다.
 5. `pass_history`의 72시간 만료는 DB 정리가 아니라 조회 시 제외 규칙입니다. 테이블은 계속 증가할 수 있습니다.
 6. `SpiderFeaturePage.jsx`와 `fdcTrendMockData.js`에는 현재 운영 route에서 직접 쓰지 않는 prototype/mock 기능이 남아 있습니다.
 7. `public/mailing-report.html`은 템플릿일 뿐, 이 저장소에는 메일 스케줄러·렌더러·SMTP 발송기가 구현되어 있지 않습니다.
