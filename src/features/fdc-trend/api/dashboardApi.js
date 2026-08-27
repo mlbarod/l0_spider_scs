@@ -21,3 +21,20 @@ export async function fetchDashboardSummary({ startDate, endDate, lines = [], si
 
   return payload
 }
+
+export async function fetchDashboardLatestDate({ signal } = {}) {
+  const response = await fetch("/api/dashboard-latest-date", {
+    headers: { Accept: "application/json" },
+    signal,
+  })
+  const payload = await response.json().catch(() => ({}))
+
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(payload, "마지막 알고리즘 수행 시간을 불러오지 못했습니다."))
+  }
+  if (typeof payload.latestDate !== "string" || !payload.latestDate.trim()) {
+    throw new Error("마지막 알고리즘 수행 시간이 응답에 없습니다.")
+  }
+
+  return payload
+}

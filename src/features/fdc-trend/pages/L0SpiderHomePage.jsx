@@ -5,7 +5,7 @@ import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-import { fetchDashboardSummary } from "../api/dashboardApi"
+import { fetchDashboardLatestDate } from "../api/dashboardApi"
 import { formatDashboardLatestDate } from "../api/dashboardLatestDate.mjs"
 import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
 import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
@@ -178,8 +178,8 @@ function SpiderAppCard({ app, animationIndex = 0 }) {
 
 function LatestDataCard() {
   const dashboardQuery = useQuery({
-    queryKey: ["spider-line-dashboard", ""],
-    queryFn: ({ signal }) => fetchDashboardSummary({ signal }),
+    queryKey: ["spider-dashboard-latest-date"],
+    queryFn: ({ signal }) => fetchDashboardLatestDate({ signal }),
     staleTime: 60 * 1000,
     retry: false,
   })

@@ -5,9 +5,10 @@ import { createSafeApiError } from "./safeApiError.mjs"
 const DATA_CONNECTIONS_ENABLED_VALUE = "1"
 const DISABLED_ERROR_CODE = "DATA_CONNECTIONS_DISABLED"
 const DISABLED_ERROR_MESSAGE = "SCS ETCH SPIDER 데이터 연결을 준비 중입니다."
-const DEFAULT_DB_INFO_PATH = "/appdata/l0_spider/db_info.pkl"
+const DEFAULT_DB_INFO_PATH = "/appdata/l0_spider_scs/db_info.pk"
 const DASHBOARD_READ_METHODS = new Map([
   ["/api/dashboard-data", new Set(["GET", "HEAD"])],
+  ["/api/dashboard-latest-date", new Set(["GET", "HEAD"])],
 ])
 const SELF_EQUIPMENT_READ_METHODS = new Map([
   ["/api/mapping-config", new Set(["GET", "HEAD"])],

@@ -106,7 +106,7 @@ Python helper가 사용하는 PyMySQL을 설치한다.
 python3 -m pip install -r scripts/requirements.txt
 ```
 
-DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider/db_info.pkl`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. 전체 gate가 비활성인 기본 mode에서는 읽기 가능한 credential 파일이 확인되면 DB 전용 API allowlist가 활성화되며, `SCS_DB_CONNECTIONS_ENABLED=0`으로 차단할 수 있다. `db_info.pkl`은 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
+DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider_scs/db_info.pk`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. 전체 gate가 비활성인 기본 mode에서는 읽기 가능한 credential 파일이 확인되면 DB 전용 API allowlist가 활성화되며, `SCS_DB_CONNECTIONS_ENABLED=0`으로 차단할 수 있다. `db_info.pk`는 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
 
 ```bash
 node server.mjs
@@ -150,7 +150,7 @@ SPIDER 메인 하단의 라인별 이상 현황 대시보드는
 지연 조회한다. 차트의 `10일`, `30일`, `90일`, `180일` 버튼으로 기간을 전환할 수 있다.
 상단 필터는 실제 데이터에 존재하는 라인의 전체/복수 선택만 제공하며 날짜 입력은 표시하지 않는다.
 
-L0 Spider의 DB 접속정보는 `/appdata/l0_spider/db_info.pkl`에서 읽는다. 아래 이력 테이블의 실제 INSERT/SELECT 기능은 해당 기능 개발 시 명시된 스키마를 기준으로 구현한다.
+L0 Spider의 DB 접속정보는 `/appdata/l0_spider_scs/db_info.pk`에서 읽는다. 아래 이력 테이블의 실제 INSERT/SELECT 기능은 해당 기능 개발 시 명시된 스키마를 기준으로 구현한다.
 
 ### `pass_history`
 

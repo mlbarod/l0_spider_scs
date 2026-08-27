@@ -154,7 +154,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 ## 9. API·화면 호환성
 
 - [ ] `/`, `/self-equipment`, `/matching-anomaly`, `/common-anomaly`, `/common-commonality-anomaly`의 route 영향을 검토했다.
-- [ ] `GET /api/dashboard-data`의 request·response·empty·error 계약을 유지했다.
+- [ ] `GET /api/dashboard-data`와 `GET /api/dashboard-latest-date`의 request·response·empty·error 계약을 유지했다.
 - [ ] `lineDashboard.mailingSummary`가 `summary`의 sibling이라는 실제 위치를 유지했다.
 - [ ] Self·commonality·common-commonality·common anomaly API의 query·option·부분 결과를 유지했다.
 - [ ] DB 등록·history API의 body limit·validation·현재 사용자 결정 영향을 확인했다.

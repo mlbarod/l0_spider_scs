@@ -50,6 +50,7 @@
 
 | Flow ID | 사용자 기능 | 시작점 | 주요 처리 | 데이터 원천 | 최종 출력 | 완성도 | 상태 |
 |---|---|---|---|---|---|---|---|
+| `DF-DASH-00` | 메인 최신 수행 시각 | `/`, `/fdc_trend` | detail root의 최신 유효 파일명 선택 | `path/{latest_date}` 파일명 | 마지막 알고리즘 수행 시간 | `Complete` | `Confirmed` |
 | `DF-DASH-01` | Line Dashboard | `/`, `/fdc_trend` | 날짜 선택·고유조합 집계 | detail·stats Parquet, mapping JSON | KPI·막대·추이·상세표 | `Complete` | `Confirmed` |
 | `DF-SELF-01` | Self Equipment 필터 | `/self-equipment` | mapping·최신 path_xian row·종속 필터 | `path_xian/{latest_date}`; DB history 미결합 | RECIPE_ID·EQP·sensor·ch_step·chart row | 코드 `Complete`; 운영 `Unknown` | `Confirmed`/`Unknown` |
 | `DF-SELF-02` | Scatter·동일성 차트 | Self Equipment chart card | image path 검증·data path 변환·point 집계 | ERD `data.parquet`, history Parquet | scatter·3일 동일성·변경이력 | `Complete` | `Confirmed` |
@@ -134,6 +135,7 @@ flowchart LR
 | Flow ID | 화면·라우트 | 컴포넌트·query | 요청 | 응답 소비·출력 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | `DF-DASH-01` | Dashboard `/` | `LineAnomalyDashboard` — `spider-line-dashboard*` | `fetchDashboardSummary` → `GET /api/dashboard-data` | `summary`, `lineSummary`, `dailyTrend`, `options` → KPI·chart·table | `Confirmed` | `dashboardApi.js`; Dashboard component |
+| `DF-DASH-00` | Portal 최신 시각 카드 | `LatestDataCard` — `spider-dashboard-latest-date` | `fetchDashboardLatestDate` → `GET /api/dashboard-latest-date` | `latestDate` → `YYYY.MM.DD hh:mm:ss` | `Confirmed` | `dashboardApi.js`; `L0SpiderHomePage.jsx` |
 | `DF-SELF-01` | `/self-equipment` | `FdcTrendPage` — `self-equipment-data` | `GET /api/self-equipment-data` | `steps`, `eqpChannels`, `sensors`, `chSteps`, `rows` | `Confirmed` | `selfEquipmentApi.js`; `FdcTrendPage` |
 | `DF-SELF-02` | chart card | `ErdScatterCard`, `ThreeDayIdentityChartCard` | `GET /api/erd-scatter-data` | point group·history → chart/card | `Confirmed` | `fetchErdScatterData`, `fetchErdIdentityData` |
 | `DF-SELF-03` | MY EQP | dormant client·handler | 현재 UI에서 요청 없음 | 현재 화면 출력 없음 | `Blocked` / legacy code `Documented` | `fetchMyEqpEquipmentData`; capability gate |
@@ -151,6 +153,7 @@ flowchart LR
 | Flow ID | API·진입점 | handler·서비스 | 데이터 원천 | 변환·집계 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | `DF-DASH-01` | `GET /api/dashboard-data` | `getDashboardSummary` | `DS-DASH-01/02`, `DS-MAP-01` | 날짜별 최신·D-1 선택, 5-key 고유집계 | `Confirmed` | `dashboardData.mjs` |
+| `DF-DASH-00` | `GET /api/dashboard-latest-date` | `getLatestDashboardDate` | `DS-DASH-01`의 파일명 목록만 사용 | 최신 `{latest_date}` 반환 | `Confirmed` | `dashboardData.mjs` |
 | `DF-SELF-01` | `GET /api/self-equipment-data` | `readLatestSelfEquipmentRows`, `scopeSelfEquipmentRows`, `buildSelfEquipmentPayload` | `DS-SELF-01`; DB history 미결합 | mapping 범위, RECIPE_ID=`recipe_id`, ch_step=`step`, 종속 option·row 생성 | 코드 `Confirmed`; 운영 `Unknown` | `selfEquipmentData.mjs` |
 | `DF-SELF-02` | scatter·file API | `resolveErdDataFilePath`, payload builder | `DS-SELF-02` | axis column, point grouping·sampling·history | `Confirmed` | `selfEquipmentData.mjs` |
 | `DF-SELF-03` | `GET /api/my-eqp-equipment-data` | legacy 사용자·등록 조회 후 `filterMyEqpRows` | DB·mapping·`DS-SELF-01` | UI는 `selfEquipmentDb=false`로 미호출 | `Blocked` / handler만 `Documented` | `handleMyEqpEquipmentDataRequest`; `dataConnections.mjs` |
@@ -183,6 +186,10 @@ flowchart LR
 | `ver` | App별 legacy path row | 현재 Self index에는 없음 | 공통부·legacy ERD/SKIP 구분 | Self는 빈 compatibility 값이며 DB 기능 fail-close | Self `Mismatch`; 다른 App 계약 별도 | path config·history code |
 
 ## 9. 대시보드 데이터 흐름
+
+Portal의 마지막 알고리즘 수행 시간은 `fetchDashboardLatestDate`가
+`GET /api/dashboard-latest-date`를 호출해 detail root의 유효한 파일명 중 최신
+`{latest_date}`만 받는다. 이 흐름은 아래 전체 Dashboard 집계와 분리된다.
 
 1. 사용자는 `/`의 `LineAnomalyDashboard`에서 Line과 추이 기간을 선택한다.
 2. `fetchDashboardSummary`가 `startDate`, `endDate`, 반복 `line`으로 `GET /api/dashboard-data`를 호출한다.

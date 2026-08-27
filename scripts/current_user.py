@@ -4,7 +4,7 @@ import pickle
 import sys
 
 
-DB_INFO_PATH = os.environ.get("DB_INFO_PATH") or "/appdata/l0_spider/db_info.pkl"
+DB_INFO_PATH = os.environ.get("DB_INFO_PATH") or "/appdata/l0_spider_scs/db_info.pk"
 
 
 def write_json(payload):

@@ -233,7 +233,18 @@ write 기능은 실제 test row를 만들지 않고 운영 증거 또는 승인�
 credential·network·schema는 DB/platform owner, helper payload·오류 변환은 application owner에게 전달한다.
 사용자 오식별은 security/privacy owner도 포함한다.
 
-## 8. `/appdata` 파일 누락 또는 권한 오류
+## 8. Portal 마지막 알고리즘 수행 시간이 `확인 불가`인 경우
+
+Portal 카드는 `GET /api/dashboard-latest-date`로 Dashboard detail root의 파일명만 조회한다.
+전체 집계용 `GET /api/dashboard-data`의 stats·mapping·Parquet 오류는 이 카드에 영향을 주지 않는다.
+
+- `503 DATA_CONNECTIONS_DISABLED`: `SCS_DASHBOARD_DATA_ENABLED=0` 여부를 확인한다.
+- `404 DASHBOARD_LATEST_DATE_NOT_FOUND`: detail root에 `YYYY-MM-DD hh:mm:ss` 형식의 일반 파일이 있는지 운영 승인 절차로 확인한다.
+- `500 DASHBOARD_LATEST_DATE_LOAD_FAILED`: `SPIDER_DASHBOARD_PATH_ROOT`와 application user의 directory read 권한을 확인한다.
+
+운영 파일의 내용·경로 목록을 로그나 보고서에 복사하지 않는다.
+
+## 9. `/appdata` 파일 누락 또는 권한 오류
 
 ### 증상
 
@@ -273,7 +284,7 @@ stat <expected-file>
 
 mount·ACL·보존은 filesystem owner, producer 지연·Schema는 data owner, path resolver는 application owner에게 전달한다.
 
-## 9. Dashboard 빈 데이터·오래된 데이터
+## 10. Dashboard 빈 데이터·오래된 데이터
 
 `SCS_DASHBOARD_DATA_ENABLED=0`인 UI shell에서 Dashboard의 `503 DATA_CONNECTIONS_DISABLED`는
 파일 누락이 아니라 의도된 범위 차단이다. 기본값에서는 Dashboard GET/HEAD가 handler까지
@@ -316,7 +327,7 @@ API가 계약된 구조를 반환하고 latest·Line count가 data owner의 승�
 
 file 생성·freshness는 data owner, mapping·집계·API 계약은 application owner에게 전달한다.
 
-## 10. STEP 딥링크·HMAC 오류
+## 11. STEP 딥링크·HMAC 오류
 
 ### 증상
 
@@ -356,7 +367,7 @@ line, sdwt, grade, step, eqpCh의 존재와 query 이름만 확인
 
 URL producer·Self 화면은 application owner, HMAC 요구·secret 경계는 security/feature owner에게 전달한다.
 
-## 11. Mail 등록 또는 실제 발송 실패
+## 12. Mail 등록 또는 실제 발송 실패
 
 ### 증상
 
@@ -397,7 +408,7 @@ journalctl -u <unit-name> --since "<approved-time>" --no-pager
 등록 API는 application/DB owner, renderer·scheduler·transport·중복은 external mail owner에게 전달한다.
 오발송은 privacy/security owner를 즉시 포함한다.
 
-## 12. 일반 파일·실행 권한 오류
+## 13. 일반 파일·실행 권한 오류
 
 ### 증상
 
@@ -433,7 +444,7 @@ test -w <approved-build-output-directory>
 
 filesystem·unit identity는 platform owner, 필요 권한 범위는 application/security owner에게 전달한다.
 
-## 13. Build 또는 `dist/index.html` 실패
+## 14. Build 또는 `dist/index.html` 실패
 
 ### 증상
 
@@ -470,7 +481,7 @@ npm run build
 
 source compile은 application owner, disk·permission·artifact 배포는 release/platform owner에게 전달한다.
 
-## 14. 공통 종료 및 재발 방지
+## 15. 공통 종료 및 재발 방지
 
 - 원인, 영향, 정상화 시각과 수행한 service 제어를 기록한다.
 - 실제 DB write, mail 발송, 운영 file·환경 변경 여부를 명시한다.
@@ -478,7 +489,7 @@ source compile은 application owner, disk·permission·artifact 배포는 releas
 - `Unknown`이 원인이었다면 [deployment](../system/deployment.md), [runbook](runbook.md) 또는 [systemd](systemd.md)의 근거 상태를 후속 갱신한다.
 - code·설정·문서 차이는 추정 수정하지 않고 `Mismatch`로 등록한다.
 
-## 15. Mismatch·Unknown·Risk
+## 16. Mismatch·Unknown·Risk
 
 ### Mismatch
 
@@ -502,7 +513,7 @@ source compile은 application owner, disk·permission·artifact 배포는 releas
 - mail 오발송과 DB write는 application rollback만으로 복구되지 않는다.
 - proxy header·URL query·journal은 사용자·STEP 정보 노출 경계다.
 
-## 16. 근거
+## 17. 근거
 
 - `server.mjs:65-87,291-304` — build·dist·port·startup 오류
 - `vite.config.mjs:126-145` — port·allowedHosts·HMR

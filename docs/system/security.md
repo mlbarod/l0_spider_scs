@@ -185,7 +185,7 @@ root prefix 검사는 구현되었지만 `realpath` 기반 symlink 탈출 방지
 
 | 항목 | 현재 처리 | 보호 대상 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|
-| endpoint | `GET/HEAD /api/dashboard-data` | 집계 데이터 | application auth 없음 | `Confirmed` / 외부 경계 `Unknown` | `server.mjs:134-139` |
+| endpoint | `GET/HEAD /api/dashboard-data`, `GET/HEAD /api/dashboard-latest-date` | 집계 데이터 또는 최신 detail 파일명 | application auth 없음 | `Confirmed` / 외부 경계 `Unknown` | `server.mjs`; `dashboardData.mjs` |
 | filter | strict date와 범위, repeated Line | resource selection | Line 개수·URL 길이 제한 없음 | 일부 `Implemented` | `dashboardData.mjs` |
 | response | 집계·Line·trend·mail summary·source paths | 업무·운영 정보 | browser가 쓰지 않는 path까지 반환 | `Risk` | `dashboardData.mjs:765-783` |
 | 오류 | 400·404·500, `{ok:false,error}` | 내부 구현 정보 | exception message 결합 | `Risk` | `dashboardData.mjs:813-825` |
@@ -236,7 +236,7 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 
 | secret 또는 설정 | 환경변수 | 사용 주체 | 브라우저 노출 | 기본값 | 누락 처리 | Git 보호 | 상태 | 근거 |
 |---|---|---|---|---|---|---|---|---|
-| DB credential 파일 | `DB_INFO_PATH` | Python helper | 아니오 | server path 존재 | default path 사용 후 open 실패 | `.gitignore`에 파일명 | `Implemented` | Python helpers; `.gitignore:14` |
+| DB credential 파일 | `DB_INFO_PATH` | Python helper | 아니오 | server path 존재 | default path 사용 후 open 실패 | `.gitignore`에 파일명 | `Implemented` | Python helpers; `.gitignore` |
 | DB credential key | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | helper가 pickle에서 읽음 | 아니오 | 없음 | key/file error | 실제 파일 제외 | `Implemented` / 운영 권한 `Unknown` | helper loaders |
 | HMAC secret | 이름 미확인 | 생성·검증 주체 미확인 | 미확인 | 미확인 | 미확인 | 정책만 있음 | `Unknown` | STEP·environment docs |
 | mail credential | 이름 미확인 | sender 미확인 | 미확인 | 미확인 | 미확인 | 미확인 | `Unknown` | sender 부재 |
