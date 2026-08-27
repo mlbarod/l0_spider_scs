@@ -24,7 +24,9 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 전역 gate와 무관하게 mapping 응답은 `capabilities.selfEquipmentDb=false`를 반환한다. 화면은
 MY EQP·SKIP LIST·SKIP·클릭이력·이력저장을 노출하거나 호출하지 않고 일반 자설비 파일 chart만
 제공한다. credential 기반 DB 전용 API allowlist는 별도지만 Self DB 혼합 기능은 계속
-`selfEquipmentDb=false`다. 실제 target server DB·mount와 Parquet 내용은 `Unknown`이다.
+`selfEquipmentDb=false`다. mapping의 `capabilities.dbConnections`는 credential read 가능 여부를
+별도로 전달하며, 화면은 이 값이 `true`일 때 접속자 조회를 수행한다. 실제 target server
+DB·mount와 Parquet 내용은 `Unknown`이다.
 ## 2. 사용자 목적과 주요 사용 시나리오
 
 Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 데이터를 EQP별 산점도와 동일성 차트로 확인하는 기능이다.
@@ -194,7 +196,7 @@ sequenceDiagram
 | scatter API | `points`, `axisColumn`, timing fields | scatter builder | 산점도·최근 point 구분 | point 없음은 card 빈 상태 | `Confirmed` |
 | scatter API | `changeHistory`, `historyError` | scatter builder | 변경점 이력 dialog | history만 실패해도 HTTP 200 | `Confirmed` |
 | identity API | `groups`, `windowDays`, point counts | identity builder | 동일성 chart | group 없음 안내 | `Confirmed` |
-| mapping API | `capabilities.selfEquipmentFileRead`, `selfEquipmentDb` | mapping handler | file query와 DB option·action 활성 여부 | file은 exact `true`만 조회, DB는 항상 `false` | `Confirmed` |
+| mapping API | `capabilities.dbConnections`, `selfEquipmentFileRead`, `selfEquipmentDb` | mapping handler | 접속자 DB 조회, file query, Self DB option·action 활성 여부 | credential read 가능 시 `dbConnections=true`; file은 exact `true`만 조회; Self DB 작업은 항상 `false` | `Confirmed` |
 
 전체 JSON Schema는 이번 단계에서 만들지 않았다.
 ## 13. 데이터 원천

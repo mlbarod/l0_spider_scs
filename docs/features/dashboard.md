@@ -8,7 +8,7 @@
 > 최신 하네스 감사: [reports/audit/harness-final-review.md](../../reports/audit/harness-final-review.md)
 > 관련 데이터 흐름: `DF-DASH-01`
 > 주요 근거: `AGENTS.md`, `reports/audit/system-inventory.md`, `docs/system/overview.md`, `docs/system/architecture.md`, `docs/system/environment-definition.md`, `docs/system/data-flow.md`
-> 계약 산출물: `harness/contracts/dashboard-api.schema.json`, success·empty synthetic fixture와 `tests/contract/dashboard-api.contract.test.mjs`가 존재한다.
+> 계약 산출물: `harness/contracts/dashboard-api.schema.json`, `harness/contracts/dashboard-latest-date-api.schema.json`, success·empty synthetic fixture와 대응 contract test가 존재한다.
 > 조사 제한: 실제 운영 데이터·`/appdata` 파일·API 실행 결과는 확인하지 않았다.
 > 브랜치 경계: `mock-agent`의 mock 응답·fixture·E2E는 이번 문서의 근거와 범위가 아니다.
 
@@ -55,7 +55,7 @@ Dashboard route는 `startDate`, `endDate`, `line`을 브라우저 URL에서 읽�
 
 | 화면 영역 | 사용자에게 표시하는 정보 | 데이터 출처 필드 | 컴포넌트 | 상태 | 근거 |
 |---|---|---|---|---|---|
-| 마지막 수행 시각 | 메인 상단 최신 시각 | `GET /api/dashboard-data`의 `sourcePaths.detail` 마지막 segment | `LatestDataCard` | `Confirmed` | `L0SpiderHomePage.jsx`; `dashboardLatestDate.mjs` |
+| 마지막 수행 시각 | 메인 상단 최신 시각 | `GET /api/dashboard-latest-date`의 `latestDate` | `LatestDataCard` | `Confirmed` | `L0SpiderHomePage.jsx`; `dashboardLatestDate.mjs` |
 | 조회 header | Dashboard 제목과 최신 데이터 시각 | `summary.latestDateTime` | `LineAnomalyDashboard` | `Confirmed` | `LineAnomalyDashboard.jsx:443-453` |
 | Line filter | 전체 또는 복수 Line, 조회·초기화 | `options.lines`, `filters.lines` | `LineMultiSelect` | `Confirmed` | `LineAnomalyDashboard.jsx:166-213,456-474` |
 | 7개 KPI | sensor 총합, 전체·Grade별 건수, 전일 대비 | `summary.*` | `KpiCard`, `ChangeText` | `Confirmed` | `LineAnomalyDashboard.jsx:482-496` |
@@ -67,7 +67,7 @@ Dashboard route는 `startDate`, `endDate`, `line`을 브라우저 URL에서 읽�
 `lineDashboard.mailingSummary`와 `lineDashboard.meta`는 브라우저 client가 배열·shape를 확인하지만 현재 Dashboard 화면에 직접 표시하지 않는다.
 추이 chart는 응답의 `lineSummary` 정렬 기준 상위 최대 8개 Line만 그린다.
 상세 table은 한 페이지에 8개 Line을 표시한다.
-`GET`/`HEAD /api/dashboard-data`는 기본 Dashboard read allowlist에 포함되며,
+`GET`/`HEAD /api/dashboard-data`와 `GET`/`HEAD /api/dashboard-latest-date`는 기본 Dashboard read allowlist에 포함되며,
 `SCS_DASHBOARD_DATA_ENABLED=0`을 명시한 UI shell에서만 handler 진입 전에 차단된다.
 
 ## 5. 프론트엔드 구성
@@ -119,8 +119,10 @@ sequenceDiagram
 
 | 메서드 | 경로 | 요청 주체 | 서버 핸들러 | 응답 소비자 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
-| `GET` | `/api/dashboard-data` | `fetchDashboardSummary` | `handleDashboardDataRequest` | Dashboard 전체 집계·메인 최신 시각 | `Confirmed` | `server.mjs`; `dashboardApi.js` |
+| `GET` | `/api/dashboard-data` | `fetchDashboardSummary` | `handleDashboardDataRequest` | Dashboard 전체 집계 | `Confirmed` | `server.mjs`; `dashboardApi.js` |
 | `HEAD` | `/api/dashboard-data` | 현재 브라우저 소비 위치 미확인 | 같은 handler | body 없음 | 구현 `Confirmed`, 소비자 `Unknown` | `dashboardData.mjs:794-820` |
+| `GET` | `/api/dashboard-latest-date` | `fetchDashboardLatestDate` | `handleDashboardLatestDateRequest` | 최신 detail 파일명 문자열만 조회 | `Confirmed` | `server.mjs`; `dashboardApi.js`; `dashboardData.mjs` |
+| `HEAD` | `/api/dashboard-latest-date` | 현재 브라우저 소비 위치 미확인 | 같은 handler | body 없음 | 구현 `Confirmed`, 소비자 `Unknown` | `dashboardData.mjs` |
 
 통합 `server.mjs`와 Vite middleware 모두 이 경로를 같은 handler에 연결한다.
 성공한 GET은 `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`를 반환한다.
@@ -285,7 +287,7 @@ mapping되지 않은 detail row는 집계에서 제외되며 화면은 `meta.unm
 
 | 응답 영역 | 소비 위치 | 표시·변환 | 상태 |
 |---|---|---|---|
-| `sourcePaths.detail` | `LatestDataCard` | 이미 결정된 detail 경로의 마지막 `/` 뒤 `{latest_date}` 텍스트만 추출해 `YYYY.MM.DD hh:mm:ss` 형태로 표시 | `Confirmed` |
+| `latestDate` (`GET /api/dashboard-latest-date`) | `LatestDataCard` | 최신 detail 파일명 `{latest_date}` 문자열을 변환 없이 그대로 표시 | `Confirmed` |
 | `summary.latestDateTime` | Dashboard badge | `YYYY.MM.DD hh:mm:ss` 형태 | `Confirmed` |
 | `summary.monitoringSensorTotal` | 첫 KPI | locale 숫자와 `개` | `Confirmed` |
 | 전체·Grade count | 나머지 count KPI | locale 숫자와 `건` | `Confirmed` |
@@ -425,7 +427,7 @@ mock 서버·대규모 fixture·mock 의존 integration·E2E와 Browser QA는 `m
 
 ## 24. 계약 산출물과 갱신 조건
 
-현재 `harness/contracts/dashboard-api.schema.json`, `harness/fixtures/dashboard/dashboard-{success,empty}.json`과 `tests/contract/dashboard-api.contract.test.mjs`가 존재한다.
+현재 `harness/contracts/dashboard-api.schema.json`, `harness/contracts/dashboard-latest-date-api.schema.json`, `harness/fixtures/dashboard/dashboard-{success,empty}.json`과 대응 contract test가 존재한다.
 contract test는 Schema compile·fixture와 partial·합계 불일치·범위 밖 Line·filter echo mismatch를 검증한다. 실제 운영 route와 운영 데이터는 사용하지 않았으므로 그 범위는 `Not Run`이다.
 메일 결합·발송 경계와 상세 link 소비는 각각 `docs/features/mailing.md`, `docs/features/self-equipment.md`가 담당한다.
 

@@ -9,7 +9,8 @@
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 다른 App API를 포함한 전역 gate를 연다. 다만 새 Self
 `path_xian` 7-column 계약에는 기존 DB 식별자 `ver`가 없어 두 mode 모두
 `capabilities.selfEquipmentDb=false`이며 Self의 MY EQP·SKIP·이력 UI는 dormant다. 실제 배포
-환경의 변수 값과 target file은 `Unknown`이다.
+환경의 변수 값과 target file은 `Unknown`이다. 읽기 가능한 `DB_INFO_PATH`가 있으면 별도
+`capabilities.dbConnections=true`가 되어 current-user 조회는 수행한다.
 
 ## 0. 한 장 요약
 
@@ -269,14 +270,17 @@ flowchart TD
 ```mermaid
 flowchart LR
     HOME["L0SpiderHomePage<br/>LineAnomalyDashboard"]
+    LATEST["LatestDataCard"]
     FEAPI["dashboardApi.js"]
     HTTP["GET /api/dashboard-data"]
+    LATESTHTTP["GET /api/dashboard-latest-date"]
     NODE["server/dashboardData.mjs"]
     DETAIL["pic/path/{date time}"]
     STATS["pic/stats/{date time}_spider_step_stats.parquets"]
     MAP["mapping_config.json"]
 
     HOME --> FEAPI --> HTTP --> NODE
+    LATEST --> FEAPI --> LATESTHTTP --> NODE
     NODE --> DETAIL
     NODE --> STATS
     NODE --> MAP
@@ -461,6 +465,7 @@ flowchart LR
 | Endpoint | Method | 프런트 API / 사용 화면 | Node handler | 최종 데이터 |
 | --- | --- | --- | --- | --- |
 | `/api/dashboard-data` | GET, HEAD | `dashboardApi.js` / 메인 대시보드 | `dashboardData.mjs` | `path/{date time}`, `stats`, mapping JSON |
+| `/api/dashboard-latest-date` | GET, HEAD | `dashboardApi.js` / 메인 우측 상단 | `dashboardData.mjs` | `path/{date time}` 파일명 목록 |
 | `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | `current_user.py` → `v_ipms_ip_info`, `user_info` |
 | `/api/mapping-config` | GET, HEAD | `mappingConfigApi.js` / 대부분의 필터 화면 | `mappingConfig.mjs` | `mapping_config.json` |
 | `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}`; Self DB history 미결합 |

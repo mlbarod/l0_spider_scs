@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  areDbConnectionsEnabled,
   getSelfEquipmentFileConnectionState,
   isLineMappingQueryReady,
   validateLineMappingPayload,
@@ -11,6 +12,14 @@ const validMapping = {
   line_mapping: { TEAM_A: "LINE_A" },
   sdwt_mapping: { TEAM_A: "SDWT_A" },
 }
+
+test("DB 연결 capability는 명시적인 true만 활성으로 판정한다", () => {
+  assert.equal(areDbConnectionsEnabled(validMapping), false)
+  assert.equal(areDbConnectionsEnabled({
+    ...validMapping,
+    capabilities: { dbConnections: true },
+  }), true)
+})
 
 test("유효한 mapping payload를 정규화한다", () => {
   assert.deepEqual(validateLineMappingPayload(validMapping), validMapping)

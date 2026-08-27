@@ -94,7 +94,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | DB helper stdin | server-generated JSON | Python helper | application별 normalization | 과도한 DB 권한·원문 오류 | 일부 `Implemented` | `server/*.mjs`; `scripts/*.py` |
 | 환경변수·설정 파일 | path·host·runtime flag | process | 이름별 parsing | 잘못된 경로, secret 유출 | 일부 `Implemented` | server·Vite·Python |
 | SCS data gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite 선행 middleware | 정확히 `"1"`인 경우만 handler 활성 | 단일 변수 오설정으로 모든 file·DB read/write 재활성화 | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; server·Vite 진입점 |
-| SCS Dashboard read gate | `SCS_DASHBOARD_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; Dashboard GET/HEAD만 활성 | 운영 filename·집계 노출, mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; Dashboard API |
+| SCS Dashboard read gate | `SCS_DASHBOARD_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; Dashboard와 latest-date GET/HEAD만 활성 | 운영 filename·집계 노출, mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; Dashboard API |
 | SCS Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; mapping GET/HEAD와 Self·scatter GET만 handler 활성 | 기본 file read에 따른 source path 노출·mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; self read API |
 | SCS DB gate | `SCS_DB_CONNECTIONS_ENABLED`, `DB_INFO_PATH` | Node·Vite 선행 middleware | 전체 gate 비활성 mode에서 비-`1`이 아니고 credential file read 가능; DB method allowlist만 활성 | 사용자 조회와 등록·이력 write 활성 | `Implemented` / 운영 연결 `Unknown` | `server/dataConnections.mjs`; DB API |
 | 메일 link | Dashboard·Self URL | 외부 renderer 후보 | template `urlencode`; 실제 renderer 미확인 | 수신자 혼합·URL 노출 | `Policy` / `Needs Validation` | mail template |
@@ -185,13 +185,13 @@ root prefix 검사는 구현되었지만 `realpath` 기반 symlink 탈출 방지
 
 | 항목 | 현재 처리 | 보호 대상 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|
-| endpoint | `GET/HEAD /api/dashboard-data` | 집계 데이터와 선택된 detail 경로 | application auth 없음 | `Confirmed` / 외부 경계 `Unknown` | `server.mjs`; `dashboardData.mjs` |
+| endpoint | `GET/HEAD /api/dashboard-data`, `GET/HEAD /api/dashboard-latest-date` | 집계 데이터와 선택된 detail 파일명 | application auth 없음 | `Confirmed` / 외부 경계 `Unknown` | `server.mjs`; `dashboardData.mjs` |
 | filter | strict date와 범위, repeated Line | resource selection | Line 개수·URL 길이 제한 없음 | 일부 `Implemented` | `dashboardData.mjs` |
 | response | 집계·Line·trend·mail summary·source paths | 업무·운영 정보 | browser가 쓰지 않는 path까지 반환 | `Risk` | `dashboardData.mjs:765-783` |
 | 오류 | 400·404·500, `{ok:false,error}` | 내부 구현 정보 | exception message 결합 | `Risk` | `dashboardData.mjs:813-825` |
 | cache | JSON `no-store`; HEAD도 `no-store` | 조회 payload | proxy 정책 미확인 | application `Implemented` | `dashboardData.mjs:32-37,807-819` |
 | frontend | 상대 URL 호출, shape 일부 검사, 오류 마스킹 | consumer integrity | runtime schema 전체 검증 아님 | 일부 `Implemented` | `dashboardApi.js:3-31` |
-| JSON Schema | 성공 body 구조와 field type 검증 | contract compatibility | 인증·권한·기밀성은 검증하지 않음 | `Implemented` | `harness/contracts/dashboard-api.schema.json` |
+| JSON Schema | 성공 body 구조와 field type 검증 | contract compatibility | 인증·권한·기밀성은 검증하지 않음 | `Implemented` | `harness/contracts/dashboard-api.schema.json`; `dashboard-latest-date-api.schema.json` |
 | mail 공유 | `lineDashboard.summary`, `mailingSummary`가 template 입력 후보 | 수신자별 정보 | sender 결합·filter 미확인 | producer `Confirmed`, sender `Unknown` | dashboard·template |
 
 `lineDashboard.mailingSummary`는 `lineDashboard.summary`의 sibling이며, 과거 후보인 `summary.mailingSummary`는 현재 계약과 다르다.

@@ -44,6 +44,7 @@ import { fetchCurrentUser } from "../api/currentUserApi"
 import { createHitHistory } from "../api/hitHistoryApi"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import {
+  areDbConnectionsEnabled,
   getSelfEquipmentFileConnectionState,
   isLineMappingQueryReady,
   isSelfEquipmentDbEnabled,
@@ -1579,11 +1580,12 @@ export function FdcTrendPage() {
   const mappingReady = isLineMappingQueryReady(mappingQuery)
   const selfEquipmentFileConnectionState = getSelfEquipmentFileConnectionState(mappingQuery)
   const selfEquipmentFileReadEnabled = selfEquipmentFileConnectionState === "enabled"
+  const dbConnectionsEnabled = areDbConnectionsEnabled(mappingQuery.data)
   const selfEquipmentDbEnabled = isSelfEquipmentDbEnabled(mappingQuery.data)
   const currentUserQuery = useQuery({
     queryKey: ["current-user"],
     queryFn: fetchCurrentUser,
-    enabled: Boolean(mappingReady && selfEquipmentDbEnabled),
+    enabled: Boolean(mappingReady && dbConnectionsEnabled),
     staleTime: Infinity,
     retry: false,
   })
@@ -1994,7 +1996,7 @@ export function FdcTrendPage() {
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
                 ? `${currentUserQuery.data.knoxId}님 안녕하세요!`
-                : !selfEquipmentDbEnabled
+                : !dbConnectionsEnabled
                 ? "DB 기능 연결 전입니다."
                 : currentUserQuery.isLoading
                 ? "접속자 확인 중…"

@@ -12,9 +12,11 @@ npm run dev
 The app opens directly at `/`.
 
 현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard와 자설비 이상감지의 read API
-(`dashboard-data`, `mapping-config`, `self-equipment-data`, `erd-scatter-data`)를 활성화한다.
+(`dashboard-data`, `dashboard-latest-date`, `mapping-config`, `self-equipment-data`,
+`erd-scatter-data`)를 활성화한다.
 `DB_INFO_PATH`의 credential 파일이 읽기 가능하면 current-user·등록·Mailing·이력 DB API도
-활성화한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
+활성화하고 mapping 응답의 `capabilities.dbConnections=true`로 이를 알린다. 자설비 화면은
+이 값이 `true`일 때 current-user를 조회한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
 반환한다. UI shell이 필요하면 `SCS_DASHBOARD_DATA_ENABLED=0`,
 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`, `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 API를 한 번에 활성화하므로 다른 App의 새 경로와

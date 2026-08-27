@@ -69,6 +69,7 @@ test("기본 실행은 별도 Self 환경변수 없이 자설비 mapping read를
       BUILD_ON_START: "0",
       SCS_DATA_CONNECTIONS_ENABLED: "0",
       MAPPING_CONFIG_PATH: mappingPath,
+      DB_INFO_PATH: join(temporaryDirectory, "missing-db-info.pkl"),
     },
     stdio: ["ignore", "pipe", "pipe"],
   })
@@ -80,6 +81,7 @@ test("기본 실행은 별도 Self 환경변수 없이 자설비 mapping read를
 
   assert.equal(response.status, 200)
   assert.deepEqual(payload.line_mapping, { TEAM_A: "LINE_A" })
+  assert.equal(payload.capabilities.dbConnections, false)
   assert.equal(payload.capabilities.selfEquipmentFileRead, true)
   assert.equal(payload.capabilities.selfEquipmentDb, false)
 })

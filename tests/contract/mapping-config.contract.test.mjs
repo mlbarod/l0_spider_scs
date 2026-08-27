@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url"
 import Ajv2020 from "ajv/dist/2020.js"
 
 import {
+  areDbConnectionsEnabled,
   isSelfEquipmentDbEnabled,
   validateLineMappingPayload,
 } from "../../src/features/fdc-trend/api/mappingContract.mjs"
@@ -43,6 +44,8 @@ test("mapping capability는 Schema를 만족하고 DB 기능을 fail-close한다
 
   assert.equal(validate(fileOnlyMapping), true, JSON.stringify(validate.errors))
   assert.equal(validate(fullMapping), true, JSON.stringify(validate.errors))
+  assert.equal(areDbConnectionsEnabled(fileOnlyMapping), false)
+  assert.equal(areDbConnectionsEnabled(fullMapping), false)
   assert.equal(isSelfEquipmentDbEnabled(fileOnlyMapping), false)
   assert.equal(isSelfEquipmentDbEnabled(fullMapping), false)
   assert.equal(isSelfEquipmentDbEnabled(validMapping), false)

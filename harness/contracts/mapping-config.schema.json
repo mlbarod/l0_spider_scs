@@ -19,8 +19,9 @@
     "capabilities": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["selfEquipmentFileRead", "selfEquipmentDb"],
+      "required": ["dbConnections", "selfEquipmentFileRead", "selfEquipmentDb"],
       "properties": {
+        "dbConnections": { "type": "boolean" },
         "selfEquipmentFileRead": { "type": "boolean" },
         "selfEquipmentDb": { "type": "boolean" }
       }

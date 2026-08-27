@@ -93,16 +93,19 @@ test("DB credential read 가능 여부는 파일 내용을 노출하지 않고 �
   assert.equal(isDbInfoReadable(join(directory, "missing.pkl")), false)
 })
 
-test("mapping capability는 전체 gate에서도 호환되지 않는 Self DB 기능을 fail-close한다", () => {
-  assert.deepEqual(getDataConnectionCapabilities({}), {
+test("mapping capability는 DB 연결과 호환되지 않는 Self DB 작업을 구분한다", () => {
+  assert.deepEqual(getDataConnectionCapabilities({}, () => false), {
+    dbConnections: false,
     selfEquipmentFileRead: true,
     selfEquipmentDb: false,
   })
-  assert.deepEqual(getDataConnectionCapabilities({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }), {
+  assert.deepEqual(getDataConnectionCapabilities({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }, () => true), {
+    dbConnections: true,
     selfEquipmentFileRead: true,
     selfEquipmentDb: false,
   })
-  assert.deepEqual(getDataConnectionCapabilities({ SCS_DATA_CONNECTIONS_ENABLED: "1" }), {
+  assert.deepEqual(getDataConnectionCapabilities({ SCS_DATA_CONNECTIONS_ENABLED: "1" }, () => true), {
+    dbConnections: true,
     selfEquipmentFileRead: true,
     selfEquipmentDb: false,
   })
@@ -197,6 +200,8 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
   for (const [method, pathname] of [
     ["GET", "/api/dashboard-data"],
     ["HEAD", "/api/dashboard-data"],
+    ["GET", "/api/dashboard-latest-date"],
+    ["HEAD", "/api/dashboard-latest-date"],
     ["GET", "/api/mapping-config"],
     ["GET", "/api/self-equipment-data"],
     ["GET", "/api/erd-scatter-data"],
@@ -210,6 +215,7 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
 
   for (const [method, pathname] of [
     ["POST", "/api/dashboard-data"],
+    ["POST", "/api/dashboard-latest-date"],
     ["GET", "/api/commonality-data"],
     ["GET", "/api/erd-file"],
     ["GET", "/api%2Fself-equipment-data"],

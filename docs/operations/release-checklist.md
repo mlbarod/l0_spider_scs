@@ -90,7 +90,7 @@ git diff --check
 
 | 영역 | Schema·fixture·test | 릴리스 확인 |
 |---|---|---|
-| Dashboard | `dashboard-api.schema.json`, success·empty fixture, contract test | [ ] |
+| Dashboard | `dashboard-api.schema.json`, `dashboard-latest-date-api.schema.json`, success·empty fixture, contract test | [ ] |
 | Mailing summary | `mailing-summary.schema.json`, success·empty fixture, contract test | [ ] |
 | STEP URL | unit·integration test가 `step=ALL`·`eqpCh`·현재 비-HMAC 경계를 검증 | [ ] |
 | 실제 HMAC | 구현·Schema·secret 계약 없음 | [ ] `Unknown/Mismatch` 유지 |
@@ -238,6 +238,7 @@ service·unit·port가 확인되지 않으면 실제 배포 단계로 진행하�
 - [ ] 전용 health endpoint가 없으므로 dependency readiness를 별도로 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 Dashboard 성공·빈 상태와 latest 시각을 확인했다.
 - [ ] 자설비 부분 연결 배포에서는 일반 Self filter·chart read만 확인하고, MY EQP·SKIP·HIT·click 요청이 발생하지 않으며 `selfEquipmentDb=false`임을 확인했다.
+- [ ] readable `DB_INFO_PATH`가 있으면 mapping의 `dbConnections=true`와 자설비 current-user 조회가 일치하고, credential이 없으면 둘 다 비활성임을 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 동일성·공통부 image·scatter의 정상·부분 결과를 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 DB current-user·등록 read 흐름을 확인했다.
 - [ ] `step=ALL`, `eqpCh` legacy link 형식은 보존되며 현재 Self 화면에서 MY EQP 조회로 활성화되지 않는다.

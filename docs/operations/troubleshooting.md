@@ -235,13 +235,13 @@ credential·network·schema는 DB/platform owner, helper payload·오류 변환�
 
 ## 8. Portal 마지막 알고리즘 수행 시간이 `확인 불가`인 경우
 
-Portal 카드는 하단 Dashboard와 동일한 `GET /api/dashboard-data` 전체 Line query를 공유한다.
-성공 응답의 `sourcePaths.detail`에서 마지막 `/` 뒤 `{latest_date}` 텍스트만 표시하며,
-Portal 카드가 별도 파일이나 directory를 읽지는 않는다.
+Portal 카드는 `GET /api/dashboard-latest-date`로 Dashboard detail directory의 최신 파일명만
+조회한다. 성공 응답의 `latestDate` 텍스트를 변환 없이 그대로 표시하며 Parquet 본문이나
+Dashboard 전체 집계는 읽지 않는다.
 
-- 하단 Dashboard도 오류라면 `/api/dashboard-data`의 상태와 문의 코드를 확인한다.
-- 하단 Dashboard는 정상인데 카드만 `확인 불가`라면 새 frontend bundle 반영 여부와 브라우저 cache를 확인한다.
-- 성공 응답에서 `sourcePaths.detail`이 비어 있으면 Dashboard가 detail 파일을 선택하지 못한 상태다.
+- `/api/dashboard-latest-date` 상태와 문의 코드를 확인한다.
+- API가 정상인데 카드만 `확인 불가`라면 새 frontend bundle 반영 여부와 브라우저 cache를 확인한다.
+- `DASHBOARD_LATEST_DATE_NOT_FOUND`면 detail directory에 유효한 `{latest_date}` 파일명이 없는 상태다.
 
 운영 파일 경로나 내용을 로그나 보고서에 복사하지 않는다.
 

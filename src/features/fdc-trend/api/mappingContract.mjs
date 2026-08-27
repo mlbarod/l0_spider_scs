@@ -47,6 +47,10 @@ export function isSelfEquipmentDbEnabled(mappingPayload) {
   return mappingPayload?.capabilities?.selfEquipmentDb === true
 }
 
+export function areDbConnectionsEnabled(mappingPayload) {
+  return mappingPayload?.capabilities?.dbConnections === true
+}
+
 export function getSelfEquipmentFileConnectionState(mappingQuery) {
   if (mappingQuery?.isError) return "error"
   if (!mappingQuery?.isSuccess) return "loading"
