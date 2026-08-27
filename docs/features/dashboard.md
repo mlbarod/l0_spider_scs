@@ -55,7 +55,7 @@ Dashboard route는 `startDate`, `endDate`, `line`을 브라우저 URL에서 읽�
 
 | 화면 영역 | 사용자에게 표시하는 정보 | 데이터 출처 필드 | 컴포넌트 | 상태 | 근거 |
 |---|---|---|---|---|---|
-| 마지막 수행 시각 | 메인 상단 최신 시각 | `GET /api/dashboard-latest-date`의 `latestDate` | `LatestDataCard` | `Confirmed` | `L0SpiderHomePage.jsx`; `dashboardLatestDate.mjs` |
+| 마지막 수행 시각 | 메인 상단 최신 시각 | `GET /api/dashboard-data`의 `sourcePaths.detail` 마지막 segment | `LatestDataCard` | `Confirmed` | `L0SpiderHomePage.jsx`; `dashboardLatestDate.mjs` |
 | 조회 header | Dashboard 제목과 최신 데이터 시각 | `summary.latestDateTime` | `LineAnomalyDashboard` | `Confirmed` | `LineAnomalyDashboard.jsx:443-453` |
 | Line filter | 전체 또는 복수 Line, 조회·초기화 | `options.lines`, `filters.lines` | `LineMultiSelect` | `Confirmed` | `LineAnomalyDashboard.jsx:166-213,456-474` |
 | 7개 KPI | sensor 총합, 전체·Grade별 건수, 전일 대비 | `summary.*` | `KpiCard`, `ChangeText` | `Confirmed` | `LineAnomalyDashboard.jsx:482-496` |
@@ -67,7 +67,7 @@ Dashboard route는 `startDate`, `endDate`, `line`을 브라우저 URL에서 읽�
 `lineDashboard.mailingSummary`와 `lineDashboard.meta`는 브라우저 client가 배열·shape를 확인하지만 현재 Dashboard 화면에 직접 표시하지 않는다.
 추이 chart는 응답의 `lineSummary` 정렬 기준 상위 최대 8개 Line만 그린다.
 상세 table은 한 페이지에 8개 Line을 표시한다.
-`GET`/`HEAD /api/dashboard-data`와 `GET`/`HEAD /api/dashboard-latest-date`는 기본 Dashboard read allowlist에 포함되며,
+`GET`/`HEAD /api/dashboard-data`는 기본 Dashboard read allowlist에 포함되며,
 `SCS_DASHBOARD_DATA_ENABLED=0`을 명시한 UI shell에서만 handler 진입 전에 차단된다.
 
 ## 5. 프론트엔드 구성
@@ -75,14 +75,14 @@ Dashboard route는 `startDate`, `endDate`, `line`을 브라우저 URL에서 읽�
 | 책임 | 대표 파일 또는 식별자 | 입력 | 출력 | 상태 | 근거 |
 |---|---|---|---|---|---|
 | route·page 조립 | `routes.jsx`, `L0SpiderHomePage` | 브라우저 경로 | 메인과 Dashboard UI | `Confirmed` | `routes.jsx:11-67`; `L0SpiderHomePage.jsx:211-279` |
-| API query 생성 | `fetchDashboardSummary`, `fetchDashboardLatestDate` | Dashboard filter 또는 `signal` | same-origin fetch | `Confirmed` | `dashboardApi.js` |
+| API query 생성 | `fetchDashboardSummary` | Dashboard filter 또는 `signal` | same-origin fetch | `Confirmed` | `dashboardApi.js` |
 | 응답 shape·교차 무결성 검사 | `fetchDashboardSummary`, `assertDashboardIntegrity` | JSON payload·요청 filter | payload 또는 정합성 오류 | `Confirmed` | `dashboardApi.js`; `dashboardIntegrity.mjs` |
 | 기본 Dashboard 조회 | `dashboardQuery` | 적용된 Line state | `lineDashboard` | `Confirmed` | `LineAnomalyDashboard.jsx:326-341` |
 | 기간 추이 조회 | `trendQuery` | 서버 `maxDate`, 기간, 적용 Line | 별도 `lineDashboard` | `Confirmed` | `LineAnomalyDashboard.jsx:342-365` |
 | 표시용 변환 | `useMemo`, formatter | 배열·숫자·날짜 | chart·table model | `Confirmed` | `LineAnomalyDashboard.jsx:367-388` |
 | 상세 URL 생성 | `buildSelfEquipmentDetailUrl` | `lineId`, `sdwts`, `sensorGrades` | `/self-equipment?...` | `Confirmed` | `dashboardLinks.mjs:6-13` |
 
-기본 query key는 `["spider-line-dashboard", lines.join("\u0000")]`이고 메인 최신 시각 카드는 별도 key `["spider-dashboard-latest-date"]`를 사용한다.
+기본 query key는 `["spider-line-dashboard", lines.join("\u0000")]`이고 메인 최신 시각 카드는 전체 Line query key `["spider-line-dashboard", ""]`를 공유한다.
 추이 query key는 `"spider-line-dashboard-trend"`, 기간, 시작일, 종료일과 Line 조합으로 구성된다.
 API client와 서버 producer는 `assertDashboardIntegrity`로 필수 object·배열, 요청 filter echo, Line 범위와 summary/detail/trend 교차 불변조건을 검사한다.
 JSON Schema 전체를 브라우저 runtime에 적재하지 않으므로 이 guard가 검사하지 않는 개별 표시 field의 전체 Schema 검증은 하지 않는다.
@@ -119,19 +119,12 @@ sequenceDiagram
 
 | 메서드 | 경로 | 요청 주체 | 서버 핸들러 | 응답 소비자 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
-| `GET` | `/api/dashboard-data` | `fetchDashboardSummary` | `handleDashboardDataRequest` | Dashboard 전체 집계 | `Confirmed` | `server.mjs`; `dashboardApi.js` |
+| `GET` | `/api/dashboard-data` | `fetchDashboardSummary` | `handleDashboardDataRequest` | Dashboard 전체 집계·메인 최신 시각 | `Confirmed` | `server.mjs`; `dashboardApi.js` |
 | `HEAD` | `/api/dashboard-data` | 현재 브라우저 소비 위치 미확인 | 같은 handler | body 없음 | 구현 `Confirmed`, 소비자 `Unknown` | `dashboardData.mjs:794-820` |
-| `GET` | `/api/dashboard-latest-date` | `fetchDashboardLatestDate` | `handleDashboardLatestDateRequest` | 메인 마지막 알고리즘 수행 시간 | `Confirmed` | `server.mjs`; `dashboardApi.js` |
-| `HEAD` | `/api/dashboard-latest-date` | 현재 브라우저 소비 위치 미확인 | 같은 handler | body 없음 | 구현 `Confirmed`, 소비자 `Unknown` | `dashboardData.mjs` |
 
-통합 `server.mjs`와 Vite middleware 모두 두 Dashboard 경로를 대응 handler에 연결한다.
+통합 `server.mjs`와 Vite middleware 모두 이 경로를 같은 handler에 연결한다.
 성공한 GET은 `Content-Type: application/json; charset=utf-8`, `Cache-Control: no-store`를 반환한다.
 성공한 HEAD는 status와 `Cache-Control: no-store`만 반환하고 body는 없다.
-`GET /api/dashboard-latest-date`는 query와 request body를 사용하지 않으며
-`{"ok":true,"latestDate":"YYYY-MM-DD hh:mm:ss"}`만 반환한다. 이 성공 계약은
-`harness/contracts/dashboard-latest-date-api.schema.json`이 관리한다. 유효한 파일명이 없으면
-`404 DASHBOARD_LATEST_DATE_NOT_FOUND`, directory 접근 등 기타 실패는
-`500 DASHBOARD_LATEST_DATE_LOAD_FAILED`이다.
 
 ## 8. 요청 계약
 
@@ -292,7 +285,7 @@ mapping되지 않은 detail row는 집계에서 제외되며 화면은 `meta.unm
 
 | 응답 영역 | 소비 위치 | 표시·변환 | 상태 |
 |---|---|---|---|
-| latest date API의 `latestDate` | `LatestDataCard` | detail root를 파일명만 탐색해 선택한 `path/{latest_date}`의 filename을 `YYYY.MM.DD hh:mm:ss` 형태로 표시 | `Confirmed` |
+| `sourcePaths.detail` | `LatestDataCard` | 이미 결정된 detail 경로의 마지막 `/` 뒤 `{latest_date}` 텍스트만 추출해 `YYYY.MM.DD hh:mm:ss` 형태로 표시 | `Confirmed` |
 | `summary.latestDateTime` | Dashboard badge | `YYYY.MM.DD hh:mm:ss` 형태 | `Confirmed` |
 | `summary.monitoringSensorTotal` | 첫 KPI | locale 숫자와 `개` | `Confirmed` |
 | 전체·Grade count | 나머지 count KPI | locale 숫자와 `건` | `Confirmed` |
@@ -370,7 +363,7 @@ My EQP 메일 count는 sender가 같은 고유건 규칙으로 별도 계산하�
 
 ## 19. 호환성 및 변경 영향 기준
 
-- `/`, `/fdc_trend`, `/api/dashboard-data`, `/api/dashboard-latest-date`, `startDate`, `endDate`, 반복 `line` 이름을 변경하면 route·client·문서 영향을 함께 검토한다.
+- `/`, `/fdc_trend`, `/api/dashboard-data`, `startDate`, `endDate`, 반복 `line` 이름을 변경하면 route·client·문서 영향을 함께 검토한다.
 - 성공 응답의 `lineDashboard`, `summary`, 세 배열과 `options.lines`는 현재 client의 최소 필수 shape다.
 - 숫자 field를 문자열로 바꾸거나 nullable을 확대하면 formatter, 비교, 정렬, chart와 table을 함께 수정해야 한다.
 - `null` 비교 field를 0으로 바꾸면 “비교 데이터 없음”과 “변동 없음”의 의미가 합쳐지므로 호환 변경으로 취급하지 않는다.

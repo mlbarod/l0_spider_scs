@@ -109,7 +109,7 @@ flowchart LR
 
     subgraph DBLAYER["DB 접근 계층"]
         PY["scripts/*.py<br/>stdin JSON → stdout JSON"]
-        CRED["db_info.pk"]
+        CRED["db_info.pkl"]
         MYSQL[("MySQL/MariaDB")]
         PY --> CRED
         PY --> MYSQL
@@ -128,7 +128,7 @@ flowchart LR
 
 - 브라우저는 `/appdata/...` 파일을 직접 읽지 않고 반드시 Node API를 통합니다.
 - Node는 Parquet·JSON·이미지를 직접 읽지만, 업무 DB에는 직접 접속하지 않습니다.
-- Python helper만 `db_info.pk`를 읽고 PyMySQL로 DB에 접속합니다.
+- Python helper만 `db_info.pkl`을 읽고 PyMySQL로 DB에 접속합니다.
 - `knox_id`가 필요한 이력 기능은 대부분 접속 IP를 DB 사용자 정보로 변환하여 사용합니다.
 
 ## 2. 실행 구조
@@ -149,7 +149,7 @@ node server.mjs
 | `HOST` | `0.0.0.0` | 바인딩 주소 |
 | `LIVE_RELOAD` | 활성 | 활성 시 Vite middleware/HMR, `0`이면 `dist` 정적 제공 |
 | `BUILD_ON_START` | 활성 | 정적 모드 시작 시 클라이언트 빌드, `0`이면 기존 `dist` 사용 |
-| `DB_INFO_PATH` | `/appdata/l0_spider_scs/db_info.pk` | Python helper의 DB 접속정보 |
+| `DB_INFO_PATH` | `/appdata/l0_spider_scs/db_info.pkl` | Python helper의 DB 접속정보 |
 | `MAPPING_CONFIG_PATH` | `/appdata/l0_spider_scs/mapping_config.json` | Line/SDWT 매핑 파일 override |
 | `COMMONALITY_ROOT_PATH` | `/appdata/abnormal_trend/pic/erd_commonality` | 동일성 데이터 루트 override |
 | `COMMON_COMMONALITY_ROOT_PATH` | 기존 데이터 root의 형제 `path_common_commonality` | 공통부 동일성 데이터 루트 override |
@@ -461,7 +461,6 @@ flowchart LR
 | Endpoint | Method | 프런트 API / 사용 화면 | Node handler | 최종 데이터 |
 | --- | --- | --- | --- | --- |
 | `/api/dashboard-data` | GET, HEAD | `dashboardApi.js` / 메인 대시보드 | `dashboardData.mjs` | `path/{date time}`, `stats`, mapping JSON |
-| `/api/dashboard-latest-date` | GET, HEAD | `dashboardApi.js` / Portal 최신 수행 시각 | `dashboardData.mjs` | `path/{date time}` 파일명 목록 |
 | `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | `current_user.py` → `v_ipms_ip_info`, `user_info` |
 | `/api/mapping-config` | GET, HEAD | `mappingConfigApi.js` / 대부분의 필터 화면 | `mappingConfig.mjs` | `mapping_config.json` |
 | `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}`; Self DB history 미결합 |
@@ -494,7 +493,7 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 | 파일/경로 | 주요 컬럼·내용 | 읽는 서버 | 사용 화면 |
 | --- | --- | --- | --- |
 | `/appdata/l0_spider_scs/mapping_config.json` | `line_mapping`, `sdwt_mapping` | `mappingConfig.mjs`, `dashboardData.mjs`, `selfEquipmentData.mjs` | 전체 필터, 대시보드, MY EQP |
-| `/appdata/l0_spider_scs/db_info.pk` | DB host/port/name/user/password | 모든 DB Python helper | DB 기능 전체 |
+| `/appdata/l0_spider_scs/db_info.pkl` | DB host/port/name/user/password | 모든 DB Python helper | DB 기능 전체 |
 | `pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | `selfEquipmentData.mjs` | 자설비 index |
 | `pic/path_common/{line}/{sdwt}/df_path.parquet` | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | `commonAnomalyData.mjs` | 공통부 |
 | index `file_path`에서 해석한 `data.parquet` | `act_time`, schema에 존재하는 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환, `eqp_cb` 또는 `eqp`; hover 보조 컬럼은 선택 | `selfEquipmentData.mjs` | 자설비 Scatter/동일성; 실패 시 화면에 실제 참조 경로 표시 |
@@ -695,7 +694,7 @@ sequenceDiagram
 ## 13. 현재 구조에서 특히 주의할 점
 
 1. `server.mjs`와 `vite.config.mjs`가 API route를 각각 수동 등록하여 이미 기능 범위가 다릅니다.
-2. DB 비밀번호가 포함된 `db_info.pk`는 저장소에 포함하거나 웹 정적 경로 아래에 두면 안 됩니다.
+2. DB 비밀번호가 포함된 `db_info.pkl`은 저장소에 포함하거나 웹 정적 경로 아래에 두면 안 됩니다.
 3. IP 기반 사용자 확인은 프록시 헤더 신뢰 설정과 IP-사용자 일대일 매핑에 의존합니다.
 4. `myeqp_regist` helper가 런타임에 `ALTER TABLE`을 수행하므로 운영 DB 계정 권한과 배포 migration 정책을 확인해야 합니다.
 5. `pass_history`의 72시간 만료는 DB 정리가 아니라 조회 시 제외 규칙입니다. 테이블은 계속 증가할 수 있습니다.

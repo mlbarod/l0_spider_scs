@@ -744,46 +744,6 @@ export async function getLatestDashboardDate(pathRoot = DASHBOARD_PATH_ROOT) {
   )
 }
 
-export async function handleDashboardLatestDateRequest(
-  req,
-  res,
-  pathRoot = DASHBOARD_PATH_ROOT,
-) {
-  if (req.method !== "GET" && req.method !== "HEAD") {
-    res.writeHead(405, {
-      Allow: "GET, HEAD",
-      "Content-Type": "application/json; charset=utf-8",
-    })
-    res.end(JSON.stringify({ ok: false, error: "Method not allowed" }))
-    return
-  }
-
-  try {
-    const latestDate = await getLatestDashboardDate(pathRoot)
-    if (req.method === "HEAD") {
-      res.writeHead(200, { "Cache-Control": "no-store" })
-      res.end()
-      return
-    }
-    sendJson(res, 200, { ok: true, latestDate })
-  } catch (error) {
-    const isNotFound = error.code === "DASHBOARD_LATEST_DATE_NOT_FOUND"
-    const statusCode = isNotFound ? 404 : 500
-    if (req.method === "HEAD") {
-      res.writeHead(statusCode, { "Cache-Control": "no-store" })
-      res.end()
-      return
-    }
-    sendJson(res, statusCode, createSafeApiError({
-      code: isNotFound ? error.code : "DASHBOARD_LATEST_DATE_LOAD_FAILED",
-      message: isNotFound
-        ? "대시보드 최신 데이터 기준일을 찾지 못했습니다."
-        : "대시보드 최신 데이터 기준일을 불러오지 못했습니다.",
-      scope: "dashboard-latest-date",
-    }))
-  }
-}
-
 export async function getDashboardSummary(requestedFilters = {}) {
   const dateFiles = await listDashboardDateFiles()
   const dateRange = resolveDashboardDateRange(

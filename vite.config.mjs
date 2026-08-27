@@ -4,10 +4,7 @@ import path from "node:path"
 import process from "node:process"
 
 import { blockDisabledDataRequest } from "./server/dataConnections.mjs"
-import {
-  handleDashboardDataRequest,
-  handleDashboardLatestDateRequest,
-} from "./server/dashboardData.mjs"
+import { handleDashboardDataRequest } from "./server/dashboardData.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
 import { handleClickedCategoryHistoryRequest } from "./server/clickedCategoryHistory.mjs"
 import {
@@ -55,11 +52,6 @@ function mappingConfigApi() {
         const url = new URL(req.url ?? "/", "http://localhost")
         if (url.pathname === "/api/dashboard-data") {
           handleDashboardDataRequest(req, res)
-          return
-        }
-
-        if (url.pathname === "/api/dashboard-latest-date") {
-          handleDashboardLatestDateRequest(req, res)
           return
         }
 

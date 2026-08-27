@@ -53,7 +53,7 @@ test("Dashboard read는 기본 활성화되고 명시적인 비-1 값으로 차�
 })
 
 test("DB 연결은 credential 파일이 읽기 가능할 때만 활성화된다", () => {
-  assert.equal(resolveDbInfoPath({}), "/appdata/l0_spider_scs/db_info.pk")
+  assert.equal(resolveDbInfoPath({}), "/appdata/l0_spider_scs/db_info.pkl")
   assert.equal(resolveDbInfoPath({ DB_INFO_PATH: " /secure/db_info.pkl " }), "/secure/db_info.pkl")
   assert.equal(areDbConnectionsEnabled({}, () => false), false)
   assert.equal(areDbConnectionsEnabled({}, () => true), true)
@@ -76,7 +76,7 @@ test("모든 DB Python helper는 SCS 기본 credential 경로를 공유한다", 
     const source = readFileSync(new URL(`../../scripts/${helperName}`, import.meta.url), "utf8")
     assert.match(
       source,
-      /os\.environ\.get\("DB_INFO_PATH"\) or "\/appdata\/l0_spider_scs\/db_info\.pk"/,
+      /os\.environ\.get\("DB_INFO_PATH"\) or "\/appdata\/l0_spider_scs\/db_info\.pkl"/,
       helperName,
     )
   }
@@ -197,8 +197,6 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
   for (const [method, pathname] of [
     ["GET", "/api/dashboard-data"],
     ["HEAD", "/api/dashboard-data"],
-    ["GET", "/api/dashboard-latest-date"],
-    ["HEAD", "/api/dashboard-latest-date"],
     ["GET", "/api/mapping-config"],
     ["GET", "/api/self-equipment-data"],
     ["GET", "/api/erd-scatter-data"],
@@ -212,7 +210,6 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
 
   for (const [method, pathname] of [
     ["POST", "/api/dashboard-data"],
-    ["POST", "/api/dashboard-latest-date"],
     ["GET", "/api/commonality-data"],
     ["GET", "/api/erd-file"],
     ["GET", "/api%2Fself-equipment-data"],

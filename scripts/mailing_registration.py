@@ -5,7 +5,7 @@ import pickle
 import sys
 
 
-DB_INFO_PATH = os.environ.get("DB_INFO_PATH") or "/appdata/l0_spider_scs/db_info.pk"
+DB_INFO_PATH = os.environ.get("DB_INFO_PATH") or "/appdata/l0_spider_scs/db_info.pkl"
 EMAIL_COLUMNS = ("email", "sdwt", "priority")
 REQUIRED_EMAIL_COLUMNS = frozenset(EMAIL_COLUMNS)
 

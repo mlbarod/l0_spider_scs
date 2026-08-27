@@ -1,6 +1,13 @@
 export function getDashboardLatestDate(dashboardPayload) {
-  const latestDate = dashboardPayload?.latestDate
-  return typeof latestDate === "string" ? latestDate.trim() : ""
+  const detailPath = dashboardPayload?.sourcePaths?.detail
+  if (typeof detailPath !== "string") return ""
+
+  return detailPath
+    .trim()
+    .replace(/\/+$/, "")
+    .split("/")
+    .at(-1)
+    ?.trim() ?? ""
 }
 
 export function formatDashboardLatestDate(dashboardPayload) {

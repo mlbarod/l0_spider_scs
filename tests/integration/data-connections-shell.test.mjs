@@ -84,43 +84,6 @@ test("기본 실행은 별도 Self 환경변수 없이 자설비 mapping read를
   assert.equal(payload.capabilities.selfEquipmentDb, false)
 })
 
-test("Portal 최신 시각 API는 전체 Dashboard 집계 없이 detail 최신 파일명을 반환한다", async (context) => {
-  const temporaryDirectory = await mkdtemp(join(tmpdir(), "l0-spider-dashboard-latest-"))
-  await Promise.all([
-    writeFile(join(temporaryDirectory, "2026-08-26 09:00:00"), "not-read"),
-    writeFile(join(temporaryDirectory, "2026-08-27 14:25:30"), "not-read"),
-  ])
-  context.after(() => rm(temporaryDirectory, { recursive: true, force: true }))
-
-  const port = await findAvailablePort()
-  const inheritedEnvironment = { ...process.env }
-  delete inheritedEnvironment.SCS_DASHBOARD_DATA_ENABLED
-  const child = spawn(process.execPath, ["server.mjs"], {
-    cwd: projectRoot,
-    env: {
-      ...inheritedEnvironment,
-      HOST: "127.0.0.1",
-      PORT: String(port),
-      LIVE_RELOAD: "1",
-      BUILD_ON_START: "0",
-      SCS_DATA_CONNECTIONS_ENABLED: "0",
-      SPIDER_DASHBOARD_PATH_ROOT: temporaryDirectory,
-    },
-    stdio: ["ignore", "pipe", "pipe"],
-  })
-  context.after(() => stopServer(child))
-
-  await waitForServer(child)
-  const response = await fetch(`http://127.0.0.1:${port}/api/dashboard-latest-date`)
-  const payload = await response.json()
-
-  assert.equal(response.status, 200)
-  assert.deepEqual(payload, {
-    ok: true,
-    latestDate: "2026-08-27 14:25:30",
-  })
-})
-
 test("명시적 UI shell은 외부 경로·DB helper보다 먼저 API를 차단하고 UI route를 유지한다", async (context) => {
   const port = await findAvailablePort()
   const child = spawn(process.execPath, ["server.mjs"], {
@@ -148,7 +111,6 @@ test("명시적 UI shell은 외부 경로·DB helper보다 먼저 API를 차단�
   for (const pathname of [
     "/api",
     "/api/dashboard-data",
-    "/api/dashboard-latest-date",
     "/api/current-user",
   ]) {
     const response = await fetch(`${baseUrl}${pathname}`)

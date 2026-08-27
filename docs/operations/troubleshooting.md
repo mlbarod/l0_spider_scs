@@ -235,14 +235,15 @@ credential·network·schema는 DB/platform owner, helper payload·오류 변환�
 
 ## 8. Portal 마지막 알고리즘 수행 시간이 `확인 불가`인 경우
 
-Portal 카드는 `GET /api/dashboard-latest-date`로 Dashboard detail root의 파일명만 조회한다.
-전체 집계용 `GET /api/dashboard-data`의 stats·mapping·Parquet 오류는 이 카드에 영향을 주지 않는다.
+Portal 카드는 하단 Dashboard와 동일한 `GET /api/dashboard-data` 전체 Line query를 공유한다.
+성공 응답의 `sourcePaths.detail`에서 마지막 `/` 뒤 `{latest_date}` 텍스트만 표시하며,
+Portal 카드가 별도 파일이나 directory를 읽지는 않는다.
 
-- `503 DATA_CONNECTIONS_DISABLED`: `SCS_DASHBOARD_DATA_ENABLED=0` 여부를 확인한다.
-- `404 DASHBOARD_LATEST_DATE_NOT_FOUND`: detail root에 `YYYY-MM-DD hh:mm:ss` 형식의 일반 파일이 있는지 운영 승인 절차로 확인한다.
-- `500 DASHBOARD_LATEST_DATE_LOAD_FAILED`: `SPIDER_DASHBOARD_PATH_ROOT`와 application user의 directory read 권한을 확인한다.
+- 하단 Dashboard도 오류라면 `/api/dashboard-data`의 상태와 문의 코드를 확인한다.
+- 하단 Dashboard는 정상인데 카드만 `확인 불가`라면 새 frontend bundle 반영 여부와 브라우저 cache를 확인한다.
+- 성공 응답에서 `sourcePaths.detail`이 비어 있으면 Dashboard가 detail 파일을 선택하지 못한 상태다.
 
-운영 파일의 내용·경로 목록을 로그나 보고서에 복사하지 않는다.
+운영 파일 경로나 내용을 로그나 보고서에 복사하지 않는다.
 
 ## 9. `/appdata` 파일 누락 또는 권한 오류
 

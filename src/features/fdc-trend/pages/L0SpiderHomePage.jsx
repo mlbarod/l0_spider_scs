@@ -5,8 +5,8 @@ import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-import { fetchDashboardLatestDate } from "../api/dashboardApi"
 import { formatDashboardLatestDate } from "../api/dashboardLatestDate.mjs"
+import { createDashboardQueryOptions } from "../api/dashboardQueryOptions.mjs"
 import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
 import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
 
@@ -177,12 +177,7 @@ function SpiderAppCard({ app, animationIndex = 0 }) {
 }
 
 function LatestDataCard() {
-  const dashboardQuery = useQuery({
-    queryKey: ["spider-dashboard-latest-date"],
-    queryFn: ({ signal }) => fetchDashboardLatestDate({ signal }),
-    staleTime: 60 * 1000,
-    retry: false,
-  })
+  const dashboardQuery = useQuery(createDashboardQueryOptions())
   const latestDate = formatDashboardLatestDate(dashboardQuery.data)
   const displayDateTime = latestDate || (dashboardQuery.isPending ? "조회 중" : "확인 불가")
 

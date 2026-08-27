@@ -12,7 +12,6 @@
 .env.test.local
 .env.production.local
 db_info.pkl
-db_info.pk
 
 # logs
 npm-debug.log*

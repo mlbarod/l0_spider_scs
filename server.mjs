@@ -7,10 +7,7 @@ import { fileURLToPath, URL } from "node:url"
 import { createServer as createViteServer } from "vite"
 
 import { blockDisabledDataRequest } from "./server/dataConnections.mjs"
-import {
-  handleDashboardDataRequest,
-  handleDashboardLatestDateRequest,
-} from "./server/dashboardData.mjs"
+import { handleDashboardDataRequest } from "./server/dashboardData.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
 import { handleClickedCategoryHistoryRequest } from "./server/clickedCategoryHistory.mjs"
 import {
@@ -143,13 +140,6 @@ const server = createServer((req, res) => {
 
   if (url.pathname === "/api/dashboard-data") {
     handleDashboardDataRequest(req, res).catch((error) => {
-      sendJson(res, 500, { ok: false, error: error.message })
-    })
-    return
-  }
-
-  if (url.pathname === "/api/dashboard-latest-date") {
-    handleDashboardLatestDateRequest(req, res).catch((error) => {
       sendJson(res, 500, { ok: false, error: error.message })
     })
     return

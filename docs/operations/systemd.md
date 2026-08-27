@@ -51,7 +51,7 @@ systemd 실행 user는 다음 최소 범위만 가져야 한다.
 - 필요한 Node module과 Python package 읽기·실행
 - build를 unit 시작 중 수행한다면 `dist/` 쓰기; 그렇지 않으면 runtime 쓰기 불필요
 - mapping, Parquet와 image의 필요한 root 읽기
-- `DB_INFO_PATH` credential file 읽기; 미설정 시 `/appdata/l0_spider_scs/db_info.pk`
+- `DB_INFO_PATH` credential file 읽기; 미설정 시 `/appdata/l0_spider_scs/db_info.pkl`
 - 설정된 비특권 port bind와 DB network 접근
 
 분석 `/appdata` write, credential 수정, source 수정과 광범위한 DB 권한을 기본으로 부여하지 않는다.
