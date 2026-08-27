@@ -10,6 +10,18 @@ export function buildErdDataReferencePath(filePath) {
   return `${normalizedPath.replace(/\/+$/, "")}/data.parquet`
 }
 
+export function getSelfEquipmentHistoryFilePath(row) {
+  return String(row?.file_path ?? "").trim()
+}
+
+export function getSelfEquipmentHistoryFilePaths(rows) {
+  return Array.from(new Set(
+    (Array.isArray(rows) ? rows : [])
+      .map(getSelfEquipmentHistoryFilePath)
+      .filter(Boolean),
+  ))
+}
+
 export async function fetchSelfEquipmentData({
   line,
   pathSdwt,
@@ -62,9 +74,8 @@ export async function fetchEqpAllSkipTargets({
   }
   const payload = await fetchSelfEquipmentData({ ...filters, pathSdwt, sdwt })
 
-  return (payload.rows ?? [])
-    .map((row) => ({ filePath: row.history_file_path }))
-    .filter(({ filePath }) => Boolean(filePath))
+  return getSelfEquipmentHistoryFilePaths(payload.rows)
+    .map((filePath) => ({ filePath }))
 }
 
 export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, latestDate, line, pathSdwt }) {

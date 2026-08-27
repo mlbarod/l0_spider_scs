@@ -86,6 +86,15 @@ test("SKIP 등록 후 정확히 3일이 지나면 일반 이상건수에 다시 
   assert.deepEqual(excludeRecentlySkippedRows([row], [expiredRecord], NOW), [row])
 })
 
+test("path_xian row에 desc와 ver가 없어도 file_path 기준으로 활성 SKIP을 제외한다", () => {
+  const row = createRow({
+    desc: "R1",
+    ver: "",
+  })
+
+  assert.deepEqual(excludeRecentlySkippedRows([row], [createPassRecord()], NOW), [])
+})
+
 test("eqp_ch ALL에서 Sensor ALL과 ch_step ALL을 선택하면 모든 센서 차트를 반환한다", () => {
   const rows = [
     createRow({ sensor: "TEMP", step: "10@MAIN", eqp: "EQP-1.png" }),
@@ -169,7 +178,6 @@ test("path_xian recipe_id는 RECIPE_ID 필터와 row 호환 필드로 정규화�
     step: "10@MAIN",
     eqp: "EQP-1",
     file_path: "/appdata/abnormal_trend/pic/erd/path",
-    history_file_path: "",
     line_rev: "",
     latest_date: "2026-08-27",
   })
@@ -214,7 +222,6 @@ test("path_xian row는 다른 선택 필드를 덮어쓰지 않고 ERD 경로 �
   assert.equal(row.ver, "V1")
   assert.equal(row.recipe_id, "RECIPE-FILTER")
   assert.equal(row.line_rev, "P1")
-  assert.equal(row.history_file_path, referenceRow.file_path)
 
   const payload = buildSelfEquipmentPayload([row], {
     line: "P1",
@@ -232,7 +239,7 @@ test("path_xian row는 다른 선택 필드를 덮어쓰지 않고 ERD 경로 �
   }])
 })
 
-test("ERD 경로 테이블에 동일 file_path 또는 ver가 없으면 DB 이력 경로를 열지 않는다", () => {
+test("ERD 경로 테이블에 동일 file_path 또는 ver가 없으면 index row를 변경하지 않는다", () => {
   const indexRow = normalizeSelfEquipmentIndexRow({
     sdwt: "SDWT-1",
     recipe_id: "RECIPE-1",
@@ -248,11 +255,8 @@ test("ERD 경로 테이블에 동일 file_path 또는 ver가 없으면 DB 이력
     ver: "",
   })
 
-  assert.equal(attachErdPathReferences([indexRow], [])[0].history_file_path, "")
-  assert.equal(
-    attachErdPathReferences([indexRow], [referenceWithoutVersion])[0].history_file_path,
-    "",
-  )
+  assert.deepEqual(attachErdPathReferences([indexRow], []), [indexRow])
+  assert.deepEqual(attachErdPathReferences([indexRow], [referenceWithoutVersion]), [indexRow])
 })
 
 test("클릭이력 보조 경로 조회 실패는 자설비 RECIPE_ID 원천 조회를 막지 않는다", async () => {

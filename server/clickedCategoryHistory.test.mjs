@@ -49,6 +49,23 @@ test("자설비 sensor ALL 클릭이력은 실제 sensor 목록 대신 ALL을 �
   assert.equal(record.sensor, "ALL")
 })
 
+test("자설비에서 ALL로 선택한 grade와 sensor는 목록이 아닌 ALL 문자열로 저장한다", () => {
+  const record = buildClickedCategoryHistoryRecord({
+    app: "self",
+    lineId: "P1L",
+    filePaths: [
+      "/appdata/abnormal_trend/pic/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@001/EQP-1.png",
+    ],
+    grades: ["ALL"],
+    selectedSensor: "ALL",
+    clickedAt: "2026-07-17T13:00:00+09:00",
+    knoxId: "user1",
+  })
+
+  assert.equal(record.grade, "ALL")
+  assert.equal(record.sensor, "ALL")
+})
+
 test("동일성 Drawing 경로는 Line에 (g)를 붙이고 경로의 grade와 sensor를 사용한다", () => {
   const record = buildClickedCategoryHistoryRecord({
     app: "commonality",

@@ -62,6 +62,8 @@ import {
   fetchErdScatterData,
   fetchEqpAllSkipTargets,
   fetchSelfEquipmentData,
+  getSelfEquipmentHistoryFilePath,
+  getSelfEquipmentHistoryFilePaths,
 } from "../api/selfEquipmentApi"
 import { SENSOR_GRADES } from "../utils/fdcTrendMockData"
 import { getLowestChStepRowsByPpid } from "../utils/chStepGrouping.mjs"
@@ -251,16 +253,12 @@ function buildChartPassHistoryKey(lineId, row) {
     row.sdwt,
     row.desc,
     row.recipe_id,
-    normalizePassHistoryDate(getLatestDateFromErdPath(getHistoryFilePath(row))),
+    normalizePassHistoryDate(getLatestDateFromErdPath(getSelfEquipmentHistoryFilePath(row))),
     row.priority,
     row.sensor,
     row.step,
     stripPngExtension(row.eqp),
   ].map((value) => String(value ?? "")).join("\u0000")
-}
-
-function getHistoryFilePath(row) {
-  return Object.hasOwn(row, "history_file_path") ? row.history_file_path : row.file_path
 }
 
 function buildRecordPassHistoryKey(record) {
@@ -1123,7 +1121,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const [isNearViewport, setIsNearViewport] = useState(false)
   const [zoomDomain, setZoomDomain] = useState(null)
   const isSkipped = Boolean(passRecord)
-  const historyFilePath = getHistoryFilePath(row)
+  const historyFilePath = getSelfEquipmentHistoryFilePath(row)
   const historyActionsEnabled = dbActionsEnabled && Boolean(historyFilePath)
 
   const refreshPassHistory = () => Promise.all([
@@ -1883,7 +1881,7 @@ export function FdcTrendPage() {
           chStep: nextChStep,
         }),
       })
-      const filePaths = (payload.rows ?? []).map(getHistoryFilePath).filter(Boolean)
+      const filePaths = getSelfEquipmentHistoryFilePaths(payload.rows)
       if (!filePaths.length) return
       await createClickedCategoryHistory({
         app: "self",

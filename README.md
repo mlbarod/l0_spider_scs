@@ -266,7 +266,10 @@ LIST를 조회하는 동작은 저장하지 않는다.
 저장한다. 동일성 App의 STEP(`step_desc`) 선택값은 저장하지 않으며, 업로드 요청은
 Drawing 결과를 `sdwt`, `grade`, `sensor` 기준 대표 경로로 압축해 기존 컬럼 구조를
 유지한다. 단, sensor 필터에서 `ALL`을 선택한 클릭이력은 여러 센서명을 긴 리스트로
-확장하지 않고 `sensor` 컬럼에 `ALL`을 저장한다. DB 응답의 `affectedRows`가
+확장하지 않고 `sensor` 컬럼에 `ALL`을 저장한다. 다른 선택 컬럼도 값이 `ALL` 하나이면
+리스트 표현이 아닌 `ALL` 문자열 그대로 저장한다. 자설비의 클릭이력·SKIP·이력저장은
+보조 reference 경로가 아니라 최신 `path_xian` row의 `file_path`를 공통으로 사용한다.
+DB 응답의 `affectedRows`가
 0이면 저장 성공으로 처리하지 않고 화면에 오류를 표시한다. `knox_id`는 모든 App에서
 서버가 확인한 접속 IP를 사용한다.
 
@@ -288,7 +291,7 @@ Drawing 결과를 `sdwt`, `grade`, `sensor` 기준 대표 경로로 압축해 �
 | --- | --- | --- | --- |
 | `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
 | 최신 자설비 index | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` |
-| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | 위 index와 동일 `file_path` row의 `ver` 및 이력 원본 경로; 선택 필드는 덮어쓰지 않음 |
+| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | 위 index와 동일 `file_path` row의 `ver`만 보조 참조; 선택 필드와 DB action 경로는 덮어쓰지 않음 |
 | 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
 | 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
 | EQP 변경점 이력 | `{eqp}.parquet` | 선택한 `data.parquet`와 같은 디렉터리의 `{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
@@ -303,8 +306,8 @@ Drawing 결과를 `sdwt`, `grade`, `sensor` 기준 대표 경로로 압축해 �
 hover 보조 컬럼은 존재하는 항목만 projection한다. 두 gate mode 모두 chart 요청의
 Line·SDWT·EQP·sensor·step·경로가
 최신 `path_xian`의 scoped row와 모두 일치할 때만 후속 Parquet를 읽는다. DB 이력에는
-분임조별 ERD 경로 테이블에서 같은 `file_path`로 찾은 row의 `ver`와 원본 이력 경로를 사용한다.
-참조 row가 없으면 해당 chart의 DB action을 표시하지 않는다. file 또는 DB capability가 없으면
+분임조별 ERD 경로 테이블에서 같은 `file_path`로 찾은 row의 `ver`를 보조 참조하고,
+클릭이력·SKIP·HIT에는 최신 index row의 `file_path`를 사용한다. file 또는 DB capability가 없으면
 DB 기능만 fail-close한다.
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와

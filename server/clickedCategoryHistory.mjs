@@ -11,7 +11,7 @@ const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
 const COMMON_COMMONALITY_FILE_ROOT = commonCommonalityRootPath
 const helperPath = fileURLToPath(new URL("../scripts/clicked_category_history.py", import.meta.url))
 const SUPPORTED_APPS = new Set(["self", "commonality", "common"])
-const ALL_SENSORS = "ALL"
+const ALL_VALUES = "ALL"
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -36,6 +36,7 @@ function formatList(values) {
 function formatCategory(values, alwaysList = false) {
   const unique = uniqueValues(values)
   if (!unique.length) throw new Error("클릭이력 카테고리 값을 찾지 못했습니다.")
+  if (unique.length === 1 && unique[0] === ALL_VALUES) return ALL_VALUES
   return alwaysList || unique.length > 1 ? formatList(unique) : unique[0]
 }
 
@@ -100,7 +101,7 @@ export function buildClickedCategoryHistoryRecord({
   const normalizedApp = normalizeText(app)
   const normalizedLineId = normalizeText(lineId)
   const paths = uniqueValues(Array.isArray(filePaths) ? filePaths : [])
-  const isAllSensorSelection = normalizeText(selectedSensor) === ALL_SENSORS
+  const isAllSensorSelection = normalizeText(selectedSensor) === ALL_VALUES
   if (!SUPPORTED_APPS.has(normalizedApp)) throw new Error("클릭이력 App 구분값이 올바르지 않습니다.")
   if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
   if (!paths.length) throw new Error("Chart Drawing 경로가 필요합니다.")
@@ -111,7 +112,7 @@ export function buildClickedCategoryHistoryRecord({
     ? grades
     : pathValues.map((values) => values.grade)
   const sensor = isAllSensorSelection
-    ? ALL_SENSORS
+    ? ALL_VALUES
     : formatCategory(pathValues.map((values) => values.sensor))
   return {
     lineId: `${normalizedLineId}${suffix}`,

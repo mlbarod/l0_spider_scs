@@ -161,7 +161,7 @@ flowchart LR
 | `DF-ABN-01` | commonality data/image API | latest path·directory index·filter payload | `DS-ABN-01` | folder segment를 image row로 변환 | `Confirmed` | commonality modules |
 | `DF-ABN-02` | common anomaly APIs | path·scatter·image handler | `DS-ABN-02`, `pass_history` | path→data/image, EQP match, point group | `Confirmed` | `commonAnomalyData.mjs` |
 | `DF-ABN-03` | common-commonality APIs | latest path·directory index·filter payload | `DS-ABN-03` | folder segment를 image row로 변환 | `Confirmed` | common-commonality modules |
-| `DF-COMMON-01` | clicked history POST | `buildClickedCategoryHistoryRecord`, Python helper | drawing path/virtual category, 접속 IP, `clicked_category_history` | category 문자열·sensor `ALL` 정규화; IP를 `knox_id`에 INSERT | 코드 `Confirmed`; 운영 `Unknown` | clicked history Node/Python |
+| `DF-COMMON-01` | clicked history POST | `buildClickedCategoryHistoryRecord`, Python helper | index drawing `file_path`, 선택값, 접속 IP, `clicked_category_history` | 선택값이 `ALL` 하나면 literal `ALL`; 그 외 category 문자열 정규화; IP를 `knox_id`에 INSERT | 코드 `Confirmed`; 운영 `Unknown` | clicked history Node/Python |
 | `DF-COMMON-02` | hit history POST | `buildHitHistoryRecord`, Python helper | App image/chart path, 접속 IP, `hit_history` | 날짜·SDWT 추출, slash→`#`, IP 포함 6-column INSERT | 코드 `Confirmed`; 운영 `Unknown` | `hitHistory.mjs`; `hit_history.py` |
 | `DF-MAIL-01` | registration APIs | Node validation→Python action | `DS-DB-REF`, `DS-DB-REG` | group·list serialize·transaction | `Confirmed` | registration Node/Python |
 | `DF-MAIL-02` | 실행 진입점 없음 | Dashboard producer와 template만 확인 | `lineDashboard`, 등록 DB 후보 | 최종 결합·render·send 미확인 | `Partial` | Dashboard module·template |
@@ -184,7 +184,7 @@ flowchart LR
 | `ppid` | file path·Parquet row | chart grouping·표시 | ERD/commonality path와 grouping | 원천 값에 의존 | `Confirmed` | path config·pages |
 | `recipe_id` | dashboard detail row | 직접 query로 전달하지 않음 | 5-key 고유 이상건 집계 | 빈 문자열도 정규화 key에 참여 | `Confirmed` | `LINE_ANOMALY_ID_COLUMNS` |
 | `eqp` | row·등록 DB·사용자 선택 | `eqp` query 또는 `eqpCh` | file row filter·chart group·MY EQP match | endpoint별 조건부 필수 | `Confirmed` | Self/Common modules |
-| `ver` | team ERD 경로 table | 현재 Self index column에는 없음 | 동일 `file_path` row의 `ver` 참조 | reference가 없으면 해당 chart DB action 비노출 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
+| `ver` | team ERD 경로 table·index `file_path` segment | 현재 Self index column에는 없음 | 동일 `file_path` row의 `ver` 참조와 history parser 보조 | reference가 없어도 index `file_path`로 DB action 요청 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
 
 ## 9. 대시보드 데이터 흐름
 

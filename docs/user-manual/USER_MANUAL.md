@@ -137,7 +137,8 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 | 이력저장 | 현재 결과를 이력 DB에 저장 |
 
 새 `path_xian` index에는 `ver` 컬럼이 없으므로 같은 `file_path`를 가진 분임조별
-ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. SKIP은 등록 시각부터 72시간 동안 일반
+ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. 버튼과 마지막 `ch_step` 클릭이력은
+차트가 사용하는 `path_xian`의 `file_path`를 그대로 사용합니다. SKIP은 등록 시각부터 72시간 동안 일반
 결과에서 제외되며, **SKIP LIST**에서 **SKIP해제**할 수 있습니다.
 
 ![SKIP 확인](images/06-self-equipment-skip-dialog.png)
@@ -251,7 +252,7 @@ Mailing Report에는 다음 내용이 포함됩니다.
 **공통부 SKIP은 언제 풀리나요?**<br>
 등록 후 72시간 동안 활성 대상에서 제외되며, 정확히 72시간이 지나면 활성 대상에 다시
 포함됩니다. DB 이력은 자동 삭제되지 않습니다.
-Self SKIP은 현재 자설비 화면에서 사용할 수 없습니다.
+자설비에서는 DB 기능이 활성일 때 각 차트의 **SKIP**, **EQP ALL SKIP**, **이력저장**을 사용할 수 있습니다.
 
 **차트가 좁거나 필터가 잘립니다.**<br>
 브라우저 배율을 100%로 맞추고 필터 아래 경계를 드래그해 높이를 조절하십시오.

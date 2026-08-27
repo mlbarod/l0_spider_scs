@@ -24,10 +24,10 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 `DB_INFO_PATH` credential이 있고 DB gate도 활성인 경우 mapping 응답은
 `capabilities.selfEquipmentDb=true`를 반환하고 MY EQP·SKIP LIST·SKIP·클릭이력·이력저장을
 함께 활성화한다. 새 `path_xian`의 7-column index에는 `ver`가 없으므로 분임조별
-`/pic/path/{line}/{sdwt}/df_path.parquet`에서 동일 `file_path` row를 찾아 그 row의 `ver`와
-이력 원본 경로를 사용한다. 이 클릭이력 보조 경로를 읽지 못해도 최신 `path_xian`의
-`recipe_id`로 RECIPE_ID 필터와 일반 file chart를 계속 제공하며, 참조가 없는 row의 DB action만
-비노출한다. PASS 이력 조회 실패도 file filter 응답과 격리하며, 화면의 별도 PASS 조회가 오류를
+`/pic/path/{line}/{sdwt}/df_path.parquet`에서 동일 `file_path` row의 `ver`를 선택적으로
+참조한다. 이 보조 경로를 읽지 못해도 최신 `path_xian`의 `recipe_id`로 RECIPE_ID 필터와
+일반 file chart를 계속 제공한다. 클릭이력·SKIP·HIT 요청은 차트와 같은 index `file_path`를
+사용한다. PASS 이력 조회 실패도 file filter 응답과 격리하며, 화면의 별도 PASS 조회가 오류를
 표시한다. 별도 `knox_id` 조회는 하지 않으며 검증된 접속 IP를 기존 DB의
 `knox_id` 컬럼과 MY EQP owner 기준에 저장한다.
 실제 target server DB·mount와 Parquet 내용의 end-to-end 결과는 `Unknown`이다.
@@ -147,7 +147,7 @@ sequenceDiagram
     User->>Browser: route 진입 및 filter 선택
     Browser->>API: mapping, self-equipment-data GET
     API->>Index: path_xian/{latest_date} 읽기
-    API->>Ref: DB 활성 시 동일 file_path row의 ver와 이력 경로 참조
+    API->>Ref: DB 활성 시 동일 file_path row의 ver만 보조 참조
     Note over API,Ref: 보조 참조 실패는 빈 참조로 격리
     API-->>Browser: filters, options, rows
     Browser->>API: erd-scatter-data GET
@@ -210,7 +210,7 @@ sequenceDiagram
 | Data Source ID | 유형 | 경로·테이블·자원 | 접근 코드 | 사용 목적 | 읽기·쓰기 | 생성 책임 | 상태 |
 |---|---|---|---|---|---|---|---|
 | `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | `readLatestSelfEquipmentRows` | 최신 index의 filter option·`file_path` | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
-| `DS-SELF-REF` | Parquet | `/pic/path/{line}/{sdwt}/df_path.parquet` | `readOptionalErdPathReferenceRows` | DB 활성 시 동일 `file_path` row의 `ver`와 이력 경로만 참조; 실패는 빈 참조로 격리하고 index 선택 필드는 유지 | Self 이력 보조 읽기 | `Unknown` | 코드·실패 격리 `Confirmed`; 운영 file `Unknown` |
+| `DS-SELF-REF` | Parquet | `/pic/path/{line}/{sdwt}/df_path.parquet` | `readOptionalErdPathReferenceRows` | DB 활성 시 동일 `file_path` row의 `ver`만 참조; 실패는 빈 참조로 격리하고 index 선택 필드·DB action 경로는 유지 | Self 이력 보조 읽기 | `Unknown` | 코드·실패 격리 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02` | Parquet | index row `file_path`: `{eqp}.png` sibling 또는 directory 하위 `data.parquet`; 직접 `data.parquet` 호환 | `readErdScatterRows` | schema 기반 axis·EQP 식별 scatter와 `eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02-H` | Parquet | 선택한 `data.parquet` directory의 `{eqp}.parquet` | `readErdHistoryRows` | 변경점 이력 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-IMG` | image | 허용 ERD root의 image | `handleErdFileRequest` | stream endpoint | 읽기 | `Unknown` | endpoint `Confirmed` |
@@ -225,7 +225,7 @@ sequenceDiagram
 | 경로 또는 자원 ID | 코드의 경로 패턴 | 용도 | 경로 변수 | 누락 처리 | 상태 |
 |---|---|---|---|---|---|
 | latest index | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | 일반 Self·MY EQP 대상 row | 날짜·시각 이름 중 최신 file, mapping의 Line·SDWT | root·file 예외→API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
-| ERD path reference | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | DB 이력용 `ver`와 원본 `file_path` | DB 활성, mapping으로 검증된 Line·SDWT, index와 동일 `file_path` | 읽기 실패·참조 없음→RECIPE_ID와 file chart 유지, 해당 chart DB action 비노출 | 코드 `Confirmed`; 운영 file `Unknown` |
+| ERD path reference | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | DB 이력 비교용 `ver` 참조 | DB 활성, mapping으로 검증된 Line·SDWT, index와 동일 `file_path` | 읽기 실패·참조 없음→RECIPE_ID·file chart·DB action 경로 유지 | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD data | row `file_path`가 `.png`이면 sibling `data.parquet`; directory이면 하위 파일; `data.parquet` 직접 입력 호환 | scatter·identity | index row, sensor, chStep | `/pic_server2/`→`/pic/`; 예외→chart API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD history | 선택한 `data.parquet` directory의 `{eqp}.parquet` | 변경점 이력 | 선택 EQP | 실패를 `historyError`로 분리 | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD image | `/appdata/abnormal_trend/pic/erd/...` | image stream endpoint | 요청 `path` | 금지 `403`, 없음 `404` | endpoint `Confirmed` |
@@ -247,7 +247,7 @@ index row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`
 | `sensor` | UI 선택 | `sensor` | row `sensor`; chart axis prefix | ch_step·chart | `Confirmed` |
 | `ch_step` | UI 선택 | `chStep` | row `step`; chart axis는 schema의 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환 | rows·chart | 코드 `Confirmed` |
 | `file_path` | index row | chart API `path` | `.png` sibling 또는 directory 하위 data/history path; `pic_server2` 정규화 | chart source | 코드 `Confirmed`; 운영 값 `Unknown` |
-| history `file_path` | ERD 경로 테이블 동일 row | history API body | PASS/HIT/click parser 입력 | DB action | 코드 `Confirmed`; 운영 값 `Unknown` |
+| history `file_path` | 최신 index row | history API body | 차트와 동일한 `row.file_path`를 PASS/HIT/click parser 입력으로 사용 | DB action | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `latest_date` | 최신 `path_xian` 파일명 | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
 | `recipe_id` | index 원천값 | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ver` | ERD 경로 테이블 동일 `file_path` row | chart row payload | PASS identity 비교 | SKIP·이력 | 코드 `Confirmed`; 운영 match `Unknown` |
@@ -291,7 +291,7 @@ index row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`
 | chart summary | EQP category·chart count·page | equipment `rows` | group·pagination | `Confirmed` |
 | scatter card | `act_time`, axis value, EQP·lot·wafer 등 | scatter `points` | lazy query·zoom·dialog | `Confirmed` |
 | identity card | EQP별 point groups | identity `groups` | 3일 동시 chart 또는 modal | `Confirmed` |
-| history·actions | 파일 변경점 이력만 표시 | chart response `changeHistory` | dialog | `Confirmed`; DB SKIP·이력저장 `Blocked` |
+| history·actions | 변경점 이력, SKIP·EQP ALL SKIP·이력저장 | chart row `file_path`, DB capability | dialog·mutation | 코드·synthetic `Confirmed`; 운영 DB `Unknown` |
 | 선택·HIT 이력 | 마지막 filter·이력저장 | clicked/hit API | mutation·toast | 코드·synthetic `Confirmed`; 운영 DB `Unknown` |
 | image | image endpoint 존재 | `/api/erd-file` | 현재 page 소비 없음 | `Unknown` |
 

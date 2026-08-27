@@ -19,7 +19,7 @@ import { areDbConnectionsEnabled } from "./dataConnections.mjs"
 import { assertKnownMappingLineSdwt, readLineMapping } from "./mappingConfig.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
-import { listPassHistoryRecords } from "./passHistory.mjs"
+import { listPassHistoryRecords, parsePassHistoryPath } from "./passHistory.mjs"
 
 export const TEAM_ERD_COLUMNS = Object.freeze([
   "sdwt",
@@ -98,7 +98,6 @@ export function normalizeSelfEquipmentIndexRow(row, latestDate) {
     step,
     eqp: normalizeTextValue(row.eqp),
     file_path: filePath,
-    history_file_path: "",
     line_rev: "",
     latest_date: latestDate,
   }
@@ -125,7 +124,6 @@ export function attachErdPathReferences(indexRows, referenceRows) {
     return {
       ...row,
       ver: normalizeTextValue(reference.ver),
-      history_file_path: normalizeSelfEquipmentFilePath(reference.file_path),
     }
   })
 }
@@ -139,11 +137,19 @@ function normalizeScopeMatchValue(value) {
 }
 
 function buildSkipComparisonKey(row) {
+  let pathValues = null
+  if (row.file_path) {
+    try {
+      pathValues = parsePassHistoryPath(row.file_path)
+    } catch {
+      pathValues = null
+    }
+  }
   return [
     row.line_rev ?? row.line_id,
-    row.sdwt,
-    row.desc,
-    row.ver,
+    pathValues?.sdwt ?? row.sdwt,
+    pathValues?.desc ?? row.desc,
+    pathValues?.ver ?? row.ver,
     row.recipe_id,
     row.priority,
     row.sensor,

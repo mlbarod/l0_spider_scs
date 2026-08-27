@@ -73,7 +73,7 @@ FdcTrendPage
 → GET /api/self-equipment-data 또는 /api/my-eqp-equipment-data
 → readLatestSelfEquipmentRows() + mapping scope
 → path_xian/{latest_date}
-→ DB 활성 시 /pic/path/{line}/{sdwt}/df_path.parquet에서 동일 file_path의 ver 선택적 참조
+→ DB 활성 시 /pic/path/{line}/{sdwt}/df_path.parquet에서 동일 file_path의 ver만 선택적 참조
 → 보조 file·PASS 조회 실패는 빈 결과로 격리하고 path_xian RECIPE_ID 유지
 → buildSelfEquipmentPayload()
 → path row의 file_path
@@ -87,8 +87,9 @@ FdcTrendPage
 서버는 `/pic_server2/`를 `/pic/`로 정규화하고 두 gate mode 모두 Line·SDWT·EQP·latest date·sensor·step이 최신 scoped row와 일치하는지 확인한다. 이후 `file_path`가 `.png`이면 sibling `data.parquet`, directory이면 하위 `data.parquet`, 직접 파일이면 해당 `data.parquet`를 선택한다.
 
 새 7-column index에는 기존 Self DB 식별자 `ver`가 없다. 서버는 mapping으로 검증한
-분임조별 ERD 경로 테이블에서 동일 `file_path` row를 찾아 `ver`와 이력 원본 경로를 참조한다.
-참조 row가 없는 chart는 file chart는 유지하지만 DB action을 표시하지 않는다.
+분임조별 ERD 경로 테이블에서 동일 `file_path` row의 `ver`만 보조 참조한다. 클릭이력·SKIP·HIT는
+최신 index row의 `file_path`를 그대로 사용한다.
+참조 row가 없는 chart도 index `file_path`가 있으면 DB capability 기준으로 DB action을 표시한다.
 
 ### 3.3 동일성 이상감지
 
@@ -185,7 +186,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | `ABN-P01` | `/appdata/abnormal_trend/pic/path/{latest_date}` | Dashboard detail Parquet | root의 시각 파일명 나열 | `Confirmed` |
 | `ABN-P02` | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | Dashboard stats | 최신 detail 시각으로 조립 | `Confirmed` |
 | `ABN-P03` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | Self/MY EQP index | 날짜·시각 파일명 중 최신 선택 후 Line·SDWT mapping scope | 코드 `Confirmed`; 운영 file `Unknown` |
-| `ABN-P03-R` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | Self history `ver`·원본 경로 | DB 활성 시 index와 동일 `file_path` row 선택; 실패 시 RECIPE_ID·file chart 유지 | 코드·실패 격리 `Confirmed`; 운영 file `Unknown` |
+| `ABN-P03-R` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | Self history `ver` 보조 참조 | DB 활성 시 index와 동일 `file_path` row 선택; 실패 시 RECIPE_ID·file chart·DB action 경로 유지 | 코드·실패 격리 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P04` | index `file_path`에서 해석한 `data.parquet` | ERD point 원천 | `pic_server2` 정규화 후 png sibling·directory 하위·직접 file 구분 | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P05` | index row `file_path` | ERD data/image 위치 identity | 최신 scoped row 원문 | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ABN-P06` | 선택한 `data.parquet` sibling `{eqp}.parquet` | 변경점 이력 | 선택 EQP 이름으로 조립 | 코드 `Confirmed`; 운영 file `Unknown` |

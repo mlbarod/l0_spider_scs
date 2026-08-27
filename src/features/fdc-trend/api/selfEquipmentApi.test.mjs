@@ -1,7 +1,12 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { buildErdDataReferencePath, fetchEqpAllSkipTargets } from "./selfEquipmentApi.js"
+import {
+  buildErdDataReferencePath,
+  fetchEqpAllSkipTargets,
+  getSelfEquipmentHistoryFilePath,
+  getSelfEquipmentHistoryFilePaths,
+} from "./selfEquipmentApi.js"
 
 test("자설비 EQP png 경로를 실제 data.parquet 참조 경로로 변환한다", () => {
   assert.equal(
@@ -24,6 +29,22 @@ test("자설비 directory와 data.parquet 경로 형식을 모두 호환한다",
   assert.equal(buildErdDataReferencePath(""), "")
 })
 
+test("클릭이력·이력저장·SKIP은 path_xian 원본 file_path를 공통 사용한다", () => {
+  assert.equal(getSelfEquipmentHistoryFilePath({
+    file_path: "/appdata/abnormal_trend/pic/erd/chart.png",
+    history_file_path: "",
+  }), "/appdata/abnormal_trend/pic/erd/chart.png")
+  assert.equal(getSelfEquipmentHistoryFilePath({ history_file_path: "/legacy/chart.png" }), "")
+  assert.deepEqual(getSelfEquipmentHistoryFilePaths([
+    { file_path: "/appdata/abnormal_trend/pic/erd/chart-a.png" },
+    { file_path: "/appdata/abnormal_trend/pic/erd/chart-a.png" },
+    { file_path: "/appdata/abnormal_trend/pic/erd/chart-b.png" },
+  ]), [
+    "/appdata/abnormal_trend/pic/erd/chart-a.png",
+    "/appdata/abnormal_trend/pic/erd/chart-b.png",
+  ])
+})
+
 test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", async (t) => {
   const originalFetch = globalThis.fetch
   let requestedUrl = ""
@@ -33,8 +54,8 @@ test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", as
       ok: true,
       json: async () => ({
         rows: [{
-          file_path: "/appdata/erd/data.parquet",
-          history_file_path: "/appdata/erd/chart.png",
+          file_path: "/appdata/erd/chart.png",
+          history_file_path: "",
         }],
       }),
     }
