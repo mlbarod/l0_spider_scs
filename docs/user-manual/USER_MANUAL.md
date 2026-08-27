@@ -141,8 +141,9 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 자설비 필터는 선택한 Line·SDWT의 분임조별 ERD 경로 테이블
 `/pic/path_xian/{line}/{sdwt}/df_path.parquet`를 직접 사용합니다. SKIP은 선택된 row의
 `ver` 컬럼을 그대로 저장하며 경로에서 version을 추정하지 않습니다. 이 `ver`가 비어 있으면
-빈 값을 저장하지 않고 SKIP 요청을 실패로 안내합니다. 단일설비 `data.parquet`도 같은 `ver`의
-데이터만 차트에 사용합니다. SKIP과 이력저장 버튼은 최종 chart row의
+빈 값을 저장하지 않고 SKIP 요청을 실패로 안내합니다. 단일설비 `data.parquet`은 같은 `ver`를
+우선 사용하며, 파일 내부 `ver`가 단일 값이면 version 경로로 이미 한정된 데이터로 처리하여
+표현 차이만으로 차트를 비우지 않습니다. SKIP과 이력저장 버튼은 최종 chart row의
 날짜·SDWT·RECIPE_ID·등급·sensor·ch_step·EQP 등 확정값을 사용합니다. 마지막 `ch_step`
 클릭이력도 최종 조회 응답의 filter 확정값을 사용합니다. 과거에 빈
 `ver`로 저장된 행은 SKIP LIST에서 chart 없이 표시되며 **SKIP해제**할 수 있습니다. SKIP LIST에서도
@@ -150,16 +151,10 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 시각부터 72시간 동안 일반
 결과에서 제외되며, **SKIP LIST**에서 **SKIP해제**할 수 있습니다.
 
-장애 확인 시 브라우저 개발자 도구 Console에서 `[history-db-request]`를 검색하면 클릭 시 서버로 보낸
-endpoint, `filePath`/`filePaths`와 전체 body를 확인할 수 있습니다. 서버 로그의
-`[history-db-attempt]`는 정규화된 helper 입력, `[history-db-write]`는 실제 SQL에 전달되는 컬럼값입니다.
 클릭이력의 최종 `line_id`, `sdwt`, `grade`, `sensor`, `update_date`, `knox_id`는 마지막 조회 응답에서
-확정된 SDWT·등급·sensor 선택값으로 생성되며, DB 작업의
-성공·실패와 관계없이 차트 영역 위의 **클릭이력 DB 전송값 (디버깅)** 표와 브라우저 Console의
-`[history-db-final]`에서 확인할 수 있습니다. 표의 상태 배지는 `생성 중`, `INSERT 성공`,
-`INSERT 실패`를 구분하며 실패한 경우에도 생성된 최종 6컬럼을 그대로 유지합니다.
-`[history-db-blocked]`가 있으면 서버 DB gate가 요청을 차단한 상태이며, 이 경우 helper가 실행되지 않아
-`[history-db-final]`은 생성되지 않습니다.
+확정된 SDWT·등급·sensor 선택값으로 생성됩니다. 이 값과 요청 body는 화면 디버깅 표,
+브라우저 Console, 서버 Console 또는 API의 `debugRecord`로 노출하지 않습니다. 실패 시에는
+화면 오류 안내와 문의용 request ID만 사용합니다.
 
 ![SKIP 확인](images/06-self-equipment-skip-dialog.png)
 

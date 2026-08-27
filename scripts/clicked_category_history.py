@@ -12,18 +12,6 @@ def write_json(payload):
     print(json.dumps(payload, ensure_ascii=False, default=str))
 
 
-def log_db_write(table, operation, columns, rows):
-    payload = {
-        "table": table,
-        "operation": operation,
-        "rows": [dict(zip(columns, row)) for row in rows],
-    }
-    print(
-        f"[history-db-write] {json.dumps(payload, ensure_ascii=False, default=str)}",
-        file=sys.stderr,
-    )
-
-
 def load_db_info():
     with open(DB_INFO_PATH, "rb") as file:
         db_info = pickle.load(file)
@@ -58,7 +46,6 @@ def build_db_record(payload):
 
 
 def main():
-    db_record = None
     try:
         payload = json.loads(sys.stdin.read() or "{}")
         db_record = build_db_record(payload)
@@ -79,7 +66,6 @@ def main():
             with connection.cursor() as cursor:
                 columns = ("line_id", "sdwt", "grade", "sensor", "update_date", "knox_id")
                 values = tuple(db_record[column] for column in columns)
-                log_db_write("clicked_category_history", "INSERT", columns, [values])
                 affected_rows = cursor.execute(
                     """
                     INSERT INTO `clicked_category_history`
@@ -89,13 +75,10 @@ def main():
                     values,
                 )
             connection.commit()
-        write_json({"ok": True, "affectedRows": affected_rows, "debugRecord": db_record})
+        write_json({"ok": True, "affectedRows": affected_rows})
     except Exception as error:
         print(f"clicked category history operation failed: {error}", file=sys.stderr)
-        result = {"ok": False, "error": "클릭이력 DB 작업에 실패했습니다."}
-        if db_record is not None:
-            result["debugRecord"] = db_record
-        write_json(result)
+        write_json({"ok": False, "error": "클릭이력 DB 작업에 실패했습니다."})
 
 
 if __name__ == "__main__":

@@ -95,81 +95,10 @@ const SCATTER_CHART_MARGIN = Object.freeze({ top: 42, right: 18, bottom: 28, lef
 const SCATTER_Y_AXIS_WIDTH = 64
 const SCATTER_X_AXIS_HEIGHT = 30
 const EMPTY_EQP_SET = new Set()
-const CLICKED_HISTORY_DB_COLUMNS = Object.freeze([
-  "line_id",
-  "sdwt",
-  "grade",
-  "sensor",
-  "update_date",
-  "knox_id",
-])
-
 function expandPriorities(grades) {
   return Array.from(new Set(
     grades.flatMap((grade) => (grade === "A/B" ? ["A", "B"] : [grade])),
   ))
-}
-
-function ClickedHistoryDebugPanel({ state }) {
-  const status = state?.status ?? "idle"
-  const record = state?.record ?? null
-  const statusLabel = status === "loading"
-    ? "생성 중"
-    : status === "success"
-    ? "INSERT 성공"
-    : status === "error"
-    ? "INSERT 실패"
-    : "대기"
-
-  return (
-    <Card className="gap-0 overflow-hidden py-0" aria-live="polite">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b bg-amber-500/10 px-4 py-3">
-        <div>
-          <h2 className="text-sm font-semibold">클릭이력 DB 전송값 (디버깅)</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            마지막 ch_step 클릭으로 clicked_category_history에 INSERT하려던 최종 6컬럼입니다.
-          </p>
-        </div>
-        <Badge variant={status === "error" ? "destructive" : status === "success" ? "default" : "secondary"}>
-          {statusLabel}
-        </Badge>
-      </div>
-      {record ? (
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {CLICKED_HISTORY_DB_COLUMNS.map((column) => (
-                  <TableHead key={column} className="whitespace-nowrap font-mono text-xs">{column}</TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow>
-                {CLICKED_HISTORY_DB_COLUMNS.map((column) => (
-                  <TableCell key={column} className="min-w-32 whitespace-normal break-all font-mono text-xs">
-                    {String(record[column] ?? "") || "-"}
-                  </TableCell>
-                ))}
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-      ) : (
-        <div className="px-4 py-3 text-sm text-muted-foreground">
-          {state?.message ?? "마지막 ch_step을 선택하면 이곳에 최종 DB 값이 표시됩니다."}
-        </div>
-      )}
-      {state?.message && record ? (
-        <p className={cn(
-          "border-t px-4 py-2 text-xs",
-          status === "error" ? "text-destructive" : "text-muted-foreground",
-        )}>
-          {state.message}
-        </p>
-      ) : null}
-    </Card>
-  )
 }
 
 function SelectRow({ label, meta, selected, multiple = false, onClick }) {
@@ -1609,11 +1538,6 @@ export function FdcTrendPage() {
   const [selectedChStep, setSelectedChStep] = useState("")
   const [chartPage, setChartPage] = useState(1)
   const [showThreeDayIdentity, setShowThreeDayIdentity] = useState(true)
-  const [clickedHistoryDebug, setClickedHistoryDebug] = useState({
-    status: "idle",
-    record: null,
-    message: "",
-  })
   const [expandedChSteps, setExpandedChSteps] = useState({
     contextKey: "",
     eqps: EMPTY_EQP_SET,
@@ -1936,28 +1860,7 @@ export function FdcTrendPage() {
     const nextChStep = selectedChStep === chStep ? "" : chStep
     const clickedAt = new Date().toISOString()
     setSelectedChStep(nextChStep)
-    if (!nextChStep || isSkipList) {
-      console.info(`[history-db-request-skipped] ${JSON.stringify({
-        action: "clicked-category-history",
-        reason: !nextChStep ? "ch_step deselected" : "SKIP LIST",
-        selected: {
-          lineId: activeLine,
-          sdwt: activeTeamLabel,
-          grades: priorities,
-          recipeId: selectedDesc,
-          eqpCh: selectedEqpCh,
-          sensor: selectedSensor,
-          chStep: nextChStep,
-        },
-      })}`)
-      return
-    }
-
-    setClickedHistoryDebug({
-      status: "loading",
-      record: null,
-      message: "최종 DB 6컬럼을 생성하는 중입니다.",
-    })
+    if (!nextChStep || isSkipList) return
 
     try {
       const queryKey = [
@@ -1986,23 +1889,9 @@ export function FdcTrendPage() {
       })
       const filePaths = getSelfEquipmentHistoryFilePaths(payload.rows)
       if (!filePaths.length) {
-        console.info(`[history-db-request-skipped] ${JSON.stringify({
-          action: "clicked-category-history",
-          reason: "file_path not found",
-          selected: {
-            lineId: activeLine,
-            sdwt: activeTeamLabel,
-            grades: priorities,
-            recipeId: selectedDesc,
-            eqpCh: selectedEqpCh,
-            sensor: selectedSensor,
-            chStep: nextChStep,
-          },
-          filePaths,
-        })}`)
         throw new Error("클릭이력에 사용할 file_path가 없습니다.")
       }
-      const historyResult = await createClickedCategoryHistory({
+      await createClickedCategoryHistory({
         app: "self",
         lineId: activeLine,
         filePaths,
@@ -2011,21 +1900,7 @@ export function FdcTrendPage() {
         selectedSensor: payload.filters?.sensor || selectedSensor,
         clickedAt,
       })
-      setClickedHistoryDebug({
-        status: "success",
-        record: historyResult.debugRecord ?? null,
-        message: historyResult.debugRecord
-          ? "DB INSERT가 완료되었습니다."
-          : "INSERT 응답에 최종 6컬럼이 없습니다.",
-      })
     } catch (error) {
-      setClickedHistoryDebug({
-        status: "error",
-        record: error.debugRecord ?? null,
-        message: error.debugRecord
-          ? `아래 6컬럼으로 INSERT를 시도했지만 실패했습니다: ${error.message}`
-          : `최종 6컬럼을 만들기 전에 실패했습니다 (${error.failureStage ?? "단계 미확인"}): ${error.failureDetail ?? error.message}`,
-      })
       toast.error(`클릭이력 저장 실패: ${error.message}`)
     }
   }
@@ -2286,12 +2161,10 @@ export function FdcTrendPage() {
       </section>
 
       <main className="grid min-w-0 gap-4 p-4">
-        <ClickedHistoryDebugPanel state={clickedHistoryDebug} />
         {selfEquipmentFileReadEnabled && !selfEquipmentDbEnabled ? (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-800 dark:text-sky-200">
             현재 서버가 DB capability를 비활성으로 응답했습니다. SKIP, 클릭이력과 이력저장 요청은
-            실행되지만 서버 DB gate에서 거부될 수 있으며, 브라우저 Console의 [history-db-request]에서
-            전송 경로와 내용을 확인할 수 있습니다.
+            실행되지만 서버 DB gate에서 거부될 수 있습니다.
           </div>
         ) : null}
         {dataQuery.isError ? (

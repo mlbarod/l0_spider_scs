@@ -274,7 +274,7 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
   }
 })
 
-test("이력 API가 차단되면 credential 내용 없이 차단 원인을 로그로 남긴다", () => {
+test("이력 API가 차단돼도 history debug 로그를 남기지 않고 안전 오류만 기록한다", () => {
   const response = createResponse()
   const logs = []
 
@@ -286,14 +286,9 @@ test("이력 API가 차단되면 credential 내용 없이 차단 원인을 로�
     () => false,
   ), true)
 
-  assert.match(logs[0], /^\[history-db-blocked\] /)
-  assert.deepEqual(JSON.parse(logs[0].replace(/^\[history-db-blocked\] /, "")), {
-    endpoint: "/api/hit-history",
-    method: "POST",
-    dbGateExplicitlyDisabled: false,
-    dbInfoReadable: false,
-  })
-  assert.match(logs[1], /^\[api-error\] scope=data-connections /)
+  assert.equal(logs.length, 1)
+  assert.match(logs[0], /^\[api-error\] scope=data-connections /)
+  assert.doesNotMatch(logs[0], /history-db-blocked/)
   assert.doesNotMatch(logs.join("\n"), /synthetic|DB_INFO_PATH/)
 })
 

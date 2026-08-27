@@ -6,22 +6,12 @@ import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
 import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
-import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugLog.mjs"
 
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
 const COMMON_COMMONALITY_FILE_ROOT = commonCommonalityRootPath
 const helperPath = fileURLToPath(new URL("../scripts/clicked_category_history.py", import.meta.url))
 const SUPPORTED_APPS = new Set(["self", "commonality", "common"])
 const ALL_VALUES = "ALL"
-const SAFE_RECORD_BUILD_FAILURES = new Set([
-  "클릭이력 App 구분값이 올바르지 않습니다.",
-  "Line Name이 필요합니다.",
-  "Chart Drawing 경로가 필요합니다.",
-  "클릭이력 카테고리 값을 찾지 못했습니다.",
-  "클릭 시각이 올바르지 않습니다.",
-  "요청 데이터가 너무 큽니다.",
-  "요청 JSON이 올바르지 않습니다.",
-])
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -189,19 +179,14 @@ async function readJsonBody(req) {
 
 function runHelper(payload) {
   return new Promise((resolvePromise, reject) => {
-    const debugRecord = buildClickedCategoryHistoryDbRecord(payload)
-    const helperPayload = { ...payload, updateDate: debugRecord.update_date }
+    const dbRecord = buildClickedCategoryHistoryDbRecord(payload)
+    const helperPayload = { ...payload, updateDate: dbRecord.update_date }
     const child = spawn("python3", ["-B", helperPath], {
       env: process.env,
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "ignore"],
     })
-    attachHistoryDbWriteLogger(child)
     let stdout = ""
     let timedOut = false
-    const rejectWithDebugRecord = (error) => {
-      error.debugRecord = error.debugRecord ?? debugRecord
-      reject(error)
-    }
     const timeout = setTimeout(() => {
       timedOut = true
       child.kill("SIGTERM")
@@ -209,28 +194,26 @@ function runHelper(payload) {
     child.stdout.on("data", (chunk) => { stdout += chunk })
     child.on("error", (error) => {
       clearTimeout(timeout)
-      rejectWithDebugRecord(error)
+      reject(error)
     })
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        rejectWithDebugRecord(new Error("클릭이력 DB 처리 시간이 초과되었습니다."))
+        reject(new Error("클릭이력 DB 처리 시간이 초과되었습니다."))
         return
       }
       let result
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        rejectWithDebugRecord(new Error("클릭이력 응답을 해석하지 못했습니다."))
+        reject(new Error("클릭이력 응답을 해석하지 못했습니다."))
         return
       }
       if (!result.ok) {
-        const error = new Error(result.error || "클릭이력을 저장하지 못했습니다.")
-        error.debugRecord = result.debugRecord ?? debugRecord
-        rejectWithDebugRecord(error)
+        reject(new Error(result.error || "클릭이력을 저장하지 못했습니다."))
         return
       }
-      resolvePromise({ ...result, debugRecord: result.debugRecord ?? debugRecord })
+      resolvePromise(result)
     })
     child.stdin.end(JSON.stringify(helperPayload))
   })
@@ -249,36 +232,17 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
     }
     const [body, currentUser] = await Promise.all([readJsonBody(req), resolveCurrentUser(remoteIp)])
     const record = buildClickedCategoryHistoryRecord({ ...body, knoxId: currentUser.knoxId })
-    logHistoryDbAttempt({
-      table: "clicked_category_history",
-      operation: "INSERT",
-      records: [record],
-    })
     const result = await runHelper(record)
     if (Number(result.affectedRows) < 1) {
-      const error = new Error("클릭이력이 DB에 반영되지 않았습니다.")
-      error.debugRecord = result.debugRecord
-      throw error
+      throw new Error("클릭이력이 DB에 반영되지 않았습니다.")
     }
     sendJson(res, 200, result)
-  } catch (error) {
+  } catch {
     const errorPayload = createSafeApiError({
       code: "CLICKED_CATEGORY_HISTORY_REQUEST_FAILED",
       message: "클릭이력 요청을 처리하지 못했습니다.",
       scope: "clicked-category-history",
     })
-    const failureStage = error?.debugRecord ? "db-write" : "record-build"
-    const failureDetail = failureStage === "record-build"
-      ? SAFE_RECORD_BUILD_FAILURES.has(error?.message)
-        ? error.message
-        : "클릭이력 최종 6컬럼 생성 조건을 확인하지 못했습니다."
-      : undefined
-    console.error(`[clicked-history-failure] requestId=${errorPayload.requestId} stage=${failureStage} reason=${JSON.stringify(error?.message ?? "unknown")}`)
-    sendJson(res, 500, {
-      ...errorPayload,
-      failureStage,
-      ...(failureDetail ? { failureDetail } : {}),
-      ...(error?.debugRecord ? { debugRecord: error.debugRecord } : {}),
-    })
+    sendJson(res, 500, errorPayload)
   }
 }

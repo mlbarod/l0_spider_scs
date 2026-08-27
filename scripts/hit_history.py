@@ -12,18 +12,6 @@ def write_json(payload):
     print(json.dumps(payload, ensure_ascii=False, default=str))
 
 
-def log_db_write(table, operation, columns, rows):
-    payload = {
-        "table": table,
-        "operation": operation,
-        "rows": [dict(zip(columns, row)) for row in rows],
-    }
-    print(
-        f"[history-db-write] {json.dumps(payload, ensure_ascii=False, default=str)}",
-        file=sys.stderr,
-    )
-
-
 def read_payload():
     text = sys.stdin.read()
     return json.loads(text) if text.strip() else {}
@@ -81,7 +69,6 @@ def build_db_record(payload):
 def insert_history(connection, db_record):
     columns = ("update_date", "line_id", "sdwt", "file_path", "knox_id", "exec_date")
     values = tuple(db_record[column] for column in columns)
-    log_db_write("hit_history", "INSERT", columns, [values])
     with connection.cursor() as cursor:
         cursor.execute(
             """
@@ -92,11 +79,10 @@ def insert_history(connection, db_record):
             values,
         )
     connection.commit()
-    return {"ok": True, "affectedRows": 1, "debugRecord": db_record}
+    return {"ok": True, "affectedRows": 1}
 
 
 def main():
-    db_record = None
     try:
         payload = read_payload()
         db_record = build_db_record(payload)
@@ -106,10 +92,7 @@ def main():
         write_json(result)
     except Exception as error:
         print(f"hit history operation failed: {error}", file=sys.stderr)
-        result = {"ok": False, "error": "HIT 이력 DB 작업에 실패했습니다."}
-        if db_record is not None:
-            result["debugRecord"] = db_record
-        write_json(result)
+        write_json({"ok": False, "error": "HIT 이력 DB 작업에 실패했습니다."})
 
 
 if __name__ == "__main__":

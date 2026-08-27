@@ -673,6 +673,32 @@ function sampleEvenly(points, limit) {
   return sampled
 }
 
+export function selectErdRowsByVersion(rows, requestedVer) {
+  const normalizedRequestedVer = normalizeText(requestedVer).normalize("NFKC").trim().toUpperCase()
+  const dataVersions = Array.from(new Set(
+    rows
+      .map((row) => normalizeText(row.ver).normalize("NFKC").trim())
+      .filter(Boolean),
+  ))
+  const dataVersionKeys = new Set(dataVersions.map((value) => value.toUpperCase()))
+  if (!normalizedRequestedVer) {
+    return { rows, dataVersions, versionMatch: "not-requested" }
+  }
+
+  const exactRows = rows.filter((row) => (
+    normalizeText(row.ver).normalize("NFKC").trim().toUpperCase() === normalizedRequestedVer
+  ))
+  if (exactRows.length) {
+    return { rows: exactRows, dataVersions, versionMatch: "exact" }
+  }
+
+  if (dataVersionKeys.size <= 1) {
+    return { rows, dataVersions, versionMatch: "file-scoped" }
+  }
+
+  return { rows: [], dataVersions, versionMatch: "mismatch" }
+}
+
 export function buildErdScatterPayload(rows, {
   eqp,
   ver,
@@ -686,9 +712,9 @@ export function buildErdScatterPayload(rows, {
 }) {
   const normalizedEqp = normalizeEqp(eqp)
   const normalizedVer = normalizeText(ver).trim()
+  const versionSelection = selectErdRowsByVersion(rows, normalizedVer)
   const latestDateMs = parseDateTimeMs(latestDate)
-  const chartPoints = rows.flatMap((row) => {
-    if (normalizeText(row.ver).trim() !== normalizedVer) return []
+  const chartPoints = versionSelection.rows.flatMap((row) => {
     if (normalizeEqp(row[equipmentColumn]) !== normalizedEqp) return []
     const actTime = normalizeText(row.act_time)
     const actTimeMs = parseDateTimeMs(actTime)
@@ -699,6 +725,7 @@ export function buildErdScatterPayload(rows, {
       actTime,
       actTimeMs,
       value,
+      ver: normalizeText(row.ver).trim(),
       eqpId: normalizeText(row.eqp_id),
       dispName: normalizeText(row.disp_name),
       waferId: normalizeText(row.wafer_id),
@@ -730,6 +757,8 @@ export function buildErdScatterPayload(rows, {
   return {
     eqp: normalizedEqp,
     ver: normalizedVer,
+    dataVersions: versionSelection.dataVersions,
+    versionMatch: versionSelection.versionMatch,
     latestDate,
     axisColumn,
     sourcePath: filePath,
@@ -754,9 +783,9 @@ export function buildErdIdentityPayload(rows, {
 }) {
   const normalizedEqp = normalizeEqp(eqp)
   const normalizedVer = normalizeText(ver).trim()
+  const versionSelection = selectErdRowsByVersion(rows, normalizedVer)
   const normalizedWindowDays = Number.isInteger(windowDays) && windowDays > 0 ? windowDays : 0
-  const validPoints = rows.flatMap((row) => {
-    if (normalizeText(row.ver).trim() !== normalizedVer) return []
+  const validPoints = versionSelection.rows.flatMap((row) => {
     if (equipmentColumn && normalizeEqp(row[equipmentColumn]) !== normalizedEqp) return []
     const eqpCb = normalizeEqp(row.eqp_cb)
     const actTime = normalizeText(row.act_time)
@@ -769,6 +798,7 @@ export function buildErdIdentityPayload(rows, {
       actTime,
       actTimeMs,
       value,
+      ver: normalizeText(row.ver).trim(),
       eqpId: normalizeText(row.eqp_id),
       dispName: normalizeText(row.disp_name),
       waferId: normalizeText(row.wafer_id),
@@ -812,6 +842,8 @@ export function buildErdIdentityPayload(rows, {
   return {
     eqp: normalizedEqp,
     ver: normalizedVer,
+    dataVersions: versionSelection.dataVersions,
+    versionMatch: versionSelection.versionMatch,
     axisColumn,
     sourcePath: filePath,
     windowDays: normalizedWindowDays,

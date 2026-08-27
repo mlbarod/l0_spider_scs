@@ -1,5 +1,4 @@
 import { getApiErrorMessage } from "./errorMessage.js"
-import { logHistoryDbFinal, logHistoryRequest } from "./historyRequestDebug.js"
 
 export async function createClickedCategoryHistory({
   app,
@@ -19,34 +18,17 @@ export async function createClickedCategoryHistory({
     selectedSensor,
     clickedAt,
   }
-  logHistoryRequest({
-    endpoint: "/api/clicked-category-history",
-    body,
-  })
   const response = await fetch("/api/clicked-category-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
   const payload = await response.json().catch(() => ({}))
-  if (payload.debugRecord) {
-    logHistoryDbFinal({
-      table: "clicked_category_history",
-      operation: "INSERT",
-      record: payload.debugRecord,
-    })
-  }
   if (!response.ok) {
-    const error = new Error(getApiErrorMessage(payload, "클릭이력을 저장하지 못했습니다."))
-    error.debugRecord = payload.debugRecord
-    error.failureStage = payload.failureStage
-    error.failureDetail = payload.failureDetail
-    throw error
+    throw new Error(getApiErrorMessage(payload, "클릭이력을 저장하지 못했습니다."))
   }
   if (Number(payload.affectedRows) < 1) {
-    const error = new Error("클릭이력이 DB에 반영되지 않았습니다.")
-    error.debugRecord = payload.debugRecord
-    throw error
+    throw new Error("클릭이력이 DB에 반영되지 않았습니다.")
   }
   return payload
 }

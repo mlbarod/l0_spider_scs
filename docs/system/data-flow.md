@@ -11,7 +11,7 @@
 > 조사 제한: 실제 운영 데이터, DB, `.env`, 비밀키와 메일 전송 시스템은 열거나 실행하지 않았다.
 > 브랜치 범위: `mock-agent`의 mock 서버·데이터·E2E 흐름은 `Out of Scope`이다.
 
-> SCS 분리 상태: 별도 환경변수 없이 Dashboard와 자설비 file read API를 허용한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 현재 사용자, My EQP와 `pass_history`, `hit_history`, `clicked_category_history` API를 좁은 allowlist로 허용한다. 각 범위는 대응하는 `SCS_DASHBOARD_DATA_ENABLED`, `SCS_SELF_EQUIPMENT_DATA_ENABLED`, `SCS_DB_CONNECTIONS_ENABLED`의 비-`1` 값으로 차단할 수 있다. Self 브라우저는 chart `file_path`가 있으면 원본 `l0_spider`처럼 history 요청을 발생시키고 서버 gate가 최종 허용한다. 브라우저 `[history-db-request]`, 서버 `[history-db-attempt]`·`[history-db-write]` 로그로 전송 전후 payload를 추적한다. Mailing과 다른 App은 `SCS_DATA_CONNECTIONS_ENABLED=1`이 아니면 handler 진입 전에 `503 DATA_CONNECTIONS_DISABLED`로 차단된다. 실제 target server DB·mount·Parquet 검증은 `Unknown`이다.
+> SCS 분리 상태: 별도 환경변수 없이 Dashboard와 자설비 file read API를 허용한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 현재 사용자, My EQP와 `pass_history`, `hit_history`, `clicked_category_history` API를 좁은 allowlist로 허용한다. 각 범위는 대응하는 `SCS_DASHBOARD_DATA_ENABLED`, `SCS_SELF_EQUIPMENT_DATA_ENABLED`, `SCS_DB_CONNECTIONS_ENABLED`의 비-`1` 값으로 차단할 수 있다. Self 브라우저는 chart `file_path`가 있으면 원본 `l0_spider`처럼 history 요청을 발생시키고 서버 gate가 최종 허용한다. 이력 요청·DB record는 브라우저·서버 Console과 API debug payload로 노출하지 않는다. Mailing과 다른 App은 `SCS_DATA_CONNECTIONS_ENABLED=1`이 아니면 handler 진입 전에 `503 DATA_CONNECTIONS_DISABLED`로 차단된다. 실제 target server DB·mount·Parquet 검증은 `Unknown`이다.
 
 ## 1. 문서 목적과 범위
 
@@ -183,7 +183,7 @@ flowchart LR
 | `ppid` | file path·Parquet row | chart grouping·표시 | ERD/commonality path와 grouping | 원천 값에 의존 | `Confirmed` | path config·pages |
 | `recipe_id` | dashboard detail row | 직접 query로 전달하지 않음 | 5-key 고유 이상건 집계 | 빈 문자열도 정규화 key에 참여 | `Confirmed` | `LINE_ANOMALY_ID_COLUMNS` |
 | `eqp` | row·등록 DB·사용자 선택 | `eqp` query 또는 `eqpCh` | file row filter·chart group·MY EQP match | endpoint별 조건부 필수 | `Confirmed` | Self/Common modules |
-| `ver` | team ERD 경로 table과 단일설비 `data.parquet` 컬럼 | chart API query·SKIP body | team row 일치 검증, data point 같은 ver 필터, SKIP에 직접 저장 | 빈 team row ver는 새 SKIP 거부 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
+| `ver` | team ERD 경로 table과 단일설비 `data.parquet` 컬럼 | chart API query·SKIP body | team row 일치 검증, data exact 우선·단일값 file-scope fallback·다중값 mismatch 차단, SKIP에 직접 저장 | 빈 team row ver는 새 SKIP 거부 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
 
 ## 9. 대시보드 데이터 흐름
 
@@ -234,8 +234,9 @@ chart row의 `file_path`가 `GET /api/erd-scatter-data`의 `path`가 된다.
 `file_path`가 `{eqp}.png`이면 같은 directory의 `data.parquet`, directory이면 하위
 `data.parquet`, 이미 `data.parquet`이면 해당 파일을 선택한다.
 요청 Line·path SDWT·EQP·latest date·sensor·ch_step·ver가 선택한 scoped team row와
-일치하는지 재검증한다. 일치할 때만 선택한 `data.parquet` schema에서 `ver`를 projection하고
-요청과 같은 `ver`의 row에 대해
+일치하는지 재검증한다. 일치할 때만 선택한 `data.parquet` schema에서 `ver`를 projection한다.
+요청과 정확히 같은 `ver`를 우선 사용하고, 파일 내부 `ver`가 단일 값이면 이미 version 경로로
+한정된 파일로 처리하며, 여러 `ver`가 섞인 mismatch는 point를 반환하지 않는다. 선택된 row에 대해
 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`을 호환 axis로 선택해 읽는다.
 scatter mode는 `eqp`가 선택 EQP인 point와 같은 directory의 `{eqp}.parquet` 이력을 반환하며,
 identity mode는 같은 `eqp` 범위에서 `eqp_cb`별 series를 만든다. history 읽기 실패는 `historyError`로 분리한다.

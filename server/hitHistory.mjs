@@ -7,7 +7,6 @@ import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
 import { commonalityRootPath } from "./latestCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
-import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugLog.mjs"
 
 const helperPath = fileURLToPath(new URL("../scripts/hit_history.py", import.meta.url))
 
@@ -157,19 +156,14 @@ async function readJsonBody(req) {
 
 function runHitHistoryHelper(payload) {
   return new Promise((resolvePromise, reject) => {
-    const debugRecord = buildHitHistoryDbRecord(payload)
-    const helperPayload = { ...payload, execDate: debugRecord.exec_date }
+    const dbRecord = buildHitHistoryDbRecord(payload)
+    const helperPayload = { ...payload, execDate: dbRecord.exec_date }
     const child = spawn("python3", ["-B", helperPath], {
       env: process.env,
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "ignore"],
     })
-    attachHistoryDbWriteLogger(child)
     let stdout = ""
     let timedOut = false
-    const rejectWithDebugRecord = (error) => {
-      error.debugRecord = error.debugRecord ?? debugRecord
-      reject(error)
-    }
     const timeout = setTimeout(() => {
       timedOut = true
       child.kill("SIGTERM")
@@ -178,12 +172,12 @@ function runHitHistoryHelper(payload) {
     child.stdout.on("data", (chunk) => { stdout += chunk })
     child.on("error", (error) => {
       clearTimeout(timeout)
-      rejectWithDebugRecord(error)
+      reject(error)
     })
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        rejectWithDebugRecord(new Error("HIT 이력 저장 시간이 초과되었습니다."))
+        reject(new Error("HIT 이력 저장 시간이 초과되었습니다."))
         return
       }
 
@@ -191,16 +185,14 @@ function runHitHistoryHelper(payload) {
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        rejectWithDebugRecord(new Error("HIT 이력 응답을 해석하지 못했습니다."))
+        reject(new Error("HIT 이력 응답을 해석하지 못했습니다."))
         return
       }
       if (!result.ok) {
-        const error = new Error(result.error || "HIT 이력을 저장하지 못했습니다.")
-        error.debugRecord = result.debugRecord ?? debugRecord
-        rejectWithDebugRecord(error)
+        reject(new Error(result.error || "HIT 이력을 저장하지 못했습니다."))
         return
       }
-      resolvePromise({ ...result, debugRecord: result.debugRecord ?? debugRecord })
+      resolvePromise(result)
     })
 
     child.stdin.end(JSON.stringify(helperPayload))
@@ -266,26 +258,14 @@ export async function handleHitHistoryRequest(req, res) {
       ...body,
       knoxId: currentUser.knoxId,
     })
-    logHistoryDbAttempt({
-      table: "hit_history",
-      operation: "INSERT",
-      records: [record],
-    })
     const result = await runHitHistoryHelper(record)
     sendJson(res, 200, result)
-  } catch (error) {
+  } catch {
     const errorPayload = createSafeApiError({
       code: "HIT_HISTORY_REQUEST_FAILED",
       message: "HIT 이력 요청을 처리하지 못했습니다.",
       scope: "hit-history",
     })
-    const failureStage = error?.debugRecord ? "db-write" : "record-build"
-    console.error(`[hit-history-failure] requestId=${errorPayload.requestId} stage=${failureStage} reason=${JSON.stringify(error?.message ?? "unknown")}`)
-    sendJson(res, 500, {
-      ...errorPayload,
-      failureStage,
-      ...(failureStage === "record-build" ? { failureDetail: error?.message } : {}),
-      ...(error?.debugRecord ? { debugRecord: error.debugRecord } : {}),
-    })
+    sendJson(res, 500, errorPayload)
   }
 }

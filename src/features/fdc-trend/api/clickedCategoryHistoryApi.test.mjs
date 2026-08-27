@@ -3,12 +3,12 @@ import test from "node:test"
 
 import { createClickedCategoryHistory } from "./clickedCategoryHistoryApi.js"
 
-test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에 출력한다", async (context) => {
+test("클릭이력 실패 응답은 debug payload를 노출하거나 Console에 출력하지 않는다", async (context) => {
   const originalFetch = globalThis.fetch
   const originalConsoleInfo = console.info
   const messages = []
   let requestBody
-  const debugRecord = {
+  const legacyDebugRecord = {
     line_id: "P1L",
     sdwt: "SDWT-1",
     grade: "ALL",
@@ -24,7 +24,7 @@ test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에
         ok: false,
         error: "클릭이력 요청을 처리하지 못했습니다.",
         failureStage: "db-write",
-        debugRecord,
+        debugRecord: legacyDebugRecord,
       }),
     }
   }
@@ -50,14 +50,8 @@ test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에
   }
 
   assert.match(receivedError?.message ?? "", /클릭이력 요청을 처리하지 못했습니다/)
-  assert.deepEqual(receivedError?.debugRecord, debugRecord)
-  assert.equal(receivedError?.failureStage, "db-write")
+  assert.equal(receivedError?.debugRecord, undefined)
+  assert.equal(receivedError?.failureStage, undefined)
   assert.equal(requestBody.selectedSdwt, "SDWT-1")
-
-  const finalMessage = messages.find((message) => message.startsWith("[history-db-final] "))
-  assert.ok(finalMessage)
-  assert.deepEqual(
-    JSON.parse(finalMessage.replace(/^\[history-db-final\] /, "")).record,
-    debugRecord,
-  )
+  assert.deepEqual(messages, [])
 })

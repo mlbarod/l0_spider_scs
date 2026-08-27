@@ -4,7 +4,6 @@ import { fileURLToPath, URL } from "node:url"
 
 import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
-import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugLog.mjs"
 
 const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
@@ -413,29 +412,24 @@ function runPassHistoryHelper(action, payload) {
       : action === "insert" || action === "delete"
       ? [payload]
       : []
-    const debugRecords = sourceRecords.map((record) => buildPassHistoryDbRecord(record))
+    const dbRecords = sourceRecords.map((record) => buildPassHistoryDbRecord(record))
     const helperPayload = action === "insert-many"
       ? {
         ...payload,
         records: payload.records.map((record, index) => ({
           ...record,
-          execDate: debugRecords[index].exec_date,
+          execDate: dbRecords[index].exec_date,
         })),
       }
       : action === "insert" || action === "delete"
-      ? { ...payload, execDate: debugRecords[0].exec_date }
+      ? { ...payload, execDate: dbRecords[0].exec_date }
       : payload
     const child = spawn("python3", ["-B", helperPath, action], {
       env: process.env,
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ["pipe", "pipe", "ignore"],
     })
-    attachHistoryDbWriteLogger(child)
     let stdout = ""
     let timedOut = false
-    const rejectWithDebugRecords = (error) => {
-      error.debugRecords = error.debugRecords ?? debugRecords
-      reject(error)
-    }
     const timeout = setTimeout(() => {
       timedOut = true
       child.kill("SIGTERM")
@@ -444,12 +438,12 @@ function runPassHistoryHelper(action, payload) {
     child.stdout.on("data", (chunk) => { stdout += chunk })
     child.on("error", (error) => {
       clearTimeout(timeout)
-      rejectWithDebugRecords(error)
+      reject(error)
     })
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        rejectWithDebugRecords(new Error("PASS 이력 처리 시간이 초과되었습니다."))
+        reject(new Error("PASS 이력 처리 시간이 초과되었습니다."))
         return
       }
 
@@ -457,17 +451,14 @@ function runPassHistoryHelper(action, payload) {
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        rejectWithDebugRecords(new Error("PASS 이력 응답을 해석하지 못했습니다."))
+        reject(new Error("PASS 이력 응답을 해석하지 못했습니다."))
         return
       }
       if (!result.ok) {
-        rejectWithDebugRecords(new Error(result.error || "PASS 이력을 처리하지 못했습니다."))
+        reject(new Error(result.error || "PASS 이력을 처리하지 못했습니다."))
         return
       }
-      resolvePromise({
-        ...result,
-        ...(debugRecords.length ? { debugRecords: result.debugRecords ?? debugRecords } : {}),
-      })
+      resolvePromise(result)
     })
 
     child.stdin.end(JSON.stringify(helperPayload))
@@ -609,11 +600,6 @@ export async function handlePassHistoryRequest(req, res, url) {
           execDate: body.execDate,
           knoxId: currentUser.knoxId,
         }))
-        logHistoryDbAttempt({
-          table: "pass_history",
-          operation: "UPSERT_MANY",
-          records,
-        })
         const result = await runPassHistoryHelper("insert-many", { records })
         sendJson(res, 200, result)
         return
@@ -622,31 +608,18 @@ export async function handlePassHistoryRequest(req, res, url) {
         { ...body, knoxId: currentUser.knoxId },
         { allowMissingSelfVersion: req.method === "DELETE" },
       )
-      logHistoryDbAttempt({
-        table: "pass_history",
-        operation: req.method === "POST" ? "UPSERT" : "DELETE",
-        records: [record],
-      })
       const result = await runPassHistoryHelper(req.method === "POST" ? "insert" : "delete", record)
       sendJson(res, 200, result)
       return
     }
 
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
-  } catch (error) {
+  } catch {
     const errorPayload = createSafeApiError({
       code: "PASS_HISTORY_REQUEST_FAILED",
       message: "PASS 이력 요청을 처리하지 못했습니다.",
       scope: "pass-history",
     })
-    const debugRecords = Array.isArray(error?.debugRecords) ? error.debugRecords : []
-    const failureStage = debugRecords.length ? "db-write" : "record-build"
-    console.error(`[pass-history-failure] requestId=${errorPayload.requestId} stage=${failureStage} reason=${JSON.stringify(error?.message ?? "unknown")}`)
-    sendJson(res, 500, {
-      ...errorPayload,
-      failureStage,
-      ...(failureStage === "record-build" ? { failureDetail: error?.message } : {}),
-      ...(debugRecords.length ? { debugRecords } : {}),
-    })
+    sendJson(res, 500, errorPayload)
   }
 }

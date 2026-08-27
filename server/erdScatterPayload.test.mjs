@@ -1,7 +1,11 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { buildErdIdentityPayload, buildErdScatterPayload } from "./selfEquipmentData.mjs"
+import {
+  buildErdIdentityPayload,
+  buildErdScatterPayload,
+  selectErdRowsByVersion,
+} from "./selfEquipmentData.mjs"
 
 test("각 차트의 가장 최신 act_time에서 과거 26시간까지 recent로 표시한다", () => {
   const payload = buildErdScatterPayload([
@@ -50,7 +54,39 @@ test("단일설비 데이터는 요청한 ver와 같은 row만 차트 포인트�
   })
 
   assert.equal(payload.ver, "V2")
+  assert.equal(payload.versionMatch, "exact")
   assert.deepEqual(payload.points.map((point) => point.value), [2])
+})
+
+test("version 경로로 한정된 파일의 단일 ver 표현이 달라도 drawing row를 유지한다", () => {
+  const payload = buildErdScatterPayload([
+    { eqp: "EQP-1", ver: "2", act_time: "2026-07-15 13:00:00", TEMP_STEP: 1 },
+    { eqp: "EQP-1", ver: "2", act_time: "2026-07-15 14:00:00", TEMP_STEP: 2 },
+  ], {
+    eqp: "EQP-1",
+    ver: "V2",
+    axisColumn: "TEMP_STEP",
+    filePath: "/tmp/version-scoped/data.parquet",
+    latestDate: "2026-07-15",
+  })
+
+  assert.equal(payload.versionMatch, "file-scoped")
+  assert.deepEqual(payload.dataVersions, ["2"])
+  assert.deepEqual(payload.points.map(({ value, ver }) => ({ value, ver })), [
+    { value: 1, ver: "2" },
+    { value: 2, ver: "2" },
+  ])
+})
+
+test("여러 ver가 섞인 파일에서 요청 ver가 없으면 잘못된 point를 drawing하지 않는다", () => {
+  const selection = selectErdRowsByVersion([
+    { ver: "V1" },
+    { ver: "V2" },
+  ], "V3")
+
+  assert.equal(selection.versionMatch, "mismatch")
+  assert.deepEqual(selection.dataVersions, ["V1", "V2"])
+  assert.deepEqual(selection.rows, [])
 })
 
 test("동일성 차트는 선택 eqp의 단일 차트 데이터를 eqp_cb별로 그룹화한다", () => {

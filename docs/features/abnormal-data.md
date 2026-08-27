@@ -90,7 +90,8 @@ directory이면 하위 `data.parquet`, 직접 파일이면 해당 `data.parquet`
 
 자설비 클릭이력·SKIP·HIT는 최종 team row의 확정 필드로 DB record를 구성하고 같은
 `file_path`를 사용한다. SKIP의 `ver`는 row의 `ver` 컬럼을 그대로 사용하며 비어 있으면 저장을
-거부한다. 단일설비 데이터도 요청과 같은 `ver`의 row만 chart point로 사용한다.
+거부한다. 단일설비 데이터는 요청과 같은 `ver`의 row를 우선 사용한다. 파일 내부 `ver`가
+단일 값이면 version 경로로 이미 한정된 파일로 처리하고, 여러 `ver`가 섞인 불일치는 차단한다.
 
 ### 3.3 동일성 이상감지
 
@@ -187,7 +188,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | `ABN-P01` | `/appdata/abnormal_trend/pic/path/{latest_date}` | Dashboard detail Parquet | root의 시각 파일명 나열 | `Confirmed` |
 | `ABN-P02` | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | Dashboard stats | 최신 detail 시각으로 조립 | `Confirmed` |
 | `ABN-P03` | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | Self team 경로 table | Line·SDWT mapping 검증 후 직접 선택; row의 `ver` 사용 | 코드 `Confirmed`; 운영 file `Unknown` |
-| `ABN-P04` | team row `file_path`에서 해석한 `data.parquet` | ERD point 원천 | `pic_server2` 정규화 후 png sibling·directory 하위·직접 file 구분, 같은 `ver` row 선택 | 코드 `Confirmed`; 운영 file `Unknown` |
+| `ABN-P04` | team row `file_path`에서 해석한 `data.parquet` | ERD point 원천 | `pic_server2` 정규화 후 png sibling·directory 하위·직접 file 구분, 같은 `ver` 우선·단일값 file-scope fallback | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P05` | team row `file_path` | ERD data/image 위치 identity | 선택한 scoped row 원문 | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ABN-P06` | 선택한 `data.parquet` sibling `{eqp}.parquet` | 변경점 이력 | 선택 EQP 이름으로 조립 | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P07` | `/appdata/abnormal_trend/pic/backup/...` | Self 데이터에서 거부되는 경로 | resolver에서 거부 | `Confirmed` |
@@ -216,7 +217,7 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 | `ch_step` | row `step`·directory suffix | query `chStep` | Self는 `${sensor}*${chStep}`, 공통부는 `${sensor}_${chStep}` column | filter·chart title | `Confirmed` |
 | `eqp` | index row·image basename·DB 등록 | query `eqp` 또는 `eqpCh` | EQP row filter, image·history filename | EQP group·chart | `Confirmed` |
 | `eqp_model` | 공통부 동일성 directory | query `eqpModel` | directory segment와 종속 filter | EQP_MODEL filter·group title | `Confirmed` |
-| `ver` | team ERD 경로 table과 단일설비 data row | chart query·SKIP body | scoped team row 검증, data point 같은 ver 필터, PASS에 직접 저장 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
+| `ver` | team ERD 경로 table과 단일설비 data row | chart query·SKIP body | scoped team row 검증, data exact/file-scope/mismatch 판정, PASS에 직접 저장 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
 
 결과 이력의 `file_path`는 네 App 모두 slash를 `#`로 바꿔 보존한다. App별 image root는 다르지만 DB column 구조와 접속 IP를 `knox_id` 컬럼에 저장하는 방식은 동일하다.
 

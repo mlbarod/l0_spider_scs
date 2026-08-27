@@ -27,18 +27,6 @@ def write_json(payload):
     print(json.dumps(payload, ensure_ascii=False, default=str))
 
 
-def log_db_write(table, operation, columns, rows):
-    payload = {
-        "table": table,
-        "operation": operation,
-        "rows": [dict(zip(columns, row)) for row in rows],
-    }
-    print(
-        f"[history-db-write] {json.dumps(payload, ensure_ascii=False, default=str)}",
-        file=sys.stderr,
-    )
-
-
 def read_payload():
     text = sys.stdin.read()
     return json.loads(text) if text.strip() else {}
@@ -128,14 +116,6 @@ def insert_history(connection, payload):
             identity_values(payload),
         )
         if cursor.fetchone():
-            update_columns = (*PASS_HISTORY_COLUMNS[:10], "knox_id", "exec_date", "comment")
-            update_values = (
-                *identity_values(payload),
-                payload["knoxId"],
-                exec_date,
-                str(payload.get("comment") or ""),
-            )
-            log_db_write("pass_history", "UPDATE", update_columns, [update_values])
             affected_rows = cursor.execute(
                 f"UPDATE `pass_history` SET `knox_id` = %s, `exec_date` = %s, `comment` = %s "
                 f"WHERE {identity_conditions}",
@@ -160,7 +140,6 @@ def insert_history(connection, payload):
         exec_date,
         str(payload.get("comment") or ""),
     )
-    log_db_write("pass_history", "INSERT", PASS_HISTORY_COLUMNS, [values])
     columns_sql = ", ".join(f"`{column}`" for column in PASS_HISTORY_COLUMNS)
     placeholders = ", ".join(["%s"] * len(PASS_HISTORY_COLUMNS))
     with connection.cursor() as cursor:
@@ -181,17 +160,6 @@ def insert_many_history(connection, payload):
     affected_rows = 0
     reactivated_rows = 0
     exec_dates = []
-    debug_rows = []
-
-    for record in records:
-        debug_rows.append((
-            *identity_values(record),
-            record["knoxId"],
-            normalize_exec_date(record.get("execDate")),
-            str(record.get("comment") or ""),
-        ))
-    log_db_write("pass_history", "UPSERT_MANY", PASS_HISTORY_COLUMNS, debug_rows)
-
     with connection.cursor() as cursor:
         for record in records:
             exec_date = normalize_exec_date(record.get("execDate"))
@@ -239,7 +207,6 @@ def insert_many_history(connection, payload):
 def delete_history(connection, payload):
     identity_columns = PASS_HISTORY_COLUMNS[:10]
     conditions = " AND ".join(f"`{column}` = %s" for column in identity_columns)
-    log_db_write("pass_history", "DELETE", identity_columns, [identity_values(payload)])
     with connection.cursor() as cursor:
         affected_rows = cursor.execute(
             f"DELETE FROM `pass_history` WHERE {conditions}",

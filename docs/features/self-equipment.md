@@ -27,8 +27,10 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 일반 자설비 필터는 선택한 Line·SDWT의
 `/pic/path_xian/{line}/{sdwt}/df_path.parquet`를 직접 읽는다. 이 테이블의 `ver` 컬럼을
 차트 요청과 SKIP에 그대로 사용하며 경로 문자열에서 version을 추정하지 않는다. `ver`가 비어 있으면
-새 SKIP 저장을 거부해 빈 값을 추가하지 않는다. 단일설비 `data.parquet`에서도 같은 `ver` row만
-차트에 사용한다. 클릭이력·SKIP·HIT 요청은 차트와 같은 분임조별 row의 `file_path`를 사용한다.
+새 SKIP 저장을 거부해 빈 값을 추가하지 않는다. 단일설비 `data.parquet`은 같은 `ver` row를
+우선 사용한다. 정확히 일치하지 않더라도 파일 내 `ver`가 단일 값이면 이미 version 경로로
+한정된 파일로 처리해 drawing을 유지하고, 여러 `ver`가 섞인 불일치는 차단한다.
+클릭이력·SKIP·HIT 요청은 차트와 같은 분임조별 row의 `file_path`를 사용한다.
 PASS 이력 조회 실패도 file filter 응답과 격리하며, 화면의 별도 PASS 조회가 오류를
 표시한다. 별도 `knox_id` 조회는 하지 않으며 검증된 접속 IP를 기존 DB의
 `knox_id` 컬럼과 MY EQP owner 기준에 저장한다.
@@ -134,8 +136,7 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 
 위 DB action은 chart `file_path`가 있으면 화면에 노출하고 요청한다. DB credential이 없거나
 `SCS_DB_CONNECTIONS_ENABLED=0`이면 서버가 `503 DATA_CONNECTIONS_DISABLED`로 거부하며 일반 file chart는
-유지한다. 요청 직전 브라우저 콘솔의 `[history-db-request]`, 서버 정규화 payload의
-`[history-db-attempt]`, 실제 Python SQL 값의 `[history-db-write]`로 단계별 입력을 확인할 수 있다.
+유지한다. 이력 요청과 DB record는 브라우저·서버 Console 및 API debug payload로 노출하지 않는다.
 자설비 클릭이력은 분임조별 경로 조회 응답의 `filters.sdwt`·`filters.priorities`·`filters.sensor`로
 6컬럼을 구성한다. `file_path`는 선택 결과 존재 확인과 요청 추적에만 남기며, 6컬럼 구성에서는
 legacy 경로 형식이나 운영 mount root에 의존하지 않는다.
@@ -145,11 +146,7 @@ legacy 경로 형식이나 운영 mount root에 의존하지 않는다.
 `ver`는 분임조별 경로 row의 컬럼 값을 그대로 사용한다. 공통부·동일성 App은 기존 경로 계약을
 유지한다. 과거 빈 `ver` PASS row는 version을 제외한 나머지 식별값으로
 72시간 제외를 유지하며, SKIP LIST에서는 chart를 복원하지 않고 SKIP해제만 제공한다.
-서버가 DB helper 호출 전에 확정한 실제 6컬럼은 성공·실패 모두 브라우저 `[history-db-final]`과 자설비 화면의
-`클릭이력 DB 전송값 (디버깅)` 표에 표시한다.
-gate 거부는 credential 값을 제외한 `[history-db-blocked]`에 기록한다.
-handler 실패는 같은 문의 코드와 함께 `[clicked-history-failure]`에 `record-build` 또는 `db-write`
-단계로 기록해 경로·credential·DB 상세값을 노출하지 않고 실패 지점을 구분한다.
+화면의 클릭이력 디버깅 표는 제공하지 않으며, 실패 응답은 안전한 오류 code와 문의용 request ID만 유지한다.
 ## 9. Self Equipment 요청 흐름
 
 `DF-SELF-01~03`의 현재 연결은 다음과 같다.
@@ -264,7 +261,7 @@ row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`, dire
 | history `file_path` | team ERD row | history API body | 차트와 동일한 `row.file_path`를 PASS/HIT/click 입력으로 사용 | DB action | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `latest_date` | team ERD row의 `file_path` 날짜 segment | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
 | `recipe_id` | team ERD row | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
-| `ver` | team ERD row와 단일설비 data row | chart API `ver`·SKIP body | scoped row 검증·point 필터·PASS identity 비교 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
+| `ver` | team ERD row와 단일설비 data row | chart API `ver`·SKIP body | scoped row 검증; data는 정확 일치 우선·단일값 file-scope fallback·다중값 mismatch 차단; PASS identity 비교 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
 
 `step_seq`와 `ppid`를 URL 또는 equipment API filter로 전달하는 흐름은 확인되지 않았다.
 `ppid`는 `file_path`/row context와 chart 모아보기 식별에 간접 사용된다.

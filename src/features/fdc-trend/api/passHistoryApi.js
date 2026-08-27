@@ -1,19 +1,9 @@
 import { getApiErrorMessage } from "./errorMessage.js"
-import { logHistoryDbFinal, logHistoryRequest } from "./historyRequestDebug.js"
 
-async function parseResponse(response, operation = "") {
+async function parseResponse(response) {
   const payload = await response.json().catch(() => ({}))
-  if (operation && Array.isArray(payload.debugRecords)) {
-    payload.debugRecords.forEach((record) => {
-      logHistoryDbFinal({ table: "pass_history", operation, record })
-    })
-  }
   if (!response.ok) {
-    const error = new Error(getApiErrorMessage(payload, "PASS 이력을 처리하지 못했습니다."))
-    error.debugRecords = payload.debugRecords
-    error.failureStage = payload.failureStage
-    error.failureDetail = payload.failureDetail
-    throw error
+    throw new Error(getApiErrorMessage(payload, "PASS 이력을 처리하지 못했습니다."))
   }
   return payload
 }
@@ -51,33 +41,30 @@ export async function fetchSkipListData({
 
 export async function createPassHistory(input) {
   const body = { ...input }
-  logHistoryRequest({ endpoint: "/api/pass-history", body })
   const response = await fetch("/api/pass-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
-  return parseResponse(response, "UPSERT")
+  return parseResponse(response)
 }
 
 export async function createPassHistoryBatch({ records, comment, execDate }) {
   const body = { records, comment, execDate }
-  logHistoryRequest({ endpoint: "/api/pass-history", body })
   const response = await fetch("/api/pass-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
-  return parseResponse(response, "UPSERT_MANY")
+  return parseResponse(response)
 }
 
 export async function deletePassHistory(input) {
   const body = { ...input }
-  logHistoryRequest({ endpoint: "/api/pass-history", method: "DELETE", body })
   const response = await fetch("/api/pass-history", {
     method: "DELETE",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
-  return parseResponse(response, "DELETE")
+  return parseResponse(response)
 }

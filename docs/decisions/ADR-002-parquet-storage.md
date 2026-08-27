@@ -33,7 +33,9 @@ L0 Spider는 분석 결과를 자체 DB로 적재하지 않고 Node server에서
 Dashboard는 날짜·시각 filename을 나열해 detail과 stats를 선택한다.
 Self는 선택한 `path_xian/{line}/{sdwt}/df_path.parquet` row의 `file_path`가 `.png`이면 sibling,
 directory이면 하위의 `data.parquet`·`{eqp}.parquet`를 찾고 직접 `data.parquet`도 호환한다.
-경로 row와 단일설비 데이터는 각자의 `ver` 컬럼을 사용하고 요청 `ver`가 같은 point만 읽는다. 공통부는 index `file_path`에서 sibling
+경로 row와 단일설비 데이터는 각자의 `ver` 컬럼을 사용한다. 단일설비는 요청 `ver`와 정확히
+같은 row를 우선하고 파일 내부 `ver`가 단일 값이면 version-scoped file로 처리하며, 다중값
+mismatch는 차단한다. 공통부는 index `file_path`에서 sibling
 data·image path를 파생한다.
 동일성은 최신 유효 시각 directory 아래의 계층을 index로 변환한다.
 
