@@ -113,7 +113,7 @@
 | 데이터 | `COMMON_COMMONALITY_ROOT_PATH` | 공통부 동일성 root override | 기존 commonality/dashboard root의 형제 `path_common_commonality`, 이후 코드 template | 선택 | 프로세스 시작 | `server/latestCommonCommonalityPath.mjs` | 경로 주의 | 기존 데이터 mount의 형제 경로 사용 | `Confirmed` |
 | 데이터 | `SPIDER_DASHBOARD_PATH_ROOT` | dashboard 통계 root override | dashboard template의 상위 경로 | 선택 | API 요청 | `server/dashboardData.mjs:20-22` | 경로 주의 | 코드 root 사용 | `Confirmed` |
 | 데이터 | `SENSOR_EXCLUSION_CONFIG_PATH` | 기본 sensor 제외 JSON 경로 override | `config/sensor-exclusions.json` | 선택 | 경로는 프로세스 시작; 내용은 API 요청 | `server/sensorExclusionConfig.mjs` | 경로 주의 | 기본 파일 사용 | `Confirmed` |
-| 데이터 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 `path_xian` root override | `/appdata/abnormal_trend/pic/path_xian` | 선택 | 프로세스 시작 | `server/selfEquipmentData.mjs` | 경로 주의 | 코드 기본 root 사용 | 코드 `Confirmed`; 운영값 `Unknown` |
+| 데이터 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 team `path_xian` root override | `/appdata/abnormal_trend/pic/path_xian` | 선택 | 프로세스 시작 | `server/selfEquipmentData.mjs` | 경로 주의 | root 아래 `{line}/{pathSdwt}/df_path.parquet` 사용 | 코드 `Confirmed`; 운영값 `Unknown` |
 | DB | `DB_INFO_PATH` | DB credential pickle 위치 | `/appdata/l0_spider_scs/db_info.pkl` | DB 기능에 조건부 | helper 실행 | `scripts/*.py` | 값 자체는 아니나 민감 경로 | 코드 경로 사용 | `Confirmed` |
 | 사용자 | `REMOTE_ADDR` | current user helper의 접속 IP 전달값 | 없음 | helper 실행 시 내부 주입 | helper 실행 | `scripts/current_user.py` | 개인정보 주의 | IP 형식 검증 후 같은 IP 반환 | `Confirmed` |
 | 메뉴얼 | `MANUAL_BASE_URL` | 기존 UI 서버 사용 여부 | 코드 기본 loopback URL, port `4173` | 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:11-12` | 아니오 | 자체 Vite 시작 | `Confirmed` |
@@ -189,7 +189,7 @@
 
 - 현재 코드는 Dashboard와 자설비 파일 read allowlist를 기본 활성화한다. 사용자와 세 이력 API는 credential read 가능 시 활성화되고 Mailing과 다른 App은 계속 차단된다. 전체 UI shell은 세 범위의 `SCS_*_ENABLED=0`을 명시해 전환한다. 실제 배포 환경의 변수 존재·값, DB와 target mount는 `Unknown`이다.
 - 화면의 상대 `/api/*` 요청은 Node 또는 Vite handler를 거쳐 코드 경로 template, root override 4개와 file/config override 2개를 사용한다.
-- Self Equipment의 `path_xian` root는 `SCS_SELF_EQUIPMENT_PATH_ROOT`로 선택적으로 override하며 기본값은 코드 template이다.
+- Self Equipment의 team `path_xian` root는 `SCS_SELF_EQUIPMENT_PATH_ROOT`로 선택적으로 override하며 기본값은 코드 template이다.
 - 읽기 권한, mount 준비, 데이터 생성 주체와 운영별 경로 차이는 `Unknown`이다.
 
 ### 13.2 대시보드 API

@@ -14,7 +14,7 @@ export const SPIDER_DATA_PATH_TEMPLATES = Object.freeze({
   latestDateFile: `${PIC_ROOT}/path/{latest_date}`,
   selfEquipmentIndexRoot: `${PIC_ROOT}/path_xian`,
   selfEquipmentIndex: `${PIC_ROOT}/path_xian/{latest_date}`,
-  teamErdPath: `${PIC_ROOT}/path/{line}/{sdwt}/df_path.parquet`,
+  teamErdPath: `${PIC_ROOT}/path_xian/{line}/{sdwt}/df_path.parquet`,
   commonAnomalyPath: `${PIC_ROOT}/path_common/{line}/{sdwt}/df_path.parquet`,
   commonAnomalyData: `${PIC_ROOT}/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/data.parquet`,
   commonAnomalyImage: `${PIC_ROOT}/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/{eqp_cb}.png`,

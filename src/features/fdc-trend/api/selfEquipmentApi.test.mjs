@@ -4,6 +4,8 @@ import test from "node:test"
 import {
   buildErdDataReferencePath,
   fetchEqpAllSkipTargets,
+  fetchErdIdentityData,
+  fetchErdScatterData,
   getSelfEquipmentPassHistoryFields,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
@@ -77,6 +79,41 @@ test("자설비 SKIP은 path_xian row에서 PASS 이력 필드를 구성한다",
     step: "10@MAIN",
     eqp: "EQP-1",
   })
+})
+
+test("단일설비와 동일성 차트 요청은 선택한 ERD row의 ver를 전달한다", async (t) => {
+  const originalFetch = globalThis.fetch
+  const requestedUrls = []
+  globalThis.fetch = async (url) => {
+    requestedUrls.push(String(url))
+    return { ok: true, json: async () => ({ ok: true }) }
+  }
+  t.after(() => {
+    globalThis.fetch = originalFetch
+  })
+
+  await fetchErdScatterData({
+    filePath: "/appdata/abnormal_trend/pic/erd/chart.png",
+    eqp: "EQP-1",
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+    ver: "V7",
+    line: "LINE-1",
+    pathSdwt: "SDWT-1",
+  })
+
+  await fetchErdIdentityData({
+    filePath: "/appdata/abnormal_trend/pic/erd/chart.png",
+    eqp: "EQP-1",
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+    ver: "V7",
+    line: "LINE-1",
+    pathSdwt: "SDWT-1",
+  })
+
+  assert.equal(requestedUrls.length, 2)
+  requestedUrls.forEach((url) => assert.match(url, /(?:\?|&)ver=V7(?:&|$)/))
 })
 
 test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", async (t) => {

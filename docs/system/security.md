@@ -151,7 +151,7 @@ mapping capability가 DB query와 action을 프론트엔드에서도 비활성�
 | Dashboard | `startDate`, `endDate`, repeated `line` | strict date·range parsing | 보호 오류 `code`·`requestId` | 성공 `sourcePaths` | `Implemented` / `Risk` | `dashboardData.mjs`; `safeApiError.mjs` |
 | SCS API gate | `/api` namespace | handler dispatch 전 전체 opt-in, Dashboard·Self read와 credential 기반 DB method allowlist | 비허용 요청은 `503 DATA_CONNECTIONS_DISABLED`, UUID `requestId`; HEAD 무본문 | 부분 활성 상태를 전체 활성으로 오판할 위험 | `Implemented` / 운영 적용 `Unknown` | `dataConnections.mjs`; safe error contract |
 | Self Equipment | `line`, `pathSdwt`, `sdwt`, filters | 필수값·path segment·option matching | 400·500 | 성공 `sourcePath` | 일부 `Implemented` | `selfEquipmentData.mjs:62-65,321-353` |
-| ERD scatter | `path`, `line`, `pathSdwt`, `eqp`, `sensor`, `chStep`, `latestDate`, `days` | root·segment·0~30 integer; Self gate에서 최신 scoped row path·EQP·date 일치 | 400·403·보호 오류 500 | 성공 `sourcePath` | `Implemented` / 운영 ACL `Unknown` | `selfEquipmentData.mjs`; `safeApiError.mjs` |
+| ERD scatter | `path`, `line`, `pathSdwt`, `eqp`, `sensor`, `chStep`, `ver`, `latestDate`, `days` | root·segment·0~30 integer; Self gate에서 분임조별 row의 path·EQP·date·sensor·step·ver 일치 | 400·403·보호 오류 500 | 성공 `sourcePath` | `Implemented` / 운영 ACL `Unknown` | `selfEquipmentData.mjs`; `safeApiError.mjs` |
 | image | absolute `path` | root·extension·file 존재 | 403·보호 오류 404/500 | 성공 요청 계약에 path 사용 | 일부 `Implemented` | file handlers |
 | registration | JSON, user IDs, 목록 | 1 MiB, count·length·pattern, mapping 가용성·Line/SDWT 범위 | mapping 400/503 또는 보호 오류 500 | debug row·DB detail 제거 | 일부 `Implemented` / CORE-04 | registration handlers |
 | history | JSON, file path, batch | 64 KiB~2 MiB, root parse, batch 500 | 보호 오류 500 | 성공 payload 호환 유지 | 일부 `Implemented` | history handlers |
@@ -168,9 +168,9 @@ mapping capability가 DB query와 action을 프론트엔드에서도 비활성�
 
 | 데이터 흐름 | 사용자 영향값 | 경로 조립 위치 | 현재 검증 | 접근 형태 | 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|---|---|
-| Self index | `line`, `pathSdwt` | 최신 `path_xian/{latest_date}` + mapping scope | segment·mapping 범위 검사 | Parquet read | symlink·mount 권한 | `Implemented` / 운영 `Unknown` | `readLatestSelfEquipmentRows`; `scopeSelfEquipmentRows` |
+| Self team path | `line`, `pathSdwt` | `path_xian/{line}/{pathSdwt}/df_path.parquet` + mapping scope | segment·mapping 범위 검사 | Parquet read | symlink·mount 권한 | `Implemented` / 운영 `Unknown` | `readTeamErdRows`; `scopeSelfEquipmentRows` |
 | common index | `line`, `pathSdwt` | `buildCommonAnomalyPath` | 같은 segment 검사 | Parquet read | symlink·path 노출 | `Implemented` / `Unknown` | `commonAnomalyData.mjs:223-245` |
-| ERD data | browser가 받은 index `file_path` | `resolveErdDataFilePath` | `/pic_server2/`→`/pic/`, `.png` sibling·directory 하위·직접 `data.parquet` 구분, pic root prefix·backup 거부; 두 gate mode에서 최신 scoped index의 path·EQP·date·sensor·step 재검증 | Parquet read | symlink·producer 신뢰·화면 경로 노출 | `Implemented` / 운영 `Needs Validation` | `resolveErdDataFilePath`; `isSelfEquipmentDataPathAllowed` |
+| ERD data | browser가 받은 team row `file_path` | `resolveErdDataFilePath` | `/pic_server2/`→`/pic/`, `.png` sibling·directory 하위·직접 `data.parquet` 구분, pic root prefix·backup 거부; 분임조별 row의 path·EQP·date·sensor·step·ver 재검증 후 data row의 같은 `ver`만 선택 | Parquet read | symlink·producer 신뢰·화면 경로 노출 | `Implemented` / 운영 `Needs Validation` | `resolveErdDataFilePath`; `isSelfEquipmentDataPathAllowed` |
 | common data | image 또는 data path | `resolveCommonAnomalyDataPath` | suffix 변환, common root prefix | Parquet read | symlink·경로 노출 | `Implemented` / `Needs Validation` | `commonAnomalyData.mjs:261-276` |
 | ERD image | absolute path query | `handleErdFileRequest` | ERD root·image extension·regular file | stream read | 직접 file 존재 oracle | `Implemented` / `Risk` | `selfEquipmentData.mjs:803-833` |
 | commonality image | absolute path query | commonality handler | 최신 root·`img.png`·regular file | stream read | 404·500 path 노출 | `Implemented` / `Risk` | `commonalityData.mjs:256-289` |
@@ -250,7 +250,7 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 | Dashboard read gate | `SCS_DASHBOARD_DATA_ENABLED` | Node·Vite | Portal·Dashboard read | 활성 | 비-`1`이면 Dashboard GET/HEAD 차단 | secret 아님 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 | Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite | mapping GET/HEAD, Self·scatter GET에 직접 영향 | 활성 | 미설정 또는 정확히 `1`이면 자설비 read allowlist 통과; 그 외 값은 차단 | secret 아님; 부분 연결 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 | DB connection gate | `SCS_DB_CONNECTIONS_ENABLED` | Node·Vite | 전체 gate 비활성 mode의 사용자·My EQP·세 이력 API handler 진입 | credential read 가능 시 활성 | 비-`1` 또는 credential read 불가이면 allowlist 차단 | secret 아님; 범위 통제 | `Implemented` / 실제 연결 `Unknown` | `server/dataConnections.mjs` |
-| Self Equipment index root | `SCS_SELF_EQUIPMENT_PATH_ROOT` | Node | path_xian 탐색 root | `/appdata/abnormal_trend/pic/path_xian` | 설정 root의 최신 file 사용 | 경로 주의 | `Implemented` / 실제 값 `Unknown` | `server/selfEquipmentData.mjs` |
+| Self Equipment team path root | `SCS_SELF_EQUIPMENT_PATH_ROOT` | Node | 분임조별 path_xian root | `/appdata/abnormal_trend/pic/path_xian` | 설정 root 아래 `{line}/{pathSdwt}/df_path.parquet` 사용 | 경로 주의 | `Implemented` / 실제 값 `Unknown` | `server/selfEquipmentData.mjs` |
 
 `.env.example`과 `.env.mock.example`은 현재 `main`에서 확인되지 않았다.
 `VITE_` 변수는 client-visible 영역으로 간주하여 secret, token, DB·mail credential과 HMAC key를 두지 않는 것이 `Policy`다.

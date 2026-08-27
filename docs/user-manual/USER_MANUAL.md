@@ -138,10 +138,15 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 | 변경점이력 | 차트 변경점 목록 확인 |
 | 이력저장 | 현재 결과를 이력 DB에 저장 |
 
-새 `path_xian` index에는 `ver` 컬럼이 없으므로 같은 `file_path`를 가진 분임조별
-ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. SKIP과 이력저장 버튼은 최종 chart row의
-날짜·SDWT·RECIPE_ID·등급·sensor·ch_step·EQP 등 확정값을 사용하며, `file_path` 계층을 다시 해석하지
-않습니다. 마지막 `ch_step` 클릭이력도 최종 조회 응답의 filter 확정값을 사용합니다. SKIP은 등록
+자설비 필터는 선택한 Line·SDWT의 분임조별 ERD 경로 테이블
+`/pic/path_xian/{line}/{sdwt}/df_path.parquet`를 직접 사용합니다. SKIP은 선택된 row의
+`ver` 컬럼을 그대로 저장하며 경로에서 version을 추정하지 않습니다. 이 `ver`가 비어 있으면
+빈 값을 저장하지 않고 SKIP 요청을 실패로 안내합니다. 단일설비 `data.parquet`도 같은 `ver`의
+데이터만 차트에 사용합니다. SKIP과 이력저장 버튼은 최종 chart row의
+날짜·SDWT·RECIPE_ID·등급·sensor·ch_step·EQP 등 확정값을 사용합니다. 마지막 `ch_step`
+클릭이력도 최종 조회 응답의 filter 확정값을 사용합니다. 과거에 빈
+`ver`로 저장된 행은 SKIP LIST에서 chart 없이 표시되며 **SKIP해제**할 수 있습니다. SKIP LIST에서도
+`eqp_ch=ALL`과 `sensor=ALL`을 함께 선택하면 `ch_step`에 `ALL`이 표시됩니다. SKIP은 등록
 시각부터 72시간 동안 일반
 결과에서 제외되며, **SKIP LIST**에서 **SKIP해제**할 수 있습니다.
 

@@ -104,10 +104,11 @@ export async function fetchEqpAllSkipTargets({
     .filter((target) => target.filePath)
 }
 
-export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, latestDate, line, pathSdwt }) {
+export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, ver, latestDate, line, pathSdwt }) {
   const searchParams = new URLSearchParams({ path: filePath, eqp })
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
+  if (ver) searchParams.set("ver", ver)
   if (latestDate) searchParams.set("latestDate", latestDate)
   if (line) searchParams.set("line", line)
   if (pathSdwt) searchParams.set("pathSdwt", pathSdwt)
@@ -123,10 +124,11 @@ export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, lates
   return payload
 }
 
-export async function fetchErdIdentityData({ filePath, eqp, sensor, chStep, latestDate, line, pathSdwt, days, signal }) {
+export async function fetchErdIdentityData({ filePath, eqp, sensor, chStep, ver, latestDate, line, pathSdwt, days, signal }) {
   const searchParams = new URLSearchParams({ path: filePath, eqp, mode: "identity" })
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
+  if (ver) searchParams.set("ver", ver)
   if (latestDate) searchParams.set("latestDate", latestDate)
   if (line) searchParams.set("line", line)
   if (pathSdwt) searchParams.set("pathSdwt", pathSdwt)

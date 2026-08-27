@@ -130,7 +130,10 @@ function buildErdImagePath(record) {
     record.step,
     `${normalizeEqp(record.eqp)}.png`,
   ].map(normalizeText)
-  if (segments.some((value) => !value)) throw new Error("PASS 이력에서 ERD 차트 경로를 복원하지 못했습니다.")
+  if (segments.some((value, index) => index !== 3 && !value)) {
+    throw new Error("PASS 이력에서 ERD 차트 경로를 복원하지 못했습니다.")
+  }
+  if (!segments[3]) return ""
   return `${ERD_FILE_ROOT}/${segments.join("/")}`
 }
 
@@ -192,7 +195,6 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
     rowCount: sensorRecords.length,
   })), "sensor")
   const selectedSensor = filters.sensor === ALL_VALUES
-    && selectedEqpCh !== ALL_VALUES
     && sensors.length
     ? ALL_VALUES
     : sensors.some((item) => item.sensor === filters.sensor)
@@ -237,7 +239,7 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
     rows: chartRecords.map((record) => {
       const filePath = buildErdImagePath(record)
       return {
-        id: `pass-${filePath}`,
+        id: `pass-${encodeURIComponent(passRecordIdentity(record))}`,
         sdwt: normalizeText(record.sdwt),
         desc: normalizeText(record.desc),
         ver: normalizeText(record.ver),
@@ -497,10 +499,9 @@ export function buildPassHistoryRecord({
   knoxId,
   comment = "",
   execDate = "",
-}) {
+}, { allowMissingSelfVersion = false } = {}) {
   const normalizedLineId = normalizeText(lineId)
   if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
-  if (!normalizeText(filePath)) throw new Error("Chart Drawing 경로가 필요합니다.")
 
   const selectedValues = {
     updateDate: normalizeText(updateDate),
@@ -523,12 +524,18 @@ export function buildPassHistoryRecord({
     selectedValues.step,
     selectedValues.eqp,
   ].every(Boolean)
+  if (!normalizeText(filePath) && !(allowMissingSelfVersion && hasSelfSelection)) {
+    throw new Error("Chart Drawing 경로가 필요합니다.")
+  }
   const normalizedPath = normalizeText(filePath).replaceAll("/pic_server2/", "/pic/")
   const pathValues = hasSelfSelection
     ? selectedValues
     : resolve(normalizedPath).startsWith(`${COMMON_FILE_ROOT}/`)
     ? parseCommonPassHistoryPath(normalizedPath, { eqp, prcGroup })
     : parsePassHistoryPath(normalizedPath)
+  if (hasSelfSelection && !pathValues.ver && !allowMissingSelfVersion) {
+    throw new Error("자설비 SKIP ver 정보를 확인하지 못했습니다.")
+  }
 
   return {
     lineId: normalizedLineId,
@@ -611,7 +618,10 @@ export async function handlePassHistoryRequest(req, res, url) {
         sendJson(res, 200, result)
         return
       }
-      const record = buildPassHistoryRecord({ ...body, knoxId: currentUser.knoxId })
+      const record = buildPassHistoryRecord(
+        { ...body, knoxId: currentUser.knoxId },
+        { allowMissingSelfVersion: req.method === "DELETE" },
+      )
       logHistoryDbAttempt({
         table: "pass_history",
         operation: req.method === "POST" ? "UPSERT" : "DELETE",

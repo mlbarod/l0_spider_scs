@@ -14,7 +14,7 @@
 ## 적용 범위
 
 - Dashboard detail·stats Parquet와 mapping JSON
-- Self/MY EQP의 최신 `path_xian/{latest_date}`, `file_path`에서 해석한 data/history Parquet
+- Self의 team `path_xian/{line}/{sdwt}/df_path.parquet`, `file_path`에서 해석한 data/history Parquet
 - 동일성 `erd_commonality` directory·`img.png`
 - 공통부 `path_common` Parquet, common `data.parquet`·PNG
 - 파일 path를 전달하는 API와 이를 소비하는 React 화면
@@ -31,8 +31,9 @@
 
 L0 Spider는 분석 결과를 자체 DB로 적재하지 않고 Node server에서 운영 파일 저장소의 Parquet를 직접 읽고 PNG를 stream한다.
 Dashboard는 날짜·시각 filename을 나열해 detail과 stats를 선택한다.
-Self는 최신 `path_xian/{latest_date}` index의 `file_path`가 `.png`이면 sibling,
-directory이면 하위의 `data.parquet`·`{eqp}.parquet`를 찾고 직접 `data.parquet`도 호환한다. 공통부는 index `file_path`에서 sibling
+Self는 선택한 `path_xian/{line}/{sdwt}/df_path.parquet` row의 `file_path`가 `.png`이면 sibling,
+directory이면 하위의 `data.parquet`·`{eqp}.parquet`를 찾고 직접 `data.parquet`도 호환한다.
+경로 row와 단일설비 데이터는 각자의 `ver` 컬럼을 사용하고 요청 `ver`가 같은 point만 읽는다. 공통부는 index `file_path`에서 sibling
 data·image path를 파생한다.
 동일성은 최신 유효 시각 directory 아래의 계층을 index로 변환한다.
 

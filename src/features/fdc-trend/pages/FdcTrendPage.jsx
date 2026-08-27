@@ -865,12 +865,13 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
   }, [])
 
   const identityQuery = useQuery({
-    queryKey: ["erd-identity-data", row.file_path, row.latest_date, eqp, row.sensor, row.step, 3],
+    queryKey: ["erd-identity-data", row.file_path, row.latest_date, eqp, row.sensor, row.step, row.ver, 3],
     queryFn: ({ signal }) => fetchErdIdentityData({
       filePath: row.file_path,
       eqp,
       sensor: row.sensor,
       chStep: row.step,
+      ver: row.ver,
       latestDate: row.latest_date,
       line: row.line_rev,
       pathSdwt: row.path_sdwt,
@@ -1246,12 +1247,13 @@ const ErdScatterCard = memo(function ErdScatterCard({
   }, [])
 
   const chartQuery = useQuery({
-    queryKey: ["erd-scatter-data", row.file_path, row.latest_date, eqp, row.sensor, row.step],
+    queryKey: ["erd-scatter-data", row.file_path, row.latest_date, eqp, row.sensor, row.step, row.ver],
     queryFn: () => fetchErdScatterData({
       filePath: row.file_path,
       eqp,
       sensor: row.sensor,
       chStep: row.step,
+      ver: row.ver,
       latestDate: row.latest_date,
       line: row.line_rev,
       pathSdwt: row.path_sdwt,
@@ -1486,7 +1488,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               loadTargets={allSkipLoadTargets}
             />
           ) : null}
-          {historyActionsEnabled && isSkipped ? (
+          {isSkipped ? (
             <Button
               type="button"
               variant="outline"

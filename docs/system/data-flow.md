@@ -53,7 +53,7 @@
 |---|---|---|---|---|---|---|---|
 | `DF-DASH-00` | 메인 최신 수행 시각 | `/`, `/fdc_trend` | 최신 detail 파일명 조회 | `path/{latest_date}` directory entry | 마지막 알고리즘 수행 시간 | `Complete` | `Confirmed` |
 | `DF-DASH-01` | Line Dashboard | `/`, `/fdc_trend` | 날짜 선택·고유조합 집계 | detail·stats Parquet, mapping JSON | KPI·막대·추이·상세표 | `Complete` | `Confirmed` |
-| `DF-SELF-01` | Self Equipment 필터 | `/self-equipment` | mapping·최신 path_xian row·PASS 제외·종속 필터 | `path_xian/{latest_date}`, `pass_history` | RECIPE_ID·EQP·sensor·ch_step·chart row | 코드 `Complete`; 운영 `Unknown` | `Confirmed`/`Unknown` |
+| `DF-SELF-01` | Self Equipment 필터 | `/self-equipment` | mapping·team path_xian row·PASS 제외·종속 필터 | `path_xian/{line}/{sdwt}/df_path.parquet`, `pass_history` | RECIPE_ID·EQP·sensor·ch_step·chart row | 코드 `Complete`; 운영 `Unknown` | `Confirmed`/`Unknown` |
 | `DF-SELF-02` | Scatter·동일성 차트 | Self Equipment chart card | image path 검증·data path 변환·point 집계 | ERD `data.parquet`, history Parquet | scatter·3일 동일성·변경이력 | `Complete` | `Confirmed` |
 | `DF-SELF-03` | MY EQP 조회 | `sdwt=MY_EQP` | 사용자·활성 등록·mapping·index·PASS 결합 | `myeqp_regist`, mapping JSON, 최신 path_xian, `pass_history` | MY EQP filter·chart | 코드 `Complete`; 운영 `Unknown` | `Confirmed`/`Unknown` |
 | `DF-ABN-01` | 동일성 이상감지 | `/matching-anomaly` | 최신 directory index와 종속 필터 | `erd_commonality` directory·PNG | 분석 이미지 카드 | `Complete` | `Confirmed` |
@@ -115,8 +115,7 @@ flowchart LR
 | `DS-EXCLUDE-01` | JSON | 기본 `config/sensor-exclusions.json`, 선택적 `SENSOR_EXCLUSION_CONFIG_PATH` override | Node | 읽기 | 개발자·배포 담당자 | 네 이상감지 App·Mailing 후보 요약 | `Confirmed` | `sensorExclusionConfig.mjs` — `readSensorExclusionConfig` |
 | `DS-DASH-01` | Parquet | `path/{latest_date}` | Node | 읽기 | `Unknown` | `DF-DASH-01`, `DF-MAIL-02` | `Confirmed` | `dashboardData.mjs` — `listDashboardDateFiles` |
 | `DS-DASH-02` | Parquet | `stats/{latest_date}_spider_step_stats.parquets` | Node | 읽기 | `Unknown` | `DF-DASH-01`, `DF-MAIL-02` | `Confirmed` | `buildDashboardStatsPath` |
-| `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | Node | 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readLatestSelfEquipmentRows` |
-| `DS-SELF-REF` | Parquet | `path/{line}/{sdwt}/df_path.parquet` | Node | DB 활성 시 선택적 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 실패 격리 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readOptionalErdPathReferenceRows` |
+| `DS-SELF-01` | Parquet | `path_xian/{line}/{sdwt}/df_path.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readTeamErdRows` |
 | `DS-SELF-02` | Parquet | path row `file_path`: `{eqp}.png`의 sibling 또는 directory 하위 `data.parquet`; 같은 directory의 `{eqp}.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-02` | 코드 `Confirmed`; 운영 file `Unknown` | `resolveErdDataFilePath`, scatter handler |
 | `DS-ABN-01` | directory·PNG | `erd_commonality/{latest_date}/.../{sensor}_{ch_step}/img.png` | Node | directory 읽기·stream | `Unknown` | `DF-ABN-01` | `Confirmed` | `commonalityData.mjs` — `collectCommonalityRows` |
 | `DS-ABN-02` | Parquet·PNG | `path_common/{line}/{sdwt}/df_path.parquet` → `common/.../data.parquet`, PNG | Node | 읽기·stream | `Unknown` | `DF-ABN-02` | `Confirmed` | `commonAnomalyData.mjs` |
@@ -155,7 +154,7 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | `DF-DASH-01` | `GET /api/dashboard-data` | `getDashboardSummary` | `DS-DASH-01/02`, `DS-MAP-01` | 날짜별 최신·D-1 선택, 5-key 고유집계 | `Confirmed` | `dashboardData.mjs` |
 | `DF-DASH-00` | `GET /api/dashboard-latest-date` | `getLatestDashboardDate` | `DS-DASH-01` 파일명 목록 | 최신 `{latest_date}` 문자열만 반환 | `Confirmed` | `dashboardData.mjs`; `dashboardLatestDate.mjs` |
-| `DF-SELF-01` | `GET /api/self-equipment-data` | `readLatestSelfEquipmentRows`, `readErdPathReferenceRows`, `scopeSelfEquipmentRows`, `buildSelfEquipmentPayload` | `DS-SELF-01`, `DS-SELF-REF`, `pass_history` | 동일 file_path의 ERD 경로 row에서 ver 참조, active PASS·sensor 제외, 종속 option·row 생성 | 코드 `Confirmed`; 운영 `Unknown` | `selfEquipmentData.mjs` |
+| `DF-SELF-01` | `GET /api/self-equipment-data` | `readTeamErdRows`, `scopeSelfEquipmentRows`, `buildSelfEquipmentPayload` | `DS-SELF-01`, `pass_history` | team row의 ver 직접 사용, active PASS·sensor 제외, 종속 option·row 생성 | 코드 `Confirmed`; 운영 `Unknown` | `selfEquipmentData.mjs` |
 | `DF-SELF-02` | scatter·file API | `resolveErdDataFilePath`, payload builder | `DS-SELF-02` | axis column, point grouping·sampling·history | `Confirmed` | `selfEquipmentData.mjs` |
 | `DF-SELF-03` | `GET /api/my-eqp-equipment-data` | 접속 IP·등록 조회 후 `filterMyEqpRows` | DB·mapping·`DS-SELF-01/REF` | IP owner의 active registration·PASS·sensor 제외 | 코드 `Confirmed`; 운영 `Unknown` | `handleMyEqpEquipmentDataRequest`; `dataConnections.mjs` |
 | `DF-ABN-01` | commonality data/image API | latest path·directory index·filter payload | `DS-ABN-01` | folder segment를 image row로 변환 | `Confirmed` | commonality modules |
@@ -172,19 +171,19 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | `line` | 사용자 선택 또는 URL | Dashboard 반복 `line`; 상세은 단일 `line` | mapping 검증, team/path 및 DB 조건 | 유효 mapping의 첫 Line; mapping 실패 시 종속 조회 중단 | `Confirmed` / CORE-04 | Dashboard/Self API |
 | `sdwt` | mapping display 또는 URL 반복값 | 일반 Self display와 `MY_EQP` 전달 | 서버 scope는 mapping key·유일 display만 신뢰; `MY_EQP`는 virtual 값 | 일반 상세 endpoint에서 필수 | 코드 `Confirmed` | URL utility; handlers |
-| `pathSdwt` | mapping JSON key | 화면의 team key | mapping 전체에서 해당 key만 유일하게 소유하는 key·표시값과 최신 index row `sdwt`를 대조 | 일반 상세에서 필수, 모호한 display는 제외 | 코드 `Confirmed` | `scopeSelfEquipmentRows` |
+| `pathSdwt` | mapping JSON key | 화면의 team key | mapping에서 선택 Line 소유 key를 검증하고 team path segment로 사용 | 일반 상세에서 필수 | 코드 `Confirmed` | `scopeSelfEquipmentRows`; `resolveTeamErdPath` |
 | `grade` / `priority` | 사용자·URL | `A/B`를 `A`,`B`로 확장하여 반복 `priority` | Parquet `priority`, mailing group | URL Grade가 없으면 화면 기본 `A/B` | `Confirmed` | `expandPriorities`; URL utility |
 | `RECIPE_ID` / legacy `desc` | 사용자 | UI label은 RECIPE_ID; API wire 이름은 legacy `desc` | path_xian Parquet `recipe_id` filter | URL `step`과 직접 연결 안 함 | 코드 `Confirmed` / URL 명칭 `Mismatch` | `FdcTrendPage`; self handler |
 | `eqpCh` | 사용자 또는 URL | `eqpCh`; legacy `eqp_ch`도 읽음 | 일반 Self row filter; MY EQP는 표기 정규화 | 없으면 미선택 | `Confirmed` | API·URL utility |
 | `sensor` | 사용자 선택 | `sensor` query; `ALL` 허용 | row·axis filter; click history는 선택 `ALL`을 그대로 저장 | 없으면 후속 row 없음 | `Confirmed` | Self/commonality handlers |
 | `chStep` / `ch_step` | 사용자 선택 | API query는 `chStep` | row `step`, 자설비 axis `${sensor}*${chStep}` | sensor `ALL`이면 `ALL`만 정상 분기 | 코드 `Confirmed` | Self payload |
-| `latest_date` | 서버의 filename/directory 선택 | 자설비 chart API에는 `latestDate`로 전달 | dashboard 날짜 file, 최신 commonality directory, path_xian 최신 file | 유효 날짜 없으면 오류 | 코드 `Confirmed`; 운영 file `Unknown` | dashboard/latest/self modules |
+| `latest_date` | 서버의 filename/directory 선택 또는 Self team row의 `file_path` | 자설비 chart API에는 `latestDate`로 전달 | dashboard 날짜 file, 최신 commonality directory, Self scoped row 검증 | 유효 날짜 없으면 오류 | 코드 `Confirmed`; 운영 file `Unknown` | dashboard/latest/self modules |
 | `step_desc` | Parquet row·directory | UI label·`stepDesc` query | detail row filter·directory segment | 선택 전 결과 row 없음 | `Confirmed` | data handlers |
 | `step_seq` | commonality directory | 브라우저 선택값 아님 | image row metadata·path segment | directory에 의존 | `Confirmed` | `collectCommonalityRows` |
 | `ppid` | file path·Parquet row | chart grouping·표시 | ERD/commonality path와 grouping | 원천 값에 의존 | `Confirmed` | path config·pages |
 | `recipe_id` | dashboard detail row | 직접 query로 전달하지 않음 | 5-key 고유 이상건 집계 | 빈 문자열도 정규화 key에 참여 | `Confirmed` | `LINE_ANOMALY_ID_COLUMNS` |
 | `eqp` | row·등록 DB·사용자 선택 | `eqp` query 또는 `eqpCh` | file row filter·chart group·MY EQP match | endpoint별 조건부 필수 | `Confirmed` | Self/Common modules |
-| `ver` | team ERD 경로 table·index `file_path` segment | 현재 Self index column에는 없음 | 동일 `file_path` row의 `ver` 참조와 history parser 보조 | reference가 없어도 index `file_path`로 DB action 요청 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
+| `ver` | team ERD 경로 table과 단일설비 `data.parquet` 컬럼 | chart API query·SKIP body | team row 일치 검증, data point 같은 ver 필터, SKIP에 직접 저장 | 빈 team row ver는 새 SKIP 거부 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
 
 ## 9. 대시보드 데이터 흐름
 
@@ -223,19 +222,20 @@ Portal의 마지막 알고리즘 수행 시간은 `GET /api/dashboard-latest-dat
 | 1 | `FdcTrendPage` | mapping, 사용자 선택 | Line→SDWT→Grade→RECIPE_ID→EQP→sensor→ch_step 상태 구성 | API query | `Confirmed` | page query state |
 | 2 | `fetchSelfEquipmentData` | filter state | 반복 priority와 선택 query 직렬화 | `GET /api/self-equipment-data` | `Confirmed` | API module |
 | 3 | Self handler | `line`, `pathSdwt`, `sdwt` 등 | 필수값·path segment 검증 | 조회 조건 | `Confirmed` | `readFilters` |
-| 4 | `readLatestSelfEquipmentRows` | path_xian root | 최신 날짜·시각 Parquet 읽기·정규화 | 전체 path rows | 코드 `Confirmed`; 운영 `Unknown` | `DS-SELF-01` |
-| 5 | ERD 경로 table·mapping·설정 결합 | path rows·Line/SDWT·선택적 team df_path·sensor 제외 JSON·PASS | DB 활성 시 동일 file_path의 ver와 PASS를 참조하되 보조 file·DB 실패는 빈 결과로 격리, mapping 범위, active SKIP과 sensor 제외 | visible rows | 코드 `Confirmed` | `readOptionalErdPathReferenceRows`; `readOptionalPassHistoryRecords`; `attachErdPathReferences`; 제외 함수 |
+| 4 | `readTeamErdRows` | `path_xian/{line}/{pathSdwt}/df_path.parquet` | 선택 team Parquet의 10개 컬럼 읽기·정규화 | team path rows | 코드 `Confirmed`; 운영 `Unknown` | `DS-SELF-01` |
+| 5 | mapping·설정 결합 | team path rows·Line/SDWT·sensor 제외 JSON·PASS | mapping 범위 검증, row의 ver 직접 유지, DB 실패는 file 조회와 격리, 과거 빈 ver PASS도 version 외 식별값으로 active 제외 유지 | visible rows | 코드 `Confirmed` | `readOptionalPassHistoryRecords`; `scopeSelfEquipmentRows`; 제외 함수 |
 | 6 | payload builder | visible rows·filter | 제외 후 종속 option과 최종 chart rows 생성 | JSON | `Confirmed` | `buildSelfEquipmentPayload` |
 | 7 | page | JSON rows | EQP grouping·pagination | 최대 20 실제 chart/page | `Confirmed` | `paginateChartGroups` |
 
 ### Flow ID: `DF-SELF-02` — ERD chart와 파일
 
 chart row의 `file_path`가 `GET /api/erd-scatter-data`의 `path`가 된다.
-서버는 index row의 `file_path`에서 `/pic_server2/`를 `/pic/`로 바꾸고 허용 pic root인지 검사한다.
+서버는 team row의 `file_path`에서 `/pic_server2/`를 `/pic/`로 바꾸고 허용 pic root인지 검사한다.
 `file_path`가 `{eqp}.png`이면 같은 directory의 `data.parquet`, directory이면 하위
 `data.parquet`, 이미 `data.parquet`이면 해당 파일을 선택한다.
-두 gate mode 모두 요청 Line·path SDWT·EQP·latest date·sensor·ch_step이 최신 scoped index row와
-일치하는지 재검증한다. 일치할 때만 선택한 `data.parquet` schema에서
+요청 Line·path SDWT·EQP·latest date·sensor·ch_step·ver가 선택한 scoped team row와
+일치하는지 재검증한다. 일치할 때만 선택한 `data.parquet` schema에서 `ver`를 projection하고
+요청과 같은 `ver`의 row에 대해
 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`을 호환 axis로 선택해 읽는다.
 scatter mode는 `eqp`가 선택 EQP인 point와 같은 directory의 `{eqp}.parquet` 이력을 반환하며,
 identity mode는 같은 `eqp` 범위에서 `eqp_cb`별 series를 만든다. history 읽기 실패는 `historyError`로 분리한다.
@@ -246,9 +246,9 @@ chart query 실패 화면은 browser가 이미 받은 `file_path`에 같은 변�
 
 ### Flow ID: `DF-SELF-03` — MY EQP
 
-handler는 `sdwt=MY_EQP`를 virtual team `__MY_EQP__`로 해석해 접속 IP의 활성
-registration과 최신 `path_xian` index를 결합한다. team ERD 경로 table의 동일 `file_path` row에서 `ver`를 참조하고
-active SKIP·sensor 제외를 적용한다. 코드 연결은 `Confirmed`, 실제 운영 DB·file 결합은 `Unknown`이다.
+현재 SCS에서는 ADR-004에 따라 MY EQP 런타임이 제거되어 이 흐름은 활성 계약이 아니다.
+과거 구현을 재도입할 경우 최신 index 자체의 `ver` 컬럼을 직접 사용해야 하며 경로 문자열에서
+version을 추정하지 않는다. 실제 운영 DB·file 결합은 `Unknown`이다.
 
 ### Flow ID: `DF-ABN-01` — 동일성 이미지
 
@@ -315,7 +315,7 @@ sensor `ALL`이면 선택 EQP_MODEL의 모든 sensor row와 `chStep=ALL`만 허�
 |---|---|---|---|---|---|---|
 | `DF-DASH-01` | detail rows | `aggregateDashboardLineRows` | 5개 식별 field 고유조합과 SDWT→Line mapping; Mailing map만 sensor 규칙 적용 | Dashboard Line·Grade count와 Mailing count | `Confirmed` | dashboard module |
 | `DF-DASH-01` | stats rows | summary builder | TL row의 `total` 합·고유 Grade count | KPI metrics | `Confirmed` | dashboard module |
-| `DF-SELF-01` | 최신 `path_xian` rows | normalizer·mapping scope·payload builder | text·path identity 정규화, priority·종속 filter, active SKIP·sensor 제외 | filter option·chart row | `Confirmed` | self module |
+| `DF-SELF-01` | team `path_xian` rows | normalizer·mapping scope·payload builder | text·path identity 정규화, priority·종속 filter, active SKIP·sensor 제외 | filter option·chart row | `Confirmed` | self module |
 | `DF-SELF-02` | Parquet rows | scatter/identity builder | 날짜·숫자 정규화, EQP group·sampling | chart point model | `Confirmed` | self module |
 | `DF-SELF-03` | DB registration+path rows | My EQP handler | SDWT mapping, EQP 표기 정규화, PASS 제외 | MY EQP filter·chart | 코드 `Confirmed`; 운영 `Unknown` | My EQP handler |
 | `DF-ABN-01` | directory tree | `collectCommonalityRows` | path segment와 `sensor_chStep` 분해 | image row | `Confirmed` | commonality module |

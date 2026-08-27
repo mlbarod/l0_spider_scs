@@ -37,6 +37,22 @@ test("각 차트의 가장 최신 act_time에서 과거 26시간까지 recent로
   assert.deepEqual(payload.points.map((point) => point.isRecent), [false, true, true])
 })
 
+test("단일설비 데이터는 요청한 ver와 같은 row만 차트 포인트로 사용한다", () => {
+  const payload = buildErdScatterPayload([
+    { eqp: "EQP-1", ver: "V1", act_time: "2026-07-15 13:00:00", TEMP_STEP: 1 },
+    { eqp: "EQP-1", ver: "V2", act_time: "2026-07-15 14:00:00", TEMP_STEP: 2 },
+  ], {
+    eqp: "EQP-1",
+    ver: "V2",
+    axisColumn: "TEMP_STEP",
+    filePath: "/tmp/data.parquet",
+    latestDate: "2026-07-15",
+  })
+
+  assert.equal(payload.ver, "V2")
+  assert.deepEqual(payload.points.map((point) => point.value), [2])
+})
+
 test("동일성 차트는 선택 eqp의 단일 차트 데이터를 eqp_cb별로 그룹화한다", () => {
   const rows = [
     {

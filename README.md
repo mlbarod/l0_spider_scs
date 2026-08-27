@@ -129,11 +129,11 @@ L0 Spider의 DB 접속정보는 `/appdata/l0_spider_scs/db_info.pkl`에서 읽�
 
 ### `pass_history`
 
-자설비 PASS/SKIP은 최신 `path_xian` row와 분임조별
-`/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet`의 동일 `file_path` row를
-매칭하고, 해당 ERD 경로 테이블의 `ver`를 사용해 원본 `l0_spider`와 같은 테이블 구조를 사용한다.
-이 DB 이력용 보조 file 또는 PASS 조회가 실패해도 `path_xian.recipe_id` 기반 RECIPE_ID와 일반
-file chart 조회는 유지한다.
+자설비 PASS/SKIP은 선택한 Line·SDWT의
+`/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` row가 제공하는
+`ver`를 그대로 사용한다. 서버는 `file_path`에서 version을 추정하지 않으며 row의 `ver`가
+비어 있으면 빈 `ver` INSERT를 거부한다. 이 값으로 원본 `l0_spider`와 같은 테이블 구조를 사용한다.
+PASS 조회가 실패해도 분임조별 경로 테이블의 `recipe_id` 기반 RECIPE_ID와 일반 file chart 조회는 유지한다.
 
 | 컬럼 | 타입 |
 | --- | --- |
@@ -157,7 +157,7 @@ POST/DELETE로 등록·해제한다.
 | `pass_history` 컬럼 | SKIP 저장값 |
 | --- | --- |
 | `line_id` | 필터에서 선택한 Line Name |
-| `ver` | 최종 chart row가 보조 참조한 `ver` |
+| `ver` | 선택한 분임조별 ERD 경로 테이블 row의 `ver` |
 | `sdwt` | 최종 chart row의 `sdwt` |
 | `desc` | 최종 chart row의 호환 `desc` (`recipe_id`) |
 | `recipe_id` | 최종 chart row의 `recipe_id` |
@@ -200,7 +200,7 @@ SKIP 상태인 차트는 상단에 `이상감지 SKIP 건` 배지와 하단에 `
 `ver = NA`인 행은 공통부 `SKIP LIST`에서 조회하며 자설비의 `SKIP LIST` 경로 복원
 대상에서는 제외한다.
 
-SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일반 SDWT 조회에서는 SKIP 등록 시각(`exec_date`)부터 72시간 동안 `latest_date`를 제외한 ERD 경로의 모든 식별값(`line_id`, `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`)이 같은 행을 동일 이상건으로 처리한다. 해당 행은 차트 목록뿐 아니라 STEP, `eqp_ch`, `sensor`, `ch_step`의 일반 이상건수 집계에서도 제외한다. 정확히 72시간이 지나면 일반 이상건과 SKIP 상태로부터 해제되고 `SKIP LIST`에서도 제거된다. 이 만료 처리는 조회 결과에서만 제외하는 UI 동작이며 `pass_history` 행은 삭제하지 않는다. 만료된 동일 식별 건을 다시 SKIP하면 기존 DB 행의 `knox_id`, `exec_date`, `comment`를 갱신하여 새로운 72시간 SKIP 기간을 시작한다.
+SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일반 SDWT 조회에서는 SKIP 등록 시각(`exec_date`)부터 72시간 동안 `latest_date`를 제외한 ERD 경로의 모든 식별값(`line_id`, `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`)이 같은 행을 동일 이상건으로 처리한다. 과거 빈 `ver` 행은 나머지 식별값을 같은 방식으로 비교해 기존 SKIP 효력을 유지한다. 해당 행은 차트 목록뿐 아니라 STEP, `eqp_ch`, `sensor`, `ch_step`의 일반 이상건수 집계에서도 제외한다. 정확히 72시간이 지나면 일반 이상건과 SKIP 상태로부터 해제되고 `SKIP LIST`에서도 제거된다. 이 만료 처리는 조회 결과에서만 제외하는 UI 동작이며 `pass_history` 행은 삭제하지 않는다. 만료된 동일 식별 건을 다시 SKIP하면 기존 DB 행의 `knox_id`, `exec_date`, `comment`를 갱신하여 새로운 72시간 SKIP 기간을 시작한다.
 
 `SKIP LIST`를 선택하면 ERD 원본 목록 대신 선택 Line의 `pass_history`를 조회한다. 이후 Sensor Grade → STEP(`desc`) → `eqp_ch`(`eqp`) → `sensor` → `ch_step`(`step`) 필터와 차트 목록은 모두 해당 테이블의 구분값으로 생성한다. 최종 차트 경로는 다음 규칙으로 복원하며, SKIP 해제 시 목록을 다시 조회하여 해제된 차트를 즉시 제거한다.
 
@@ -269,7 +269,7 @@ Drawing 결과를 `sdwt`, `grade`, `sensor` 기준 대표 경로로 압축해 �
 유지한다. 단, sensor 필터에서 `ALL`을 선택한 클릭이력은 여러 센서명을 긴 리스트로
 확장하지 않고 `sensor` 컬럼에 `ALL`을 저장한다. 다른 선택 컬럼도 값이 `ALL` 하나이면
 리스트 표현이 아닌 `ALL` 문자열 그대로 저장한다. 자설비의 클릭이력·SKIP·이력저장은
-보조 reference 경로가 아니라 최신 `path_xian` row의 `file_path`를 공통으로 사용한다.
+별도 reference 경로가 아니라 선택한 분임조별 `path_xian` row의 `file_path`를 공통으로 사용한다.
 DB 응답의 `affectedRows`가
 0이면 저장 성공으로 처리하지 않고 화면에 오류를 표시한다. `knox_id`는 모든 App에서
 서버가 확인한 접속 IP를 사용한다.
@@ -291,13 +291,14 @@ DB 응답의 `affectedRows`가
 | 구분 | 참조 파일 | 참조 경로 | 참조 컬럼/키 |
 | --- | --- | --- | --- |
 | `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
-| 최신 자설비 index | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` |
-| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | 위 index와 동일 `file_path` row의 `ver`만 보조 참조; 선택 필드와 DB action 경로는 덮어쓰지 않음 |
-| 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
-| 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
+| 최신 자설비 index | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `ver` 포함; 현재 일반 자설비 필터에서는 사용하지 않음 |
+| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev` |
+| 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | `ver`와 선택 row의 `ver` 일치, `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
+| 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | `ver`와 선택 row의 `ver` 일치, `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 `eqp`, `eqp_id`, `disp_name`, `wafer_id`, `root_lot_id` |
 | EQP 변경점 이력 | `{eqp}.parquet` | 선택한 `data.parquet`와 같은 디렉터리의 `{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
 
-구현은 `path_xian`에서 날짜·시각 이름이 가장 큰 파일을 선택한다. 화면 `RECIPE_ID` 필터는
+일반 자설비 구현은 선택한 Line·SDWT로 분임조별 `path_xian/{line}/{sdwt}/df_path.parquet`를
+직접 읽는다. 화면 `RECIPE_ID` 필터는
 `recipe_id` 컬럼을, `ch_step`은 `step` 컬럼을 사용한다. `file_path`의
 `/pic_server2/` segment는 `/pic/`로 바꾸고, `.png` `file_path`는 같은 디렉터리의
 `data.parquet`와 `{eqp}.parquet`로 변환한다. directory와 `data.parquet` 직접 입력도 호환한다.
@@ -305,20 +306,20 @@ DB 응답의 `affectedRows`가
 차트는 실제 Parquet schema에서 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`도
 호환하며, 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series는 `eqp_cb`를 사용한다.
 hover 보조 컬럼은 존재하는 항목만 projection한다. 두 gate mode 모두 chart 요청의
-Line·SDWT·EQP·sensor·step·경로가
-최신 `path_xian`의 scoped row와 모두 일치할 때만 후속 Parquet를 읽는다. DB 이력에는
-분임조별 ERD 경로 테이블에서 같은 `file_path`로 찾은 row의 `ver`를 보조 참조하고,
-클릭이력·SKIP·HIT에는 최신 index row의 `file_path`를 사용한다. chart `file_path`가 있으면 action을
+Line·SDWT·EQP·sensor·step·`ver`·경로가 선택한 분임조별 row와 모두 일치할 때만 후속
+Parquet를 읽는다. 단일설비 `data.parquet`도 같은 `ver` row만 차트에 사용한다. DB 이력에는
+분임조별 ERD 경로 row의 `ver`를 그대로 전달하며, 비어 있으면 SKIP 저장을 거부한다.
+클릭이력·SKIP·HIT에는 분임조별 row의 `file_path`를 사용한다. chart `file_path`가 있으면 action을
 노출하고 요청하며, DB capability가 없으면 서버가 `503 DATA_CONNECTIONS_DISABLED`로 거부한다.
 브라우저 개발자 도구에는 전송 직전 `[history-db-request]`를, 서버에는 정규화 전
 `[history-db-attempt]`와 실제 SQL 값 `[history-db-write]`를 한 줄 JSON으로 출력한다. 서버 gate에서
 거부한 요청은 credential 내용을 노출하지 않는 `[history-db-blocked]`로 원인을 구분한다. 자설비
-클릭이력은 최신 index 조회 응답의 `filters.sdwt`·`filters.priorities`·`filters.sensor`로 6컬럼을
+클릭이력은 분임조별 경로 조회 응답의 `filters.sdwt`·`filters.priorities`·`filters.sensor`로 6컬럼을
 구성한다. `file_path`는 선택 결과 존재 확인과 요청 추적에만 남기며 6컬럼 구성에서는 경로 형식이나
 mount root를 해석하지 않는다. 서버가 DB helper
 호출 전에 확정한 최종 6컬럼은 성공·실패 모두 브라우저 Console의 `[history-db-final]`과 자설비 화면
 상단의 `클릭이력 DB 전송값 (디버깅)` 표에 출력한다.
-자설비 SKIP과 이력저장도 최신 chart row의 확정 필드를 각각 `pass_history` 13컬럼과 `hit_history`
+자설비 SKIP과 이력저장도 선택된 chart row의 확정 필드를 각각 `pass_history` 13컬럼과 `hit_history`
 6컬럼으로 전달하며, 자설비에서는 `file_path`의 legacy 계층이나 mount root를 다시 해석하지 않는다.
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와

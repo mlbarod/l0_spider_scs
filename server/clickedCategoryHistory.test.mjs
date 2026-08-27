@@ -50,7 +50,7 @@ test("자설비 sensor ALL 클릭이력은 실제 sensor 목록 대신 ALL을 �
   assert.equal(record.sensor, "ALL")
 })
 
-test("자설비 클릭이력은 최신 index 선택값으로 6컬럼을 만들고 file_path 형식과 root에 의존하지 않는다", () => {
+test("자설비 클릭이력은 선택된 team row 값으로 6컬럼을 만들고 file_path 형식과 root에 의존하지 않는다", () => {
   const record = buildClickedCategoryHistoryRecord({
     app: "self",
     lineId: "P1L",

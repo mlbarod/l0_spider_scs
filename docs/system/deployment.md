@@ -71,7 +71,7 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `SCS_DASHBOARD_DATA_ENABLED` | Dashboard GET/HEAD | 활성 | 명시적 UI shell에서만 `0`; 기본 Portal 최신시각·Dashboard read에 필요 |
 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | mapping GET/HEAD와 자설비 index·chart GET allowlist | 활성 | UI shell이 필요할 때 `0`; 미설정 또는 `1`이면 image와 다른 App을 제외한 자설비 read만 허용 |
 | `SCS_DB_CONNECTIONS_ENABLED` | credential 기반 사용자·My EQP·세 이력 API allowlist | 활성 후보 | 전체 gate 비활성 mode에서 `DB_INFO_PATH`가 읽기 가능해야 활성; allowlist 차단 또는 UI shell은 `0` |
-| `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 index root | `/appdata/abnormal_trend/pic/path_xian` | 다른 mount 경로를 사용할 때만 명시하고 read-only 권한 확인 |
+| `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 team path root | `/appdata/abnormal_trend/pic/path_xian` | 다른 mount 경로를 사용할 때만 명시하고 `{line}/{pathSdwt}/df_path.parquet` read-only 권한 확인 |
 | `VITE_SITE_URL` | Vite 시작·build | 빈 값 | client-visible 설정에 secret 금지 |
 | `MAPPING_CONFIG_PATH` | API 요청 | `/appdata/l0_spider_scs/mapping_config.json` | 실제 file 접근 사전 확인; 기본 경로와 다를 때만 override |
 | `COMMONALITY_ROOT_PATH` | API 요청 | 코드 기본 root | 운영 root 변경 영향 검토 |

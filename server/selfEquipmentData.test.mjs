@@ -2,24 +2,21 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
-  ERD_PATH_REFERENCE_COLUMNS,
   SKIP_EXCLUSION_DURATION_MS,
   TEAM_ERD_COLUMNS,
-  attachErdPathReferences,
   authorizeSelfEquipmentDataPath,
   buildSelfEquipmentPayload,
   excludeRecentlySkippedRows,
+  getSelfEquipmentLatestDateFromFilePath,
   handleErdScatterDataRequest,
   isSelfEquipmentDataPathAllowed,
-  normalizeErdPathReferenceRow,
-  normalizeSelfEquipmentIndexRow,
   normalizeSelfEquipmentFilePath,
-  readOptionalErdPathReferenceRows,
+  normalizeTeamErdRow,
   readOptionalPassHistoryRecords,
   resolveErdScatterProjection,
   resolveErdDataFilePath,
   resolveErdHistoryFilePath,
-  resolveLatestSelfEquipmentDate,
+  resolveTeamErdPath,
   scopeSelfEquipmentRows,
 } from "./selfEquipmentData.mjs"
 
@@ -99,6 +96,24 @@ test("path_xian row는 file_path 재파싱 없이 chart row 식별값으로 활�
   })], NOW), [])
 })
 
+test("과거 빈 ver SKIP은 ver가 있는 분임조 ERD row도 계속 제외한다", () => {
+  const row = createRow({ ver: "V7" })
+  const legacyRecord = {
+    line_id: row.line_rev,
+    ver: "",
+    sdwt: row.sdwt,
+    desc: row.desc,
+    recipe_id: row.recipe_id,
+    priority: row.priority,
+    sensor: row.sensor,
+    step: row.step,
+    eqp: row.eqp,
+    exec_date: new Date(NOW - 1_000).toISOString(),
+  }
+
+  assert.deepEqual(excludeRecentlySkippedRows([row], [legacyRecord], NOW), [])
+})
+
 test("eqp_ch ALL에서 Sensor ALL과 ch_step ALL을 선택하면 모든 센서 차트를 반환한다", () => {
   const rows = [
     createRow({ sensor: "TEMP", step: "10@MAIN", eqp: "EQP-1.png" }),
@@ -142,170 +157,73 @@ test("Sensor ALL에서는 개별 ch_step 선택을 허용하지 않는다", () =
   assert.deepEqual(payload.rows, [])
 })
 
-test("path_xian 최신 파일은 날짜와 시각이 가장 큰 이름을 선택한다", () => {
-  assert.equal(resolveLatestSelfEquipmentDate([
-    "README.txt",
-    "2026-08-24",
-    "2026-08-25 09:00:00",
-    "2026-08-25 18:30:00",
-  ]), "2026-08-25 18:30:00")
-})
-
-test("path_xian index는 recipe_id를 포함한 7개 컬럼만 projection한다", () => {
+test("분임조별 path_xian 테이블은 ver를 포함한 원본 컬럼을 projection한다", () => {
   assert.deepEqual(TEAM_ERD_COLUMNS, [
     "sdwt",
+    "desc",
+    "ver",
     "recipe_id",
     "priority",
     "sensor",
     "step",
     "eqp",
     "file_path",
+    "line_rev",
   ])
 })
 
-test("path_xian recipe_id는 RECIPE_ID 필터와 row 호환 필드로 정규화한다", () => {
-  assert.deepEqual(normalizeSelfEquipmentIndexRow({
+test("분임조별 path_xian row는 ver를 경로 추정 없이 원본 컬럼에서 정규화한다", () => {
+  assert.deepEqual(normalizeTeamErdRow({
     sdwt: " SDWT-1 ",
+    desc: " ETCH ",
+    ver: " V7 ",
     recipe_id: " RECIPE-1 ",
     priority: " A ",
     sensor: " TEMP ",
     step: " 10@MAIN ",
     eqp: " EQP-1 ",
-    file_path: "/appdata/abnormal_trend/pic_server2/erd/path",
-  }, "2026-08-27"), {
+    file_path: "/appdata/abnormal_trend/pic_server2/erd/2026-08-27/SDWT-1/ETCH/V7/RECIPE-1/A/TEMP/10@MAIN/EQP-1.png",
+  }, {
+    line: "P1L",
+    pathSdwt: "RAW-SDWT-1",
+    displaySdwt: "SDWT-1",
+  }), {
     sdwt: "SDWT-1",
-    desc: "RECIPE-1",
-    ver: "",
+    desc: "ETCH",
+    ver: "V7",
     recipe_id: "RECIPE-1",
     priority: "A",
     sensor: "TEMP",
     step: "10@MAIN",
     eqp: "EQP-1",
-    file_path: "/appdata/abnormal_trend/pic/erd/path",
-    line_rev: "",
+    file_path: "/appdata/abnormal_trend/pic/erd/2026-08-27/SDWT-1/ETCH/V7/RECIPE-1/A/TEMP/10@MAIN/EQP-1.png",
+    line_rev: "P1L",
+    path_sdwt: "RAW-SDWT-1",
     latest_date: "2026-08-27",
   })
 })
 
-test("ERD 경로 테이블에서는 file_path와 ver만 projection한다", () => {
-  assert.deepEqual(ERD_PATH_REFERENCE_COLUMNS, [
-    "ver",
-    "file_path",
-  ])
-})
-
-test("path_xian row는 다른 선택 필드를 덮어쓰지 않고 ERD 경로 테이블 ver만 참조한다", () => {
-  const indexRow = {
-    ...normalizeSelfEquipmentIndexRow({
-      sdwt: "SDWT-1",
-      recipe_id: "RECIPE-FILTER",
-      priority: "A",
-      sensor: "TEMP",
-      step: "10@MAIN",
-      eqp: "EQP-1.png",
-      file_path: "/appdata/abnormal_trend/pic_server2/erd/chart/EQP-1.png",
-    }, "2026-08-27"),
-    line_rev: "P1",
-  }
-
-  const referenceRow = normalizeErdPathReferenceRow({
-    sdwt: "SDWT-1",
-    desc: "ETCH",
-    ver: "V1",
-    recipe_id: "PPID-1",
-    priority: "A",
-    sensor: "TEMP",
-    step: "10@MAIN",
-    eqp: "EQP-1.png",
-    file_path: "/appdata/abnormal_trend/pic/erd/chart/EQP-1.png",
-    line_rev: "P1L",
-  })
-  const [row] = attachErdPathReferences([indexRow], [referenceRow])
-
-  assert.equal(row.desc, "RECIPE-FILTER")
-  assert.equal(row.ver, "V1")
-  assert.equal(row.recipe_id, "RECIPE-FILTER")
-  assert.equal(row.line_rev, "P1")
-
-  const payload = buildSelfEquipmentPayload([row], {
-    line: "P1",
-    sdwt: "SDWT-1",
-    priorities: ["A"],
-    desc: "",
-    eqpCh: "",
-    sensor: "",
-    chStep: "",
-  })
-  assert.deepEqual(payload.steps, [{
-    desc: "RECIPE-FILTER",
-    rowCount: 1,
-    equipmentCount: 1,
-  }])
-})
-
-test("ERD 경로 테이블에 동일 file_path 또는 ver가 없으면 index row를 변경하지 않는다", () => {
-  const indexRow = normalizeSelfEquipmentIndexRow({
-    sdwt: "SDWT-1",
-    recipe_id: "RECIPE-1",
-    priority: "A",
-    sensor: "TEMP",
-    step: "10@MAIN",
-    eqp: "EQP-1",
-    file_path: "/appdata/abnormal_trend/pic/erd/chart/EQP-1.png",
-  }, "2026-08-27")
-  const referenceWithoutVersion = normalizeErdPathReferenceRow({
-    ...indexRow,
-    file_path: indexRow.file_path,
-    ver: "",
-  })
-
-  assert.deepEqual(attachErdPathReferences([indexRow], []), [indexRow])
-  assert.deepEqual(attachErdPathReferences([indexRow], [referenceWithoutVersion]), [indexRow])
-})
-
-test("클릭이력 보조 경로 조회 실패는 자설비 RECIPE_ID 원천 조회를 막지 않는다", async () => {
-  const referenceRows = await readOptionalErdPathReferenceRows({
-    line: "P1L",
-    pathSdwt: "SDWT-1",
-  }, {
-    dbConnectionsEnabled: true,
-    readReferenceRows: async () => {
-      throw new Error("synthetic reference failure")
-    },
-  })
-  const row = createRow({ recipe_id: "RECIPE-AVAILABLE" })
-  const payload = buildSelfEquipmentPayload(
-    attachErdPathReferences([row], referenceRows),
-    {
-      line: "P1L",
-      sdwt: "SDWT-1",
-      priorities: ["A"],
-      desc: "",
-      eqpCh: "",
-      sensor: "",
-      chStep: "",
-    },
+test("분임조별 ERD 경로는 pic/path가 아니라 pic/path_xian을 사용한다", () => {
+  assert.equal(
+    resolveTeamErdPath({ line: "P1L", pathSdwt: "RAW-SDWT-1" }),
+    "/appdata/abnormal_trend/pic/path_xian/P1L/RAW-SDWT-1/df_path.parquet",
   )
-
-  assert.deepEqual(referenceRows, [])
-  assert.deepEqual(payload.steps.map((item) => item.desc), ["RECIPE-AVAILABLE"])
+  assert.equal(
+    resolveTeamErdPath(
+      { line: "P1L", pathSdwt: "RAW-SDWT-1" },
+      "/mounted/path_xian",
+    ),
+    "/mounted/path_xian/P1L/RAW-SDWT-1/df_path.parquet",
+  )
 })
 
-test("DB 기능이 비활성이면 클릭이력 보조 경로를 읽지 않는다", async () => {
-  let readCount = 0
-  const referenceRows = await readOptionalErdPathReferenceRows({
-    line: "P1L",
-    pathSdwt: "SDWT-1",
-  }, {
-    dbConnectionsEnabled: false,
-    readReferenceRows: async () => {
-      readCount += 1
-      return { rows: [createRow()] }
-    },
-  })
-
-  assert.deepEqual(referenceRows, [])
-  assert.equal(readCount, 0)
+test("latest_date는 최신 index가 아니라 선택한 분임조 ERD row의 file_path에서 얻는다", () => {
+  assert.equal(
+    getSelfEquipmentLatestDateFromFilePath(
+      "/appdata/abnormal_trend/pic/erd/2026-08-27 13:00:00/SDWT-1/ETCH/V7/R1/A/TEMP/10@MAIN/EQP-1.png",
+    ),
+    "2026-08-27 13:00:00",
+  )
 })
 
 test("DB PASS 이력 조회 실패도 자설비 RECIPE_ID 원천 조회와 분리한다", async () => {
@@ -335,6 +253,7 @@ test("DB PASS 이력 조회 실패도 자설비 RECIPE_ID 원천 조회와 분�
 test("ERD scatter는 실제 schema의 underscore axis와 eqp_cb를 선택한다", () => {
   assert.deepEqual(resolveErdScatterProjection([
     "act_time",
+    "ver",
     "eqp_cb",
     "eqp_id",
     "TEMP_10@MAIN",
@@ -344,13 +263,14 @@ test("ERD scatter는 실제 schema의 underscore axis와 eqp_cb를 선택한다"
   }), {
     axisColumn: "TEMP_10@MAIN",
     equipmentColumn: "eqp_cb",
-    columns: ["act_time", "eqp_cb", "eqp_id", "TEMP_10@MAIN"],
+    columns: ["act_time", "ver", "eqp_cb", "eqp_id", "TEMP_10@MAIN"],
   })
 })
 
 test("ERD scatter는 star axis와 eqp schema도 호환한다", () => {
   assert.deepEqual(resolveErdScatterProjection([
     "act_time",
+    "ver",
     "eqp",
     "wafer_id",
     "TEMP*10@MAIN",
@@ -360,13 +280,14 @@ test("ERD scatter는 star axis와 eqp schema도 호환한다", () => {
   }), {
     axisColumn: "TEMP*10@MAIN",
     equipmentColumn: "eqp",
-    columns: ["act_time", "eqp", "wafer_id", "TEMP*10@MAIN"],
+    columns: ["act_time", "ver", "eqp", "wafer_id", "TEMP*10@MAIN"],
   })
 })
 
 test("ERD identity는 eqp 없이 eqp_cb group 전체를 읽을 수 있다", () => {
   assert.deepEqual(resolveErdScatterProjection([
     "act_time",
+    "ver",
     "eqp_cb",
     "TEMP_10@MAIN",
   ], {
@@ -376,8 +297,19 @@ test("ERD identity는 eqp 없이 eqp_cb group 전체를 읽을 수 있다", () =
   }), {
     axisColumn: "TEMP_10@MAIN",
     equipmentColumn: "",
-    columns: ["act_time", "eqp_cb", "TEMP_10@MAIN"],
+    columns: ["act_time", "ver", "eqp_cb", "TEMP_10@MAIN"],
   })
+})
+
+test("ERD 단일설비 data.parquet는 ver 컬럼이 필수다", () => {
+  assert.throws(() => resolveErdScatterProjection([
+    "act_time",
+    "eqp",
+    "TEMP_10@MAIN",
+  ], {
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+  }), /ver 컬럼/)
 })
 
 test("자설비 경로의 pic_server2 segment만 pic로 정규화한다", () => {
@@ -449,14 +381,14 @@ test("ERD data 경로는 backup root와 하위만 거부하고 이름이 비슷�
   )
 })
 
-test("전역 path_xian row는 mapping의 Line과 SDWT 범위로 제한한다", () => {
+test("선택한 Line과 SDWT의 분임조별 path_xian row를 직접 사용한다", () => {
   const rows = [
     createRow({ sdwt: "RAW-1" }),
-    createRow({ sdwt: "RAW-2" }),
+    createRow({ sdwt: "RAW-1", eqp: "EQP-2" }),
   ]
   const mapping = {
-    line_mapping: { "RAW-1": "P1L", "RAW-2": "P2L" },
-    sdwt_mapping: { "RAW-1": "SDWT-1", "RAW-2": "SDWT-2" },
+    line_mapping: { "RAW-1": "P1L" },
+    sdwt_mapping: { "RAW-1": "SDWT-1" },
   }
 
   const scoped = scopeSelfEquipmentRows(rows, {
@@ -466,13 +398,14 @@ test("전역 path_xian row는 mapping의 Line과 SDWT 범위로 제한한다", (
     mapping,
   })
 
-  assert.equal(scoped.length, 1)
-  assert.equal(scoped[0].line_rev, "P1L")
-  assert.equal(scoped[0].path_sdwt, "RAW-1")
-  assert.equal(scoped[0].sdwt, "SDWT-1")
+  assert.equal(scoped.length, 2)
+  assert.ok(scoped.every((row) => row.line_rev === "P1L"))
+  assert.ok(scoped.every((row) => row.path_sdwt === "RAW-1"))
+  assert.ok(scoped.every((row) => row.sdwt === "SDWT-1"))
+  assert.ok(scoped.every((row) => row.ver === "V1"))
 })
 
-test("자설비 chart 경로는 최신 scoped index의 path·EQP·sensor·step이 모두 일치해야 한다", () => {
+test("자설비 chart 경로는 분임조별 row의 path·EQP·sensor·step·ver가 모두 일치해야 한다", () => {
   const rows = [createRow({
     eqp: "EQP-1",
     latest_date: "2026-08-25",
@@ -484,6 +417,7 @@ test("자설비 chart 경로는 최신 scoped index의 path·EQP·sensor·step�
     latestDate: "2026-08-25",
     sensor: "TEMP",
     step: "10@MAIN",
+    ver: "V1",
   }
 
   assert.equal(isSelfEquipmentDataPathAllowed(rows, request), true)
@@ -493,6 +427,7 @@ test("자설비 chart 경로는 최신 scoped index의 path·EQP·sensor·step�
   }), false)
   assert.equal(isSelfEquipmentDataPathAllowed(rows, { ...request, sensor: "PRESSURE" }), false)
   assert.equal(isSelfEquipmentDataPathAllowed(rows, { ...request, step: "20@MAIN" }), false)
+  assert.equal(isSelfEquipmentDataPathAllowed(rows, { ...request, ver: "V2" }), false)
   assert.equal(isSelfEquipmentDataPathAllowed(rows, { ...request, eqp: "EQP-2" }), false)
   assert.equal(isSelfEquipmentDataPathAllowed(rows, {
     ...request,
@@ -500,15 +435,15 @@ test("자설비 chart 경로는 최신 scoped index의 path·EQP·sensor·step�
   }), false)
 })
 
-test("Self chart authorization은 다른 App 경로를 handler read 전에 거부한다", async () => {
-  const indexRows = [createRow({
+test("Self chart authorization은 선택한 분임조별 path_xian row만 허용한다", async () => {
+  const teamRows = [createRow({
     sdwt: "RAW-1",
     eqp: "EQP-1",
     latest_date: "2026-08-25",
     file_path: "/appdata/abnormal_trend/pic/self/2026-08-25/EQP-1",
   })]
   const dependencies = {
-    readIndex: async () => ({ latestDate: "2026-08-25", rows: indexRows }),
+    readRows: async () => ({ rows: teamRows }),
     readMapping: async () => ({
       line_mapping: { "RAW-1": "P1L" },
       sdwt_mapping: { "RAW-1": "SDWT-1" },
@@ -523,6 +458,7 @@ test("Self chart authorization은 다른 App 경로를 handler read 전에 거�
     pathSdwt: "RAW-1",
     sensor: "TEMP",
     step: "10@MAIN",
+    ver: "V1",
   }, dependencies), true)
   assert.equal(await authorizeSelfEquipmentDataPath({
     dataDirectoryPath: "/appdata/abnormal_trend/pic/common/2026-08-25/EQP-1",
@@ -532,6 +468,7 @@ test("Self chart authorization은 다른 App 경로를 handler read 전에 거�
     pathSdwt: "RAW-1",
     sensor: "TEMP",
     step: "10@MAIN",
+    ver: "V1",
   }, dependencies), false)
 })
 
@@ -548,7 +485,7 @@ test("chart handler는 다른 App 경로를 Parquet read 전에 403으로 거부
     },
   }
   const url = new URL(
-    "http://localhost/api/erd-scatter-data?path=/appdata/abnormal_trend/pic/common/2026-08-25/EQP-1&eqp=EQP-1&sensor=TEMP&chStep=10%40MAIN&latestDate=2026-08-25&line=P1L&pathSdwt=RAW-1",
+    "http://localhost/api/erd-scatter-data?path=/appdata/abnormal_trend/pic/common/2026-08-25/EQP-1&eqp=EQP-1&sensor=TEMP&chStep=10%40MAIN&ver=V1&latestDate=2026-08-25&line=P1L&pathSdwt=RAW-1",
   )
 
   await handleErdScatterDataRequest({ method: "GET" }, response, url, {
@@ -561,117 +498,25 @@ test("chart handler는 다른 App 경로를 Parquet read 전에 403으로 거부
   assert.equal(response.statusCode, 403)
   assert.equal(authorizationRequest.sensor, "TEMP")
   assert.equal(authorizationRequest.step, "10@MAIN")
+  assert.equal(authorizationRequest.ver, "V1")
 })
 
-test("SDWT scope 비교는 구분자를 제거해 다른 index row를 섞지 않는다", () => {
-  const rows = [
-    createRow({ sdwt: "TEAM-A" }),
-    createRow({ sdwt: "TEAMA" }),
-  ]
-  const mapping = {
-    line_mapping: { "TEAM-A": "P1L" },
-    sdwt_mapping: { "TEAM-A": "TEAM-A" },
-  }
-
-  const scoped = scopeSelfEquipmentRows(rows, {
-    line: "P1L",
-    pathSdwt: "TEAM-A",
-    sdwt: "TEAM-A",
-    mapping,
-  })
-
-  assert.equal(scoped.length, 1)
-  assert.equal(scoped[0].file_path, rows[0].file_path)
-})
-
-test("요청 sdwt 값은 mapping으로 정한 index scope를 확장하지 않는다", () => {
-  const rows = [
-    createRow({ sdwt: "RAW-1", eqp: "EQP-1" }),
-    createRow({ sdwt: "RAW-2", eqp: "EQP-2" }),
-  ]
-  const mapping = {
-    line_mapping: { "RAW-1": "P1L", "RAW-2": "P2L" },
-    sdwt_mapping: { "RAW-1": "SDWT-1", "RAW-2": "SDWT-2" },
-  }
-
-  const scoped = scopeSelfEquipmentRows(rows, {
-    line: "P1L",
-    pathSdwt: "RAW-1",
-    sdwt: "RAW-2",
-    mapping,
-  })
-
-  assert.deepEqual(scoped.map((row) => row.eqp), ["EQP-1"])
-})
-
-test("sdwt display mapping이 없어도 요청 sdwt를 index scope에 추가하지 않는다", () => {
-  const rows = [
-    createRow({ sdwt: "RAW-1", eqp: "EQP-1" }),
-    createRow({ sdwt: "RAW-2", eqp: "EQP-2" }),
-  ]
-  const mapping = {
-    line_mapping: { "RAW-1": "P1L" },
-    sdwt_mapping: {},
-  }
-
-  const scoped = scopeSelfEquipmentRows(rows, {
-    line: "P1L",
-    pathSdwt: "RAW-1",
-    sdwt: "RAW-2",
-    mapping,
-  })
-
-  assert.deepEqual(scoped.map((row) => row.eqp), ["EQP-1"])
-  assert.equal(scoped[0].sdwt, "RAW-1")
-})
-
-test("다른 Line과 중복되는 display SDWT는 global index scope와 chart authorization에서 제외한다", async () => {
-  const ambiguousPath = "/appdata/abnormal_trend/pic/erd/2026-08-25/SHARED"
-  const mapping = {
-    line_mapping: { "RAW-1": "P1L", "RAW-2": "P2L" },
-    sdwt_mapping: { "RAW-1": "SHARED", "RAW-2": "SHARED" },
-  }
-  const rows = [createRow({
-    sdwt: "SHARED",
-    eqp: "EQP-2",
-    file_path: ambiguousPath,
-    latest_date: "2026-08-25",
-  })]
-
-  assert.deepEqual(scopeSelfEquipmentRows(rows, {
-    line: "P1L",
-    pathSdwt: "RAW-1",
-    mapping,
-  }), [])
-  assert.equal(await authorizeSelfEquipmentDataPath({
-    dataDirectoryPath: ambiguousPath,
-    eqp: "EQP-2",
-    latestDate: "2026-08-25",
-    line: "P1L",
-    pathSdwt: "RAW-1",
-    sensor: "TEMP",
-    step: "10@MAIN",
-  }, {
-    readIndex: async () => ({ latestDate: "2026-08-25", rows }),
-    readMapping: async () => mapping,
-  }), false)
-})
-
-test("RECIPE_ID 필터는 ch_step용 step과 분리된 index 값을 사용한다", () => {
-  const row = createRow({ desc: "LEGACY-DESC", recipe_id: "INDEX-RECIPE", step: "INDEX-STEP" })
+test("RECIPE_ID 필터는 분임조별 table의 recipe_id를 사용하고 desc·ver를 보존한다", () => {
+  const row = createRow({ desc: "ETCH", ver: "V7", recipe_id: "TEAM-RECIPE", step: "TEAM-STEP" })
   const payload = buildSelfEquipmentPayload([row], {
     line: "P1L",
     pathSdwt: "SDWT-1",
     sdwt: "SDWT-1",
     priorities: ["A"],
-    desc: "INDEX-RECIPE",
+    desc: "TEAM-RECIPE",
     eqpCh: "",
     sensor: "",
     chStep: "",
   })
 
-  assert.deepEqual(payload.steps.map((item) => item.desc), ["INDEX-RECIPE"])
-  assert.equal(payload.filters.desc, "INDEX-RECIPE")
+  assert.deepEqual(payload.steps.map((item) => item.desc), ["TEAM-RECIPE"])
+  assert.equal(payload.filters.desc, "TEAM-RECIPE")
+  assert.equal(payload.rows.length, 0)
 })
 
 test("chart API는 path_xian latestDate 형식이 잘못되면 파일을 읽기 전에 거부한다", async () => {

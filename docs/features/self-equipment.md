@@ -24,11 +24,12 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 `DB_INFO_PATH` credential이 있고 DB gate도 활성인 경우 mapping 응답은
 `capabilities.selfEquipmentDb=true`를 반환한다. 자설비의 SKIP LIST·SKIP·클릭이력·이력저장은
 원본 `l0_spider` 구조와 같이 chart `file_path`를 기준으로 요청하고 서버 DB gate가 최종 허용한다.
-새 `path_xian`의 7-column index에는 `ver`가 없으므로 분임조별
-`/pic/path/{line}/{sdwt}/df_path.parquet`에서 동일 `file_path` row의 `ver`를 선택적으로
-참조한다. 이 보조 경로를 읽지 못해도 최신 `path_xian`의 `recipe_id`로 RECIPE_ID 필터와
-일반 file chart를 계속 제공한다. 클릭이력·SKIP·HIT 요청은 차트와 같은 index `file_path`를
-사용한다. PASS 이력 조회 실패도 file filter 응답과 격리하며, 화면의 별도 PASS 조회가 오류를
+일반 자설비 필터는 선택한 Line·SDWT의
+`/pic/path_xian/{line}/{sdwt}/df_path.parquet`를 직접 읽는다. 이 테이블의 `ver` 컬럼을
+차트 요청과 SKIP에 그대로 사용하며 경로 문자열에서 version을 추정하지 않는다. `ver`가 비어 있으면
+새 SKIP 저장을 거부해 빈 값을 추가하지 않는다. 단일설비 `data.parquet`에서도 같은 `ver` row만
+차트에 사용한다. 클릭이력·SKIP·HIT 요청은 차트와 같은 분임조별 row의 `file_path`를 사용한다.
+PASS 이력 조회 실패도 file filter 응답과 격리하며, 화면의 별도 PASS 조회가 오류를
 표시한다. 별도 `knox_id` 조회는 하지 않으며 검증된 접속 IP를 기존 DB의
 `knox_id` 컬럼과 MY EQP owner 기준에 저장한다.
 실제 target server DB·mount와 Parquet 내용의 end-to-end 결과는 `Unknown`이다.
@@ -135,13 +136,15 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 `SCS_DB_CONNECTIONS_ENABLED=0`이면 서버가 `503 DATA_CONNECTIONS_DISABLED`로 거부하며 일반 file chart는
 유지한다. 요청 직전 브라우저 콘솔의 `[history-db-request]`, 서버 정규화 payload의
 `[history-db-attempt]`, 실제 Python SQL 값의 `[history-db-write]`로 단계별 입력을 확인할 수 있다.
-자설비 클릭이력은 최신 index 조회 응답의 `filters.sdwt`·`filters.priorities`·`filters.sensor`로
+자설비 클릭이력은 분임조별 경로 조회 응답의 `filters.sdwt`·`filters.priorities`·`filters.sensor`로
 6컬럼을 구성한다. `file_path`는 선택 결과 존재 확인과 요청 추적에만 남기며, 6컬럼 구성에서는
 legacy 경로 형식이나 운영 mount root에 의존하지 않는다.
 자설비 SKIP은 같은 최종 chart row의 `latest_date`, `sdwt`, `desc/recipe_id`, `ver`, `priority`,
 `sensor`, `step`, `eqp`를 `pass_history` record로 전달하고, 이력저장은 `latest_date`, `sdwt`,
-`file_path`를 `hit_history` 6컬럼 구성에 사용한다. 두 action 모두 자설비에서는 `file_path` 계층을
-다시 파싱하지 않으며 공통부·동일성 App은 기존 경로 계약을 유지한다.
+`file_path`를 `hit_history` 6컬럼 구성에 사용한다. 자설비 action은 최종 chart row를 기준으로 하며,
+`ver`는 분임조별 경로 row의 컬럼 값을 그대로 사용한다. 공통부·동일성 App은 기존 경로 계약을
+유지한다. 과거 빈 `ver` PASS row는 version을 제외한 나머지 식별값으로
+72시간 제외를 유지하며, SKIP LIST에서는 chart를 복원하지 않고 SKIP해제만 제공한다.
 서버가 DB helper 호출 전에 확정한 실제 6컬럼은 성공·실패 모두 브라우저 `[history-db-final]`과 자설비 화면의
 `클릭이력 DB 전송값 (디버깅)` 표에 표시한다.
 gate 거부는 credential 값을 제외한 `[history-db-blocked]`에 기록한다.
@@ -156,14 +159,12 @@ sequenceDiagram
     actor User
     participant Browser as FdcTrendPage
     participant API as Node API
-    participant Index as path_xian latest index
-    participant Ref as team df_path.parquet
+    participant TeamPath as path_xian team df_path.parquet
     participant Erd as ERD Parquet
     User->>Browser: route 진입 및 filter 선택
     Browser->>API: mapping, self-equipment-data GET
-    API->>Index: path_xian/{latest_date} 읽기
-    API->>Ref: DB 활성 시 동일 file_path row의 ver만 보조 참조
-    Note over API,Ref: 보조 참조 실패는 빈 참조로 격리
+    API->>TeamPath: path_xian/{line}/{sdwt}/df_path.parquet 읽기
+    Note over API,TeamPath: row의 ver를 chart와 SKIP에 직접 사용
     API-->>Browser: filters, options, rows
     Browser->>API: erd-scatter-data GET
     API->>Erd: file_path에서 해석한 data.parquet와 sibling {eqp}.parquet 읽기
@@ -198,8 +199,8 @@ sequenceDiagram
 | 같은 API | `desc`, `eqpCh`, `sensor`, `chStep` | query | string | 선택 | option 불일치 시 빈 선택 | 종속 state | `Confirmed` |
 | `/api/my-eqp-equipment-data` | `line` 등 | query | strings | Line 필수 | 등록·mapping·EQP 표기 정규화 | MY EQP state | 코드 `Confirmed` |
 | `/api/erd-scatter-data` | `path`, `eqp` | query | string | 필수 | pic root·segment 검증 | chart row | `Confirmed` |
-| 같은 API | `line`, `pathSdwt` | query | string | 필수 | 최신 scoped index row의 path·EQP·sensor·step 재검증 | chart row | `Confirmed` |
-| 같은 API | `sensor`, `chStep`, `latestDate` | query | string | sensor·chStep 필수, latestDate 선택 | row 값 사용; latestDate 형식 검증 | chart row | 코드 `Confirmed` |
+| 같은 API | `line`, `pathSdwt` | query | string | 필수 | 분임조별 row의 path·EQP·sensor·step·ver 재검증 | chart row | `Confirmed` |
+| 같은 API | `sensor`, `chStep`, `ver`, `latestDate` | query | string | sensor·chStep·ver 필수, latestDate 선택 | row 값 사용; latestDate 형식 검증 | chart row | 코드 `Confirmed` |
 | 같은 API | `mode=identity`, `days` | query | string, integer string | 선택 | days는 0~30 정수 | chart mode | `Confirmed` |
 | `/api/my-eqp-registration` | `line`, `activeOnly=true` | query | string | Line 필요 | active 조건 | Self·등록 화면 | 코드 `Confirmed` |
 
@@ -224,8 +225,7 @@ sequenceDiagram
 
 | Data Source ID | 유형 | 경로·테이블·자원 | 접근 코드 | 사용 목적 | 읽기·쓰기 | 생성 책임 | 상태 |
 |---|---|---|---|---|---|---|---|
-| `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | `readLatestSelfEquipmentRows` | 최신 index의 filter option·`file_path` | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
-| `DS-SELF-REF` | Parquet | `/pic/path/{line}/{sdwt}/df_path.parquet` | `readOptionalErdPathReferenceRows` | DB 활성 시 동일 `file_path` row의 `ver`만 참조; 실패는 빈 참조로 격리하고 index 선택 필드·DB action 경로는 유지 | Self 이력 보조 읽기 | `Unknown` | 코드·실패 격리 `Confirmed`; 운영 file `Unknown` |
+| `DS-SELF-01` | Parquet | `path_xian/{line}/{sdwt}/df_path.parquet` | `readTeamErdRows` | 선택 team의 filter option·`file_path`·`ver` | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02` | Parquet | index row `file_path`: `{eqp}.png` sibling 또는 directory 하위 `data.parquet`; 직접 `data.parquet` 호환 | `readErdScatterRows` | schema 기반 axis·EQP 식별 scatter와 `eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02-H` | Parquet | 선택한 `data.parquet` directory의 `{eqp}.parquet` | `readErdHistoryRows` | 변경점 이력 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-IMG` | image | 허용 ERD root의 image | `handleErdFileRequest` | stream endpoint | 읽기 | `Unknown` | endpoint `Confirmed` |
@@ -239,16 +239,15 @@ sequenceDiagram
 
 | 경로 또는 자원 ID | 코드의 경로 패턴 | 용도 | 경로 변수 | 누락 처리 | 상태 |
 |---|---|---|---|---|---|
-| latest index | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | 일반 Self·MY EQP 대상 row | 날짜·시각 이름 중 최신 file, mapping의 Line·SDWT | root·file 예외→API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
-| ERD path reference | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | DB 이력 비교용 `ver` 참조 | DB 활성, mapping으로 검증된 Line·SDWT, index와 동일 `file_path` | 읽기 실패·참조 없음→RECIPE_ID·file chart·DB action 경로 유지 | 코드 `Confirmed`; 운영 file `Unknown` |
+| team ERD path | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | 일반 Self 대상 row와 DB 이력용 `ver` | mapping으로 검증된 Line·SDWT; row의 `ver` 직접 사용 | file 예외→API `500`; 빈 `ver` SKIP은 `500 PASS_HISTORY_REQUEST_FAILED` | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD data | row `file_path`가 `.png`이면 sibling `data.parquet`; directory이면 하위 파일; `data.parquet` 직접 입력 호환 | scatter·identity | index row, sensor, chStep | `/pic_server2/`→`/pic/`; 예외→chart API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD history | 선택한 `data.parquet` directory의 `{eqp}.parquet` | 변경점 이력 | 선택 EQP | 실패를 `historyError`로 분리 | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD image | `/appdata/abnormal_trend/pic/erd/...` | image stream endpoint | 요청 `path` | 금지 `403`, 없음 `404` | endpoint `Confirmed` |
-| Self scoped path | 최신 index row의 정규화된 `file_path` | Self 전용 gate의 chart 접근 경계 | Line·path SDWT·EQP·latest date | 불일치 `403` | 코드 `Confirmed`; 운영 row `Unknown` |
+| Self scoped path | 분임조별 row의 정규화된 `file_path` | Self 전용 gate의 chart 접근 경계 | Line·path SDWT·EQP·latest date·sensor·step·ver | 불일치 `403` | 코드 `Confirmed`; 운영 row `Unknown` |
 
 경로 template 근거는 `src/config/spiderDataPaths.mjs:1-17,70-72`, 접근 근거는 `server/selfEquipmentData.mjs:137-163,449-468`이다.
-Self Equipment는 `path_xian` root의 날짜·시각 파일명을 비교해 최신 index를 선택하고,
-index row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`, directory와
+Self Equipment는 선택한 Line·SDWT의 분임조별 `df_path.parquet`를 직접 읽고,
+row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`, directory와
 `data.parquet` 직접 입력을 구분해 같은 결과 파일을 선택한다.
 ## 15. 조회 파라미터 전파
 
@@ -257,15 +256,15 @@ index row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`
 | `line` | URL 또는 Line 선택 | `line` | mapping의 `pathSdwt` 소유 Line 검증, 응답 `line_rev` | SDWT 범위 | 코드 `Confirmed` |
 | `sdwt` | URL 또는 SDWT 선택 | `pathSdwt`와 legacy display `sdwt` | 요청 display는 scope에 사용하지 않으며 mapping key/유일 display만 index row와 비교 | RECIPE_ID 범위 | 코드 `Confirmed` |
 | `grade` | URL 또는 복수 선택 | 반복 `priority` | row `priority` | 모든 하위 option | `Confirmed` |
-| `RECIPE_ID` | UI 선택 | legacy query 이름 `desc` | path_xian row `recipe_id` | EQP option | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `RECIPE_ID` | UI 선택 | legacy query 이름 `desc` | team ERD row `recipe_id` | EQP option | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `eqpCh` | URL 또는 eqp_ch 선택 | `eqpCh` | row `eqp` 매칭 | sensor option | `Confirmed` |
 | `sensor` | UI 선택 | `sensor` | row `sensor`; chart axis prefix | ch_step·chart | `Confirmed` |
 | `ch_step` | UI 선택 | `chStep` | row `step`; chart axis는 schema의 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환 | rows·chart | 코드 `Confirmed` |
-| `file_path` | index row | chart API `path` | `.png` sibling 또는 directory 하위 data/history path; `pic_server2` 정규화 | chart source | 코드 `Confirmed`; 운영 값 `Unknown` |
-| history `file_path` | 최신 index row | history API body | 차트와 동일한 `row.file_path`를 PASS/HIT/click parser 입력으로 사용 | DB action | 코드 `Confirmed`; 운영 값 `Unknown` |
-| `latest_date` | 최신 `path_xian` 파일명 | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
-| `recipe_id` | index 원천값 | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
-| `ver` | ERD 경로 테이블 동일 `file_path` row | chart row payload | PASS identity 비교 | SKIP·이력 | 코드 `Confirmed`; 운영 match `Unknown` |
+| `file_path` | team ERD row | chart API `path` | `.png` sibling 또는 directory 하위 data/history path; `pic_server2` 정규화 | chart source | 코드 `Confirmed`; 운영 값 `Unknown` |
+| history `file_path` | team ERD row | history API body | 차트와 동일한 `row.file_path`를 PASS/HIT/click 입력으로 사용 | DB action | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `latest_date` | team ERD row의 `file_path` 날짜 segment | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
+| `recipe_id` | team ERD row | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
+| `ver` | team ERD row와 단일설비 data row | chart API `ver`·SKIP body | scoped row 검증·point 필터·PASS identity 비교 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
 
 `step_seq`와 `ppid`를 URL 또는 equipment API filter로 전달하는 흐름은 확인되지 않았다.
 `ppid`는 `file_path`/row context와 chart 모아보기 식별에 간접 사용된다.
@@ -273,7 +272,7 @@ index row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`
 
 | 입력 형태 | 처리 위치 | 변환·검증 | 조회 조건 | 화면 결과 | 상태 |
 |---|---|---|---|---|---|
-| UI RECIPE_ID label | `FdcTrendPage` | path_xian `recipe_id`에서 만든 legacy `steps[].desc` 중 선택 | API legacy query `desc` | 다음 eqp_ch option | 코드 `Confirmed` |
+| UI RECIPE_ID label | `FdcTrendPage` | team ERD `recipe_id`에서 만든 legacy `steps[].desc` 중 선택 | API legacy query `desc` | 다음 eqp_ch option | 코드 `Confirmed` |
 | URL `step=ALL`, MY EQP | parser·handler | `ALL` 강제·등록 EQP 정규화 | MY EQP option·전체 STEP | chart 결과 | 코드 `Confirmed`; 운영 DB `Unknown` |
 | URL `step=ALL`, 일반 SDWT | page·server | page state에는 ALL이나 일반 handler는 ALL 불허 | server `filters.desc=""` | STEP 재선택 필요 | `Confirmed` |
 | URL 비-ALL STEP 문자열 | parser·page | `stepToken`으로 읽지만 state에 반영 안 함 | API로 전달 안 함 | STEP 미선택 | `Mismatch` |
@@ -346,11 +345,11 @@ history 부분 실패의 `historyError`도 원문 exception 없이 고정 메시
 | 현재 사용자 | session 동안 stale Infinity | 접속 IP 표시·mutation identity | 없음 | `Confirmed` |
 | scatter lazy load | viewport 근접 시 enabled, stale/gc Infinity | card | off-page·off-viewport 요청 억제 | `Confirmed` |
 | 3일 identity | viewport 근접, stale Infinity, gc 10분 | paired chart | 최근 window 결과 재사용 | `Confirmed` |
-| server path Parquet cache | mtime·size 확인, LRU 최대 16 | latest index와 team ERD 경로 table | 파일 변경 감지 후 재읽기 | `Confirmed` |
+| server path Parquet cache | mtime·size 확인, LRU 최대 16 | team ERD 경로 table | 파일 변경 감지 후 재읽기 | `Confirmed` |
 | manual refresh | 전용 버튼 없음 | equipment | filter 변경·mutation invalidation 중심 | `Confirmed` |
 | window focus·일반 retry | 명시 설정 없음 | 일부 query | library 기본 동작은 정책 `Unknown` | `Unknown` |
 
-최신성은 index row가 가리키는 file과 mtime 기반 cache에 의존한다.
+최신성은 team ERD row가 가리키는 file과 mtime 기반 cache에 의존한다.
 데이터 생산 주기와 freshness SLA는 확인되지 않았다.
 ## 21. 대시보드 및 메일 연계
 
