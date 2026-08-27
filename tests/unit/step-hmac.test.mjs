@@ -1,40 +1,9 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { buildMyEqpDetailUrl } from "../../src/features/fdc-trend/utils/dashboardLinks.mjs"
-import {
-  MY_EQP_URL_SDWT,
-  MY_EQP_URL_STEP,
-  readSelfEquipmentUrlFilters,
-} from "../../src/features/fdc-trend/utils/selfEquipmentUrlFilters.mjs"
+import { readSelfEquipmentUrlFilters } from "../../src/features/fdc-trend/utils/selfEquipmentUrlFilters.mjs"
 
-test("MY EQP 링크의 step은 HMAC token이 아닌 ALL 예약값이다", () => {
-  const builtUrl = buildMyEqpDetailUrl({
-    lineId: "SYNTH_LINE",
-    sensorGrades: ["D"],
-    eqpCh: "SYNTH_EQP_01",
-  })
-  const parsedUrl = new URL(builtUrl, "http://localhost")
-  const filters = readSelfEquipmentUrlFilters(parsedUrl.searchParams)
-
-  assert.equal(parsedUrl.searchParams.get("step"), MY_EQP_URL_STEP)
-  assert.equal(filters.stepToken, MY_EQP_URL_STEP)
-  assert.deepEqual(filters.sdwts, [MY_EQP_URL_SDWT])
-})
-
-test("MY EQP는 누락·임의 step 값을 HMAC으로 검증하지 않고 ALL 분기를 유지한다", () => {
-  const missingStep = readSelfEquipmentUrlFilters(
-    new URLSearchParams("line=SYNTH_LINE&sdwt=MY_EQP&grade=D"),
-  )
-  const opaqueStep = readSelfEquipmentUrlFilters(
-    new URLSearchParams("line=SYNTH_LINE&sdwt=MY_EQP&grade=D&step=synthetic-opaque-token"),
-  )
-
-  assert.equal(missingStep.stepToken, MY_EQP_URL_STEP)
-  assert.equal(opaqueStep.stepToken, MY_EQP_URL_STEP)
-})
-
-test("비 MY EQP의 opaque step과 eqpCh는 URLSearchParams round trip 후 보존된다", () => {
+test("일반 자설비의 opaque step과 eqpCh는 URLSearchParams round trip 후 보존된다", () => {
   const stepValue = "synthetic-token+/=% 한글"
   const eqpChValue = "SYNTH EQP/+ 01"
   const sourceUrl = new URL("/self-equipment", "http://localhost")

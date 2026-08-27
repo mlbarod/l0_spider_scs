@@ -66,8 +66,6 @@ test("모든 DB Python helper는 SCS 기본 credential 경로를 공유한다", 
     "hit_history.py",
     "clicked_category_history.py",
     "pass_history.py",
-    "my_eqp_reference.py",
-    "my_eqp_registration.py",
     "mailing_registration.py",
   ]
 
@@ -239,7 +237,7 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
   }
 })
 
-test("읽기 가능한 credential이 있으면 사용자·이력·My EQP API를 제한적으로 연다", () => {
+test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한적으로 연다", () => {
   const environment = { DB_INFO_PATH: "/synthetic/db_info.pkl" }
   for (const [method, pathname] of [
     ["GET", "/api/current-user"],
@@ -248,12 +246,6 @@ test("읽기 가능한 credential이 있으면 사용자·이력·My EQP API를 
     ["GET", "/api/pass-history"],
     ["POST", "/api/pass-history"],
     ["DELETE", "/api/pass-history"],
-    ["GET", "/api/my-eqp-reference"],
-    ["HEAD", "/api/my-eqp-reference"],
-    ["GET", "/api/my-eqp-registration"],
-    ["POST", "/api/my-eqp-registration"],
-    ["DELETE", "/api/my-eqp-registration"],
-    ["GET", "/api/my-eqp-equipment-data"],
   ]) {
     assert.equal(blockDisabledDataRequest(
       { method, url: pathname, headers: { host: "localhost" } },
@@ -266,7 +258,8 @@ test("읽기 가능한 credential이 있으면 사용자·이력·My EQP API를 
 
   for (const [method, pathname] of [
     ["DELETE", "/api/mailing-registration"],
-    ["POST", "/api/my-eqp-equipment-data"],
+    ["GET", "/api/my-eqp-equipment-data"],
+    ["POST", "/api/my-eqp-registration"],
     ["GET", "/api/commonality-data"],
   ]) {
     const response = createResponse()
@@ -279,22 +272,6 @@ test("읽기 가능한 credential이 있으면 사용자·이력·My EQP API를 
     ), true, `${method} ${pathname}`)
     assert.equal(response.statusCode, 503)
   }
-})
-
-test("My EQP 조회는 DB와 자설비 file gate가 모두 열려야 한다", () => {
-  const environment = {
-    DB_INFO_PATH: "/synthetic/db_info.pkl",
-    SCS_SELF_EQUIPMENT_DATA_ENABLED: "0",
-  }
-  const response = createResponse()
-  assert.equal(blockDisabledDataRequest(
-    { method: "GET", url: "/api/my-eqp-equipment-data", headers: { host: "localhost" } },
-    response,
-    environment,
-    () => {},
-    () => true,
-  ), true)
-  assert.equal(response.statusCode, 503)
 })
 
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {

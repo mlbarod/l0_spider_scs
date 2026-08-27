@@ -49,7 +49,6 @@ import {
   isLineMappingQueryReady,
   isSelfEquipmentDbEnabled,
 } from "../api/mappingContract.mjs"
-import { fetchMyEqpRegistrations } from "../api/myEqpRegistrationApi"
 import {
   createPassHistory,
   createPassHistoryBatch,
@@ -62,7 +61,6 @@ import {
   fetchErdIdentityData,
   fetchErdScatterData,
   fetchEqpAllSkipTargets,
-  fetchMyEqpEquipmentData,
   fetchSelfEquipmentData,
 } from "../api/selfEquipmentApi"
 import { SENSOR_GRADES } from "../utils/fdcTrendMockData"
@@ -70,8 +68,6 @@ import { getLowestChStepRowsByPpid } from "../utils/chStepGrouping.mjs"
 import { paginateChartGroups } from "../utils/chartPagination.mjs"
 import { formatLineDisplayName } from "../utils/lineDisplay.mjs"
 import {
-  MY_EQP_TEAM_KEY,
-  MY_EQP_TEAM_LABEL,
   readSelfEquipmentUrlFilters,
   resolveSelfEquipmentGrades,
   resolveSelfEquipmentTeam,
@@ -91,43 +87,15 @@ const ALL_CH_STEPS = "ALL"
 const ALL_STEPS = "ALL"
 const SKIP_LIST_TEAM = "__SKIP_LIST__"
 const SKIP_LIST_LABEL = "SKIP LIST"
-const MY_EQP_TEAM = MY_EQP_TEAM_KEY
-const MY_EQP_LABEL = MY_EQP_TEAM_LABEL
 const SCATTER_CHART_MARGIN = Object.freeze({ top: 42, right: 18, bottom: 28, left: 16 })
 const SCATTER_Y_AXIS_WIDTH = 64
 const SCATTER_X_AXIS_HEIGHT = 30
 const EMPTY_EQP_SET = new Set()
-const MY_EQP_HISTORY_DEDUP_MS = 3_000
-const myEqpHistoryUploads = new Map()
 
 function expandPriorities(grades) {
   return Array.from(new Set(
     grades.flatMap((grade) => (grade === "A/B" ? ["A", "B"] : [grade])),
   ))
-}
-
-function uploadMyEqpCategoryHistory(lineId) {
-  const contextKey = `${lineId}\u0000${MY_EQP_TEAM}`
-  if (myEqpHistoryUploads.has(contextKey)) return
-
-  const upload = createClickedCategoryHistory({
-    app: "self",
-    lineId,
-    virtualCategory: {
-      sdwt: MY_EQP_LABEL,
-    },
-    clickedAt: new Date().toISOString(),
-  }).catch((error) => {
-    toast.error(`MY EQP 클릭이력 저장 실패: ${error.message}`)
-  })
-  myEqpHistoryUploads.set(contextKey, upload)
-  void upload.finally(() => {
-    setTimeout(() => {
-      if (myEqpHistoryUploads.get(contextKey) === upload) {
-        myEqpHistoryUploads.delete(contextKey)
-      }
-    }, MY_EQP_HISTORY_DEDUP_MS)
-  })
 }
 
 function SelectRow({ label, meta, selected, multiple = false, onClick }) {
@@ -1543,7 +1511,6 @@ const ErdScatterCard = memo(function ErdScatterCard({
 export function FdcTrendPage() {
   const pageRef = useRef(null)
   const stepScrollPositionRef = useRef(0)
-  const myEqpHistoryContextRef = useRef("")
   const queryClient = useQueryClient()
   const [searchParams] = useSearchParams()
   const requestedFilters = useMemo(
@@ -1602,24 +1569,14 @@ export function FdcTrendPage() {
     [lineMapping],
   )
   const activeLine = lines.includes(selectedLine) ? selectedLine : (lines[0] ?? "")
-  const myEqpRegistrationsQuery = useQuery({
-    queryKey: ["my-eqp-registrations", activeLine, true],
-    queryFn: () => fetchMyEqpRegistrations({ line: activeLine, activeOnly: true }),
-    enabled: Boolean(mappingReady && selfEquipmentDbEnabled && activeLine),
-    staleTime: 15 * 1000,
-    refetchInterval: 30 * 1000,
-    retry: false,
-  })
-  const hasActiveMyEqp = Boolean(myEqpRegistrationsQuery.data?.length)
   const teamOptions = useMemo(
     () => [
       ...Object.entries(lineMapping)
         .filter(([, line]) => line === activeLine)
         .map(([key]) => ({ key, label: sdwtMapping[key] ?? key })),
-      ...(selfEquipmentDbEnabled && hasActiveMyEqp ? [{ key: MY_EQP_TEAM, label: MY_EQP_LABEL }] : []),
       ...(selfEquipmentDbEnabled && activeLine ? [{ key: SKIP_LIST_TEAM, label: SKIP_LIST_LABEL }] : []),
     ],
-    [activeLine, hasActiveMyEqp, lineMapping, sdwtMapping, selfEquipmentDbEnabled],
+    [activeLine, lineMapping, sdwtMapping, selfEquipmentDbEnabled],
   )
   const resolvedSelectedTeam = resolveSelfEquipmentTeam(teamOptions, [selectedTeam])
   const activeTeam = resolvedSelectedTeam
@@ -1627,10 +1584,9 @@ export function FdcTrendPage() {
     : (teamOptions[0]?.key ?? "")
   const activeTeamLabel = teamOptions.find((team) => team.key === activeTeam)?.label ?? ""
   const isSkipList = activeTeam === SKIP_LIST_TEAM
-  const isMyEqp = activeTeam === MY_EQP_TEAM
   const priorities = useMemo(() => expandPriorities(selectedGrades), [selectedGrades])
   const dataQueryKey = [
-    isSkipList ? "skip-list-data" : isMyEqp ? "my-eqp-equipment-data" : "self-equipment-data",
+    isSkipList ? "skip-list-data" : "self-equipment-data",
     activeLine,
     activeTeam,
     activeTeamLabel,
@@ -1645,15 +1601,6 @@ export function FdcTrendPage() {
     queryFn: () => isSkipList
       ? fetchSkipListData({
           lineId: activeLine,
-          priorities,
-          desc: selectedDesc,
-          eqpCh: selectedEqpCh,
-          sensor: selectedSensor,
-          chStep: selectedChStep,
-        })
-      : isMyEqp
-      ? fetchMyEqpEquipmentData({
-          line: activeLine,
           priorities,
           desc: selectedDesc,
           eqpCh: selectedEqpCh,
@@ -1714,7 +1661,6 @@ export function FdcTrendPage() {
       mappingReady
       && selfEquipmentDbEnabled
       && !isSkipList
-      && !isMyEqp
       && activeLine
       && activeTeamLabel
       && activeDesc
@@ -1785,7 +1731,6 @@ export function FdcTrendPage() {
     if (!selfEquipmentDbEnabled || isSkipList) return new Map()
     return new Map(chartGroups.map((group) => [group.eqp, async (sensor) => {
       return fetchEqpAllSkipTargets({
-        isMyEqp,
         line: activeLine,
         pathSdwt: activeTeam,
         sdwt: activeTeamLabel,
@@ -1801,7 +1746,6 @@ export function FdcTrendPage() {
     activeTeam,
     activeTeamLabel,
     chartGroups,
-    isMyEqp,
     isSkipList,
     priorities,
     selfEquipmentDbEnabled,
@@ -1816,29 +1760,22 @@ export function FdcTrendPage() {
     queries.team,
   )
   const gradeOptions = useMemo(() => {
-    if (!isSkipList && !isMyEqp) return SENSOR_GRADES
+    if (!isSkipList) return SENSOR_GRADES
     return Array.from(new Set(
       (dataQuery.data?.availablePriorities ?? EMPTY_LIST)
         .map((priority) => (["A", "B"].includes(priority) ? "A/B" : priority)),
     )).filter((grade) => SENSOR_GRADES.includes(grade))
-  }, [dataQuery.data?.availablePriorities, isMyEqp, isSkipList])
+  }, [dataQuery.data?.availablePriorities, isSkipList])
   const filteredGrades = filterItems(
     gradeOptions.map((grade) => ({ value: grade, label: grade })),
     queries.grade,
   )
   const filteredSteps = filterItems(
-    [
-      ...(isMyEqp && steps.length ? [{
-        value: ALL_STEPS,
-        label: ALL_STEPS,
-        meta: `${steps.reduce((total, item) => total + item.rowCount, 0).toLocaleString()}건 · 전체 STEP`,
-      }] : []),
-      ...steps.map((item) => ({
-        value: item.desc,
-        label: item.desc,
-        meta: `${item.rowCount.toLocaleString()}건 · ${item.equipmentCount.toLocaleString()} eqp`,
-      })),
-    ],
+    steps.map((item) => ({
+      value: item.desc,
+      label: item.desc,
+      meta: `${item.rowCount.toLocaleString()}건 · ${item.equipmentCount.toLocaleString()} eqp`,
+    })),
     queries.step,
   )
   const filteredEqpChannels = filterItems(
@@ -1889,17 +1826,6 @@ export function FdcTrendPage() {
 
   const setQuery = (key, value) => setQueries((current) => ({ ...current, [key]: value }))
 
-  useEffect(() => {
-    if (!selfEquipmentDbEnabled || !isMyEqp || !activeLine) {
-      myEqpHistoryContextRef.current = ""
-      return
-    }
-    const contextKey = `${activeLine}\u0000${MY_EQP_TEAM}`
-    if (myEqpHistoryContextRef.current === contextKey) return
-    myEqpHistoryContextRef.current = contextKey
-    uploadMyEqpCategoryHistory(activeLine)
-  }, [activeLine, isMyEqp, selfEquipmentDbEnabled])
-
   const resetStepAndSensor = () => {
     setSelectedDesc("")
     setSelectedEqpCh("")
@@ -1910,17 +1836,11 @@ export function FdcTrendPage() {
   const handleLineChange = (line) => {
     setSelectedLine(line)
     setSelectedTeam("")
-    if (activeTeam === MY_EQP_TEAM) setSelectedGrades(["A/B"])
     setQueries((current) => ({ ...current, team: "", step: "", eqpCh: "", sensor: "", chStep: "" }))
     resetStepAndSensor()
   }
   const handleTeamChange = (team) => {
     setSelectedTeam(team)
-    if (team === MY_EQP_TEAM) {
-      setSelectedGrades([...SENSOR_GRADES])
-    } else if (activeTeam === MY_EQP_TEAM) {
-      setSelectedGrades(["A/B"])
-    }
     resetStepAndSensor()
   }
   const toggleGrade = (grade) => {
@@ -1936,7 +1856,7 @@ export function FdcTrendPage() {
     const nextChStep = selectedChStep === chStep ? "" : chStep
     const clickedAt = new Date().toISOString()
     setSelectedChStep(nextChStep)
-    if (!nextChStep || !selfEquipmentDbEnabled || isSkipList || isMyEqp) return
+    if (!nextChStep || !selfEquipmentDbEnabled || isSkipList) return
 
     try {
       const queryKey = [
@@ -2231,31 +2151,17 @@ export function FdcTrendPage() {
             </Button>
           </div>
         ) : null}
-        {myEqpRegistrationsQuery.isError ? (
-          <p className="border-t px-6 py-2 text-xs text-destructive">
-            My EQP 등록 조건을 불러오지 못했습니다: {myEqpRegistrationsQuery.error.message}
-          </p>
-        ) : null}
       </section>
 
       <main className="grid min-w-0 gap-4 p-4">
         {selfEquipmentFileReadEnabled && !selfEquipmentDbEnabled ? (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-800 dark:text-sky-200">
-            현재 자설비 파일 조회와 차트만 연결되어 있습니다. DB credential이 준비되면 My EQP, SKIP, 클릭이력과 이력저장이 활성화됩니다.
+            현재 자설비 파일 조회와 차트만 연결되어 있습니다. DB credential이 준비되면 SKIP, 클릭이력과 이력저장이 활성화됩니다.
           </div>
         ) : null}
         {dataQuery.isError ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {dataQuery.error.message}
-          </div>
-        ) : null}
-        {isMyEqp
-          && !dataQuery.isLoading
-          && (dataQuery.data?.counts?.registeredEqps ?? 0) > 0
-          && (dataQuery.data?.counts?.matchedRegistrationRows ?? 0) === 0 ? (
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
-            등록된 SDWT·EQP와 일치하는 자설비 이상건을 찾지 못했습니다.
-            원본 이상건 {(dataQuery.data?.counts?.sourceRows ?? 0).toLocaleString()}건에서 매칭 결과가 없습니다.
           </div>
         ) : null}
         {!isSkipList && passHistoryQuery.isError ? (
@@ -2352,7 +2258,7 @@ export function FdcTrendPage() {
                                 ? row.pass_history
                                 : passHistoryByKey.get(buildChartPassHistoryKey(activeLine, row))}
                               allSkipLoadTargets={allSkipLoadTargetsByEqp.get(group.eqp) ?? null}
-                              dataQueryKeyPrefix={isMyEqp ? "my-eqp-equipment-data" : "self-equipment-data"}
+                              dataQueryKeyPrefix="self-equipment-data"
                               dbActionsEnabled={selfEquipmentDbEnabled}
                             />
                           </div>

@@ -19,9 +19,10 @@
 
 L0 Spider는 L0 공정의 이상감지 결과를 Line, SDWT, 자설비 RECIPE_ID 또는 기능별 STEP, 설비와 sensor 조건으로 조회하는 웹서비스다.
 사용자는 메인 대시보드에서 Line별 현황을 확인하고, 자설비·동일성·공통부 화면에서 Parquet 기반 차트와 분석 이미지를 상세 조회한다.
-MY EQP·Mailing 조건 등록과 비-Self App의 SKIP·HIT·클릭 이력은 DB에 관리한다. 현재
-자설비 화면의 MY EQP·SKIP·HIT·클릭 이력은 file과 credential DB capability가 모두 준비되면
+Mailing 조건 등록과 비-Self App의 SKIP·HIT·클릭 이력은 DB에 관리한다. 현재
+자설비 화면의 SKIP·HIT·클릭 이력은 file과 credential DB capability가 모두 준비되면
 활성화된다. 코드·synthetic 계약은 `Confirmed`, 실제 운영 DB write는 `Unknown`이다.
+SCS에는 My EQP 메뉴·등록·조회·메일 Report 기능을 제공하지 않는다.
 React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와 이미지 제공을 담당하며, DB 작업은 Python helper를 통해 수행한다.
 메일용 요약 집계와 HTML 템플릿은 확인되지만 실제 메일 renderer, scheduler와 sender는 현재 저장소에서 확인되지 않았다.
 
@@ -30,7 +31,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 관점 | 목적 | 상태 |
 |---|---|---|
 | 업무 | 분산된 이상감지 결과를 Line·설비 조건별로 조회하고 대시보드와 상세 화면의 기준을 연결한다. | Confirmed |
-| 사용자 | 현황에서 차트·이미지로 이동하고 SKIP·이력을 남기며 MY EQP·Mailing 조건을 등록한다. MY EQP `step=ALL` 딥링크도 소비한다. | 코드 `Confirmed`; 운영 DB `Unknown` |
+| 사용자 | 현황에서 차트·이미지로 이동하고 SKIP·이력을 남기며 Mailing 조건을 등록한다. | 코드 `Confirmed`; 운영 DB `Unknown` |
 | 운영·유지보수 | 기존 동작과 API 호환성을 보존하고 화면·API·데이터 근거와 운영 자원 비의존 Core 검증을 축적한다. | 프로젝트 운영 정책 |
 
 ## 4. 주요 사용자와 사용 시나리오
@@ -38,13 +39,12 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 사용자 또는 역할 | 주요 목적 | 대표 기능 | 상태 |
 |---|---|---|---|
 | 웹 접속 사용자 | 이상감지 현황과 상세 결과 조회 | 대시보드, 자설비, 동일성, 공통부 | Confirmed |
-| 모니터링 조건 등록 사용자 | 개인 설비와 수신 조건 관리 | MY EQP, Mailing 등록·조회·삭제 | Confirmed |
+| 수신 조건 등록 사용자 | Mailing 수신 조건 관리 | Mailing 등록·조회·삭제 | Confirmed |
 | 메일 수신 사용자 | 요약 결과 확인과 상세 화면 재진입 | Mailing Report와 딥링크 | Documented |
 | 운영·유지보수 담당자 | 배포, 데이터·DB·계약과 장애 관리 | 환경·운영 문서와 Core Harness | Inferred |
 
 대표 시나리오는 대시보드 현황 확인, 일반 Self Equipment 상세 조회, 일반 STEP·장비 조건
-딥링크 진입, MY EQP·Mailing 조건 등록과 요약 메일 확인이다. Self MY EQP 조회는 현재
-`Blocked`다.
+딥링크 진입, Mailing 조건 등록과 요약 메일 확인이다.
 조직명, 직무별 권한 체계와 별도 로그인 역할은 현재 자료로 확인되지 않았다.
 
 ## 5. 주요 기능
@@ -52,11 +52,11 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 기능 | 사용자에게 제공하는 결과 | 주요 진입점 | 상세 문서 |
 |---|---|---|---|
 | Line 대시보드 | 최신 KPI, Line별 건수와 기간 추이 | `/`, `GET /api/dashboard-data` | [dashboard.md](../features/dashboard.md) — `Active Baseline` |
-| Self Equipment | 일반·MY EQP Scatter·동일성·변경점, SKIP·HIT·클릭 이력 | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) — 코드 `Confirmed`, 운영 DB `Unknown` |
+| Self Equipment | 일반 Scatter·동일성·변경점, SKIP·HIT·클릭 이력 | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) — 코드 `Confirmed`, 운영 DB `Unknown` |
 | 동일성 이상감지 | STEP·sensor 조건별 분석 이미지 | `/matching-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
 | 공통부 이상감지 | 공통부 이미지와 설비 비교 차트 | `/common-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
 | 공통부 동일성 이상감지 | EQP_MODEL·sensor 조건별 공통부 분석 이미지 | `/common-commonality-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
-| MY EQP·Mailing 등록 | 개인 설비와 수신 조건 관리 | `/registration` | [mailing.md](../features/mailing.md) — summary 계약 존재, 실제 발송 `Blocked` |
+| Mailing 등록 | 수신 조건 관리 | `/registration`, `/recipients` | [mailing.md](../features/mailing.md) — summary 계약 존재, 실제 발송 `Blocked` |
 | STEP 딥링크 | URL 조건을 자설비 필터에 적용 | `/self-equipment?...` | [step-deeplink.md](../features/step-deeplink.md) — ALL 흐름 확인, HMAC `Blocked` |
 | Mailing Report | 대시보드 요약, 수신인별 표와 상세 링크 | `public/mailing-report.html` | 실제 발송 흐름은 `Unknown` |
 | 사용자 메뉴얼 | 화면별 사용 절차와 이미지 | `/manual` | `docs/user-manual/USER_MANUAL.md` |
@@ -97,7 +97,7 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | 통계·경로 Parquet | 대시보드 집계와 상세 대상 탐색 | Node와 hyparquet | `/appdata` 운영 파일을 직접 변경하지 않음 | Confirmed |
 | ERD·공통부 Parquet | Scatter와 동일성 차트 데이터 | 검증된 경로의 Node read | 경로·컬럼 계약 보존 필요 | Confirmed |
 | 분석 이미지 | 동일성·공통부 결과 표시 | 허용 root 검증 후 stream | 경로 노출과 traversal 방지 필요 | Confirmed |
-| 업무 DB | 사용자, MY EQP, Mailing와 이력 | Node→Python helper→PyMySQL | 테스트 쓰기·DDL 금지, credential 보호 | Confirmed |
+| 업무 DB | 사용자, Mailing와 이력 | Node→Python helper→PyMySQL | 테스트 쓰기·DDL 금지, credential 보호 | Confirmed |
 | 환경변수·credential 파일 | port, mode, 경로와 DB 연결 설정 | process environment·로컬 파일 | 실제 값과 비밀정보를 문서화하지 않음 | Confirmed |
 | Mailing HTML template | KPI, 수신인별 표와 딥링크 구조 | 외부 renderer 입력 후보 | 실제 renderer·sender 계약 확인 필요 | Confirmed |
 

@@ -20,11 +20,6 @@ const DB_METHODS = new Map([
   ["/api/hit-history", new Set(["POST"])],
   ["/api/clicked-category-history", new Set(["POST"])],
   ["/api/pass-history", new Set(["GET", "POST", "DELETE"])],
-  ["/api/my-eqp-reference", new Set(["GET", "HEAD"])],
-  ["/api/my-eqp-registration", new Set(["GET", "POST", "DELETE"])],
-])
-const SELF_EQUIPMENT_DB_METHODS = new Map([
-  ["/api/my-eqp-equipment-data", new Set(["GET"])],
 ])
 
 export const DATA_CONNECTIONS_ENABLED_ENV = "SCS_DATA_CONNECTIONS_ENABLED"
@@ -114,19 +109,12 @@ export function blockDisabledDataRequest(
     && isExactPath
     && DB_METHODS.get(normalizedPathname)?.has(req.method)
   )
-  const isAllowedSelfEquipmentDbRequest = (
-    areSelfEquipmentDataConnectionsEnabled(environment)
-    && areDbConnectionsEnabled(environment, canReadDbInfo)
-    && isExactPath
-    && SELF_EQUIPMENT_DB_METHODS.get(normalizedPathname)?.has(req.method)
-  )
   if (
     !isApiPath(url.pathname)
     || areDataConnectionsEnabled(environment)
     || isAllowedDashboardRead
     || isAllowedSelfEquipmentRead
     || isAllowedDbRequest
-    || isAllowedSelfEquipmentDbRequest
   ) return false
 
   const payload = createSafeApiError({

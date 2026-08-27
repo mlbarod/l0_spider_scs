@@ -111,8 +111,8 @@ Node는 파일에 직접 접근하고 DB는 `python3 -B` helper를 실행하며,
 | Dashboard detail·stats | Node | hyparquet 집계와 metadata cache | `dashboardData.mjs` | Unknown | Confirmed |
 | Self Equipment Parquet | Node | 허용 경로 변환, hyparquet와 LRU | `selfEquipmentData.mjs` | Unknown | Confirmed |
 | 동일성·공통부 데이터 | Node | 디렉터리 index, Parquet 조회와 PNG stream | `commonalityData.mjs`, `commonAnomalyData.mjs` | Unknown | Confirmed |
-| 사용자·기준정보 | Node IP 처리 / Python helper | IP 정규화·접속 IP 식별·기준정보 SELECT | `currentUser.mjs`, `current_user.py`, `my_eqp_reference.py` | IP는 요청에서 수집; DB 주체 Unknown | Confirmed |
-| 등록·이력 | Python helper | SELECT·INSERT·UPDATE·DELETE, 일부 runtime DDL | registration·history helper | L0 Spider 쓰기 | Confirmed |
+| 사용자 식별 | Node IP 처리 / Python helper | IP 정규화·접속 IP 식별 | `currentUser.mjs`, `current_user.py` | IP는 요청에서 수집 | Confirmed |
+| Mailing 등록·이력 | Python helper | SELECT·INSERT·UPDATE·DELETE | Mailing registration·history helper | L0 Spider 쓰기 | Confirmed |
 | 사용자 메뉴얼 | Vite·브라우저 | build resource import | `UserManualPage.jsx` | 저장소 문서 | Confirmed |
 
 Node handler는 파일 존재와 허용 root를 검사하고 일부 cache를 `mtimeMs`와 size 변경으로 갱신한다.
@@ -257,7 +257,7 @@ mock 구현은 `main`으로 병합하지 않으며 `mock-agent`가 `main`의 계
 | [deployment.md](deployment.md) | build·배포 topology와 절차 | 작성됨; 실제 topology `Unknown` |
 | [security.md](security.md) | 신뢰 경계, 비밀·입력·로그 정책 | 작성됨; 운영 통제 일부 `Blocked` |
 | [dashboard.md](../features/dashboard.md) | Dashboard 화면·API·데이터 계약 | 작성됨; success Schema·fixture·contract test 존재 |
-| [self-equipment.md](../features/self-equipment.md) | Self Equipment·MY EQP 기능 흐름 | 작성됨 |
+| [self-equipment.md](../features/self-equipment.md) | Self Equipment 기능 흐름 | 작성됨 |
 | [step-deeplink.md](../features/step-deeplink.md) | query와 HMAC 계약 | 작성됨; 실제 HMAC `Blocked` |
 | [mailing.md](../features/mailing.md) | 집계·template·수신자·발송 경계 | 작성됨; renderer·sender `Blocked` |
 | [abnormal-data.md](../features/abnormal-data.md) | 동일성·공통부 데이터와 화면 | 작성됨 |

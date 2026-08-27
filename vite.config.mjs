@@ -27,13 +27,10 @@ import {
 } from "./server/commonCommonalityData.mjs"
 import { handleLatestCommonalityPathRequest } from "./server/latestCommonalityPath.mjs"
 import { handleMappingConfigRequest } from "./server/mappingConfig.mjs"
-import { handleMyEqpReferenceRequest } from "./server/myEqpReference.mjs"
-import { handleMyEqpRegistrationRequest } from "./server/myEqpRegistration.mjs"
 import { handlePassHistoryRequest } from "./server/passHistory.mjs"
 import {
   handleErdFileRequest,
   handleErdScatterDataRequest,
-  handleMyEqpEquipmentDataRequest,
   handleSelfEquipmentDataRequest,
 } from "./server/selfEquipmentData.mjs"
 
@@ -129,16 +126,6 @@ function mappingConfigApi() {
           return
         }
 
-        if (url.pathname === "/api/my-eqp-reference") {
-          handleMyEqpReferenceRequest(req, res)
-          return
-        }
-
-        if (url.pathname === "/api/my-eqp-registration") {
-          handleMyEqpRegistrationRequest(req, res, url)
-          return
-        }
-
         if (url.pathname === "/api/mailing-registration") {
           handleMailingRegistrationRequest(req, res, url)
           return
@@ -146,11 +133,6 @@ function mappingConfigApi() {
 
         if (url.pathname === "/api/self-equipment-data") {
           handleSelfEquipmentDataRequest(req, res, url)
-          return
-        }
-
-        if (url.pathname === "/api/my-eqp-equipment-data") {
-          handleMyEqpEquipmentDataRequest(req, res, url)
           return
         }
 

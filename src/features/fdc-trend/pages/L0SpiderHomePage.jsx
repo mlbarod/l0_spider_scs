@@ -63,8 +63,8 @@ const spiderApps = [
   },
   {
     icon: Mail,
-    title: "My EQP 등록",
-    subtitle: "Mailing 수신 조건과 My EQP 모니터링 설비를 함께 등록합니다.",
+    title: "Mailing 등록",
+    subtitle: "이상감지 Mailing Report 수신 조건을 등록합니다.",
     category: "Registration",
     href: "/registration",
     active: true,

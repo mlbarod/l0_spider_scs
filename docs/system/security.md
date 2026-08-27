@@ -1,5 +1,7 @@
 # L0 Spider 시스템 보안 기준
 
+> 현재 범위: [ADR-004](../decisions/ADR-004-scs-my-eqp-scope.md)에 따라 SCS의 My EQP 기능은 제거되었다. 아래 My EQP 항목은 제거 전 보안 분석이며 현재 runtime surface가 아니다.
+
 ## 1. 문서 목적과 범위
 
 | 항목 | 기준 |
@@ -109,7 +111,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | API auth middleware | global middleware·Bearer/JWT 확인 안 됨 | `server.mjs` direct dispatch | handler별 처리 | `Not Implemented` in application | `server.mjs:131-273` |
 | 접속자 이력 식별 | forwarded/socket IP 정규화 후 같은 IP 반환 | `getRemoteIp`, `resolveCurrentUser`, Python helper | IP 없음·형식 오류 400 | `Implemented` | current user Node/Python |
 | history write identity | body `knoxId` 대신 server가 확인한 접속 IP 사용 | hit·click·pass handlers | IP 확인 실패 시 write 실패 | `Implemented` | history handlers |
-| My EQP 조회 | 접속 IP를 저장한 `knox_id`와 `is_public=1` 조건 | Node·Python helper | 조회 오류 500 | 일부 `Implemented` | `myEqpRegistration.mjs`; Python query |
+| My EQP 조회 | 접속 IP를 저장한 `knox_id`; 컬럼이 있을 때만 `is_public=1` 포함 | Node·Python helper | 조회 오류 500 | 일부 `Implemented` | `myEqpRegistration.mjs`; Python query |
 | My EQP 등록 | 접속 IP를 owner 비교값으로 사용; 브라우저 `knoxIds` 입력 없음 | Node handler | helper 오류 500 | `Needs Validation` | `myEqpRegistration.mjs` |
 | Mailing 등록 | caller가 `knoxId`·`knoxIds`를 지정 | Node handler | 형식 오류도 catch에서 500 | `Needs Validation` | `mailingRegistration.mjs:53-75,160-217` |
 | 역할·관리자 권한 | role·permission check 미확인 | 해당 없음 | 미확인 | `Unknown` | code search |
@@ -266,7 +268,7 @@ DB까지 승인된 경우에만 `1`로 설정하며, gate 없는 과거 artifact
 | query parameterization | 대표 SELECT·INSERT·UPDATE·DELETE에 `%s` parameter 사용 | 동적 identifier 조립의 안전성 전수 검토 필요 | 대체로 `Implemented` | `scripts/*.py` |
 | dynamic SQL | 고정 column 목록·placeholder 수로 query 조립 | future input-derived identifier 금지 | 일부 `Implemented` | pass·My EQP helper |
 | read·write | reference read, registration·history write·commit | 권한 범위 넓음 | `Confirmed` | Python helpers |
-| runtime DDL | `myeqp_regist.is_public` 부재 시 `ALTER TABLE` | application 계정 DDL 권한·동시성 | `Risk` | `my_eqp_registration.py:50-67` |
+| My EQP schema 차이 | `myeqp_regist.is_public` 유무 | 읽기 전용 컬럼 확인 후 대응 query 선택 | `Implemented` | `my_eqp_registration.py` |
 | transaction | write 후 명시적 `commit()` | partial recipient batch는 Node loop 단위 | 일부 `Implemented` | helper write functions |
 | rollback | context manager 동작 외 명시 정책 미확인 | 실패 시 transaction 결과 | `Unknown` | Python code |
 | connection pool | 요청마다 child process와 connection | load·connection exhaustion | `Not Implemented` | Node spawn·helper connect |

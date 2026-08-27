@@ -30,20 +30,12 @@
         #667085 for no change or missing comparison data
       - recipient_knox_id: the knox_id receiving this rendered mail
       - rows: knox_id, line_name, sdwt, sensor_grade, dashboard_abnormal_count
-      - my_eqp_rows: knox_id, line_name, sdwt, prc_group, eqp, sensor_grade,
-        dashboard_abnormal_count
 
       All count variables and dashboard_abnormal_count values must be passed as raw
       numbers. This template formats them with a comma every three digits.
 
-      The sender recipient set is the union of email.email and the knox_id values in
-      active myeqp_regist rows. A recipient can receive either section or both.
-
-      rows and my_eqp_rows must be filtered independently for recipient_knox_id:
-      - rows: only conditions registered in email where email.email matches the recipient
-      - my_eqp_rows: only active myeqp_regist conditions where knox_id matches the recipient
-      Never include another knox_id's conditions. If one list is empty, keep that report
-      table empty and render only the rows available in the other report table.
+      rows must include only conditions registered in email where email.email matches
+      recipient_knox_id. Never include another knox_id's conditions.
 
       dashboard_abnormal_count must come from lineDashboard.mailingSummary.abnormalCount.
       It uses the same dashboard rule: unique desc, recipe_id, priority, sensor,
@@ -65,15 +57,6 @@
       file at the same hh:mm (including the same Line mapping and unique-combination
       rule). Do not independently choose a stats file, choose the previous day's latest
       file, compare period totals, or recalculate from rows/mailingSummary.
-
-      my_eqp_rows must be filtered for the mail recipient by active myeqp_regist rows.
-      Its dashboard_abnormal_count must be calculated by the sender with the same
-      unique desc, recipe_id, priority, sensor, and eqp rule as the dashboard, grouped
-      by date, Line, SDWT, EQP, and Sensor Grade. Do not modify lineDashboard for this.
-      Every my_eqp_rows LINK must use sdwt=MY_EQP (not row.sdwt), step=ALL,
-      and row.eqp. This selects the recipient's My EQP virtual SDWT, Sensor Grade,
-      the fixed ALL STEP, and eqp_ch in the self-equipment app. Never put
-      row.prc_group itself in the URL.
 
       The sender must render this file as a Jinja-compatible HTML template with HTML
       auto-escaping enabled. The urlencode filters in each LINK preserve the selected
@@ -192,57 +175,6 @@
                           {% else %}
                           <tr>
                             <td colspan="5" align="center" style="padding:34px 16px; color:#667085; font-size:13px; line-height:20px;">등록된 전체설비 Report 수신 조건 또는 해당 이상건이 없습니다.</td>
-                          </tr>
-                          {% endfor %}
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-            </tr>
-
-            <tr>
-              <td colspan="7" class="content-padding" style="padding:18px 4px 0;">
-                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%; border:1px solid #dfe3e8; border-radius:12px; border-collapse:separate; border-spacing:0; background-color:#ffffff; overflow:hidden; box-shadow:0 1px 3px rgba(16,24,40,0.06);">
-                  <tr>
-                    <td style="padding:16px 18px 13px; border-bottom:1px solid #eaecf0;">
-                      <div style="color:#172033; font-size:15px; line-height:22px; font-weight:700;">My EQP 이상현황 Report</div>
-                      <div style="margin-top:3px; color:#667085; font-size:11px; line-height:17px;">수신인에게 지정된 My EQP 중 이상이 발생한 설비를 표시합니다.</div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding:0; overflow-x:auto;">
-                      <table role="table" width="100%" cellspacing="0" cellpadding="0" border="0" class="detail-table" style="width:100%; min-width:980px; border-collapse:collapse;">
-                        <thead>
-                          <tr style="background-color:#f8fafc;">
-                            <th align="left" scope="col" style="padding:12px 14px; border-bottom:1px solid #dfe3e8; color:#475467; font-size:11px; line-height:16px; font-weight:700;">Line Name</th>
-                            <th align="left" scope="col" style="padding:12px 14px; border-bottom:1px solid #dfe3e8; color:#475467; font-size:11px; line-height:16px; font-weight:700;">SDWT</th>
-                            <th align="left" scope="col" style="padding:12px 14px; border-bottom:1px solid #dfe3e8; color:#475467; font-size:11px; line-height:16px; font-weight:700;">PRC Group</th>
-                            <th align="left" scope="col" style="padding:12px 14px; border-bottom:1px solid #dfe3e8; color:#475467; font-size:11px; line-height:16px; font-weight:700;">EQP</th>
-                            <th align="center" scope="col" style="padding:12px 14px; border-bottom:1px solid #dfe3e8; color:#475467; font-size:11px; line-height:16px; font-weight:700;">Sensor Grade</th>
-                            <th align="right" scope="col" style="padding:12px 14px; border-bottom:1px solid #dfe3e8; color:#475467; font-size:11px; line-height:16px; font-weight:700;">이상건수</th>
-                            <th align="center" scope="col" style="width:112px; padding:12px 14px; border-bottom:1px solid #dfe3e8; color:#475467; font-size:11px; line-height:16px; font-weight:700;">LINK</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {% for row in my_eqp_rows | default([]) if row.knox_id == recipient_knox_id %}
-                          <tr>
-                            <td style="padding:13px 14px; border-bottom:1px solid #f0f2f5; color:#172033; font-size:13px; line-height:19px; font-weight:700;">{{ row.line_name }}</td>
-                            <td style="padding:13px 14px; border-bottom:1px solid #f0f2f5; color:#344054; font-size:13px; line-height:19px;">{{ row.sdwt }}</td>
-                            <td style="padding:13px 14px; border-bottom:1px solid #f0f2f5; color:#344054; font-size:13px; line-height:19px;">{{ row.prc_group }}</td>
-                            <td style="padding:13px 14px; border-bottom:1px solid #f0f2f5; color:#344054; font-size:13px; line-height:19px; font-weight:700;">{{ row.eqp }}</td>
-                            <td align="center" style="padding:13px 14px; border-bottom:1px solid #f0f2f5;">
-                              <span style="display:inline-block; min-width:34px; padding:3px 9px; border:1px solid #bfdbfe; border-radius:999px; background-color:#eff6ff; color:#1d4ed8; font-size:11px; line-height:16px; font-weight:700;">{{ row.sensor_grade }}</span>
-                            </td>
-                            <td align="right" style="padding:13px 14px; border-bottom:1px solid #f0f2f5; color:#172033; font-size:13px; line-height:19px; font-weight:700; white-space:nowrap;">{{ "{:,}".format(row.dashboard_abnormal_count | int) }}건</td>
-                            <td align="center" style="padding:10px 14px; border-bottom:1px solid #f0f2f5;">
-                              <a href="{{ spider_base_url }}/self-equipment?line={{ row.line_name | urlencode }}&amp;sdwt=MY_EQP&amp;grade={{ row.sensor_grade | urlencode }}&amp;step=ALL&amp;eqpCh={{ row.eqp | urlencode }}" target="_blank" rel="noopener noreferrer" style="display:inline-block; min-width:58px; padding:7px 12px; border:1px solid #2563eb; border-radius:7px; background-color:#ffffff; color:#2563eb; font-size:11px; line-height:15px; font-weight:700; text-align:center; text-decoration:none;">LINK&nbsp; ↗</a>
-                            </td>
-                          </tr>
-                          {% else %}
-                          <tr>
-                            <td colspan="7" align="center" style="padding:34px 16px; color:#667085; font-size:13px; line-height:20px;">등록된 My EQP 수신 조건 또는 해당 이상건이 없습니다.</td>
                           </tr>
                           {% endfor %}
                         </tbody>

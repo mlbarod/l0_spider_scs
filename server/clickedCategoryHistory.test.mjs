@@ -49,28 +49,6 @@ test("자설비 sensor ALL 클릭이력은 실제 sensor 목록 대신 ALL을 �
   assert.equal(record.sensor, "ALL")
 })
 
-test("MY EQP 선택은 파일 경로 없이 clicked_category_history 값으로 변환한다", () => {
-  const clickedAt = "2026-07-24T09:30:00+09:00"
-  const record = buildClickedCategoryHistoryRecord({
-    app: "self",
-    lineId: "P1L",
-    virtualCategory: {
-      sdwt: "MY EQP",
-    },
-    clickedAt,
-    knoxId: "user1",
-  })
-
-  assert.deepEqual(record, {
-    lineId: "P1L",
-    sdwt: "MY EQP",
-    grade: "['A', 'B', 'D', 'N', 'M']",
-    sensor: "ALL",
-    updateDate: clickedAt,
-    knoxId: "user1",
-  })
-})
-
 test("동일성 Drawing 경로는 Line에 (g)를 붙이고 경로의 grade와 sensor를 사용한다", () => {
   const record = buildClickedCategoryHistoryRecord({
     app: "commonality",

@@ -6,6 +6,7 @@
 > 기준 브랜치: `main`
 > 작업 시작 기준 commit: `ab2e27c`
 > 관련 Flow ID: `DF-MAIL-01`, `DF-MAIL-02`, `DF-STEP-01`
+> 현재 범위: [ADR-004](../decisions/ADR-004-scs-my-eqp-scope.md)에 따라 SCS 메일 template과 수신 조건에서 My EQP를 제외한다. 아래 My EQP 항목은 제거 전 분석이다.
 > 조사 방식: 저장소 정적 조사만 수행했으며 실제 DB·`/appdata`·메일 시스템을 사용하지 않았다.
 > 브랜치 경계: `mock-agent`의 mock SMTP·recipient·renderer·E2E는 `External Branch / Out of Scope`다.
 

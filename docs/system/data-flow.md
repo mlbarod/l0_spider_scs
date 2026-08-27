@@ -6,6 +6,7 @@
 > 검증 기준 branch: `main`
 > 검증 기준 코드 commit: `2d5535366fc56ecff7a322139ddfe6f09cd4df25` + 현재 working tree 변경
 > 최신 하네스 감사: [reports/audit/harness-final-review.md](../../reports/audit/harness-final-review.md)
+> 현재 범위: [ADR-004](../decisions/ADR-004-scs-my-eqp-scope.md)에 따라 SCS의 My EQP 흐름은 제거되었다. 아래 My EQP 항목은 제거 전 분석이며 현재 런타임 흐름이 아니다.
 > 주요 근거: `AGENTS.md`, `reports/audit/system-inventory.md`, `docs/system/overview.md`, `docs/system/architecture.md`, `docs/system/environment-definition.md`
 > 조사 제한: 실제 운영 데이터, DB, `.env`, 비밀키와 메일 전송 시스템은 열거나 실행하지 않았다.
 > 브랜치 범위: `mock-agent`의 mock 서버·데이터·E2E 흐름은 `Out of Scope`이다.

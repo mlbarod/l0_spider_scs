@@ -72,7 +72,7 @@
 | `SCS_DATA_CONNECTIONS_ENABLED` | 아니오 | 예 | 명시적으로 `1`인 경우에만 `/api` namespace의 파일·DB handler 진입을 허용한다. |
 | `SCS_DASHBOARD_DATA_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이면 Dashboard GET/HEAD read allowlist를 허용하고, 그 외 값이면 차단한다. |
 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이면 mapping GET/HEAD와 자설비 index·chart GET allowlist를 허용하고, 그 외 값이면 차단한다. |
-| `SCS_DB_CONNECTIONS_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이고 `DB_INFO_PATH` 파일이 읽기 가능할 때 사용자·My EQP와 세 이력 API allowlist를 허용한다. |
+| `SCS_DB_CONNECTIONS_ENABLED` | 아니오 | 예 | 미설정 또는 `1`이고 `DB_INFO_PATH` 파일이 읽기 가능할 때 사용자와 세 이력 API allowlist를 허용한다. |
 | 데이터 root 설정 | 아니오 | 예 | API 요청 처리 중 파일 탐색 위치를 결정한다. |
 | `SENSOR_EXCLUSION_CONFIG_PATH` | 아니오 | 예 | 기본 `config/sensor-exclusions.json` 대신 사용할 App별 sensor 제외 JSON 위치를 지정한다. |
 | `DB_INFO_PATH` | 아니오 | 예 | DB 작업용 Python helper가 credential 파일을 해석한다. current user IP 확인에는 사용하지 않는다. |
@@ -84,7 +84,7 @@
 
 ## 7. 설정 로딩과 우선순위
 
-1. `SCS_DATA_CONNECTIONS_ENABLED=1`이면 전체 API가 활성화된다. 그렇지 않은 상태에서는 Dashboard와 자설비 file read allowlist가 기본 통과한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 사용자·My EQP와 세 이력 API allowlist도 통과하며, 각 범위는 대응하는 `SCS_*_ENABLED=0`으로 명시 차단할 수 있다. 나머지 `/api` 요청은 `503 DATA_CONNECTIONS_DISABLED`로 종료된다.
+1. `SCS_DATA_CONNECTIONS_ENABLED=1`이면 전체 API가 활성화된다. 그렇지 않은 상태에서는 Dashboard와 자설비 file read allowlist가 기본 통과한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 사용자와 세 이력 API allowlist도 통과하며, 각 범위는 대응하는 `SCS_*_ENABLED=0`으로 명시 차단할 수 있다. 나머지 `/api` 요청은 `503 DATA_CONNECTIONS_DISABLED`로 종료된다.
 2. 연결이 활성화된 경우 Node 프로세스에 주입된 환경변수가 해당 코드 기본값보다 우선한다.
 3. Node가 Python DB helper child process를 만들 때 기존 환경을 전달한다. 이력 payload에는 Node가 검증한 접속 IP가 기존 `knoxId` 필드명으로 포함된다.
 4. 환경변수가 없으면 각 모듈의 코드 기본값 또는 `SPIDER_DATA_PATH_TEMPLATES`가 사용된다.
@@ -106,7 +106,7 @@
 | 서버 | `SCS_DATA_CONNECTIONS_ENABLED` | Parquet·이미지·DB API handler 전체 활성화 gate | 비활성 | 새 전체 연결 전에는 설정 금지 | API 요청 | `server/dataConnections.mjs`, `server.mjs`, `vite.config.mjs` | 아니오 | Dashboard·Self·DB 전용 allowlist 외 `/api`에 `503 DATA_CONNECTIONS_DISABLED` 반환 | `Confirmed` |
 | 서버 | `SCS_DASHBOARD_DATA_ENABLED` | Dashboard GET/HEAD read allowlist override | 활성 | UI shell 전환 시 선택 | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | Dashboard read 통과 | 코드 `Confirmed`; 운영값 `Unknown` |
 | 서버 | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 자설비 mapping·Parquet read API override | 활성 | UI shell 전환 시 선택 | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | 자설비 read allowlist 통과 | 코드 `Confirmed`; 운영값 `Unknown` |
-| 서버 | `SCS_DB_CONNECTIONS_ENABLED` | 읽기 가능한 credential 기반 사용자·My EQP·세 이력 API allowlist override | 활성 후보 | 전체 gate 비활성 mode에서 allowlist 차단 시 `0` | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | credential 누락·읽기 불가 또는 비-`1`이면 해당 API 503 | 코드 `Confirmed`; 운영값 `Unknown` |
+| 서버 | `SCS_DB_CONNECTIONS_ENABLED` | 읽기 가능한 credential 기반 사용자·세 이력 API allowlist override | 활성 후보 | 전체 gate 비활성 mode에서 allowlist 차단 시 `0` | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | credential 누락·읽기 불가 또는 비-`1`이면 해당 API 503 | 코드 `Confirmed`; 운영값 `Unknown` |
 | Vite | `VITE_SITE_URL` | 허용 host와 HMR 조건 | 빈 값 | 선택 | Vite 시작/build | `vite.config.mjs:29-30,129-140` | 아니오 | 조건부 설정 미적용 | `Confirmed` |
 | 데이터 | `MAPPING_CONFIG_PATH` | mapping 설정 파일 override | `/appdata/l0_spider_scs/mapping_config.json` | 선택 | API 요청 | `server/mappingConfig.mjs:5-7` | 경로 주의 | SCS 코드 기본 경로 사용 | `Confirmed` |
 | 데이터 | `COMMONALITY_ROOT_PATH` | commonality root override | 코드 경로 template | 선택 | API 요청 | `server/latestCommonalityPath.mjs:9-11` | 경로 주의 | 코드 root 사용 | `Confirmed` |
@@ -178,7 +178,7 @@
 - 실제 값과 실제 파일은 확인하지 않았으며 문서에도 기록하지 않는다.
 - 연결은 `PyMySQL`과 `charset="utf8"`을 사용하고 helper 호출마다 열고 닫는다.
 - connection pool, 명시적 connect/read/write timeout, TLS option은 확인되지 않았다.
-- 조회뿐 아니라 등록·이력 저장과 `commit()`이 존재하며, `my_eqp_registration.py`에는 runtime `ALTER TABLE` 가능성이 있다.
+- 조회뿐 아니라 Mailing 등록·이력 저장과 `commit()`이 존재한다.
 - 최소 권한, schema migration 책임, 운영 DB별 계정 분리와 DDL 허용 정책은 `Unknown`이며 권한 과다 `Risk`가 있다.
 - 이력 식별값은 proxy 관련 header와 socket 주소에서 정규화·검증한 IP에 의존한다.
 - 신뢰할 proxy 범위와 header 위조 방지 설정은 저장소에서 확인되지 않아 `Risk`이다.
@@ -187,7 +187,7 @@
 
 ### 13.1 데이터 경로와 화면 연결
 
-- 현재 코드는 Dashboard와 자설비 파일 read allowlist를 기본 활성화한다. 사용자·My EQP와 세 이력 API는 credential read 가능 시 활성화되고 Mailing과 다른 App은 계속 차단된다. 전체 UI shell은 세 범위의 `SCS_*_ENABLED=0`을 명시해 전환한다. 실제 배포 환경의 변수 존재·값, DB와 target mount는 `Unknown`이다.
+- 현재 코드는 Dashboard와 자설비 파일 read allowlist를 기본 활성화한다. 사용자와 세 이력 API는 credential read 가능 시 활성화되고 Mailing과 다른 App은 계속 차단된다. 전체 UI shell은 세 범위의 `SCS_*_ENABLED=0`을 명시해 전환한다. 실제 배포 환경의 변수 존재·값, DB와 target mount는 `Unknown`이다.
 - 화면의 상대 `/api/*` 요청은 Node 또는 Vite handler를 거쳐 코드 경로 template, root override 4개와 file/config override 2개를 사용한다.
 - Self Equipment의 `path_xian` root는 `SCS_SELF_EQUIPMENT_PATH_ROOT`로 선택적으로 override하며 기본값은 코드 template이다.
 - 읽기 권한, mount 준비, 데이터 생성 주체와 운영별 경로 차이는 `Unknown`이다.
@@ -229,7 +229,6 @@
 
 - dashboard와 latest commonality의 날짜 filename 처리는 `Date.UTC`와 ISO 날짜를 사용한다.
 - 사용자 클릭 시각은 여러 화면에서 `new Date().toISOString()`으로 생성되어 UTC 형식이다.
-- My EQP 활성 조건은 DB `NOW()`를 사용하므로 DB timezone 설정의 영향을 받지만 실제 timezone은 `Unknown`이다.
 - zone 없는 날짜·시각 문자열을 `Date.parse` 또는 `Date`로 처리하는 위치는 runtime timezone 영향을 받을 수 있어 `Risk`이다.
 - 저장소에서 `TZ` 설정이나 서버·DB timezone 일치 규칙은 확인되지 않았다.
 - 표시에는 `ko-KR`, `ko`, `en-US`가 명시된 위치와 기본 locale을 쓰는 위치가 함께 존재한다.
@@ -334,7 +333,7 @@
 - 내부 host와 service URL 및 일부 data root가 코드에 고정되어 환경 이관과 정보 노출에 영향을 줄 수 있다.
 - 오류 응답과 child process 오류가 내부 경로 또는 DB 세부정보를 노출할 수 있다.
 - proxy header 신뢰 정책이 확인되지 않아 사용자 주소 기반 식별의 위조 가능성을 평가할 수 없다.
-- DB helper 계정이 runtime DDL을 수행할 수 있어 최소 권한 위반 가능성이 있다.
+- DB helper 계정은 registration·history DML 권한이 필요하며 schema 변경 권한은 요구하지 않는다.
 - startup readiness가 없어 데이터 root와 DB 장애가 첫 요청 시 드러날 수 있다.
 - timezone과 locale이 명시되지 않은 parsing·표시 위치는 환경별 결과 차이를 만들 수 있다.
 - 실제 메일 발송 차단 장치가 확인되지 않아 sender가 추가될 때 안전한 기본값이 필요하다.

@@ -195,7 +195,7 @@ host·TLS·WebSocket은 proxy/network owner, route 차이는 application owner�
 
 ### 증상
 
-- 접속 IP API가 `400`이거나 MY EQP·Mailing 등록, PASS·HIT·click 이력 API가 timeout 또는 `500`이다.
+- 접속 IP API가 `400`이거나 Mailing 등록, PASS·HIT·click 이력 API가 timeout 또는 `500`이다.
 - Python helper exit·JSON parse·credential permission 오류가 기록된다.
 
 ### 확인 명령
@@ -215,7 +215,7 @@ test -r <confirmed-db-info-path>
 - Python dependency 또는 helper timeout
 - proxy forwarded header 또는 socket 주소가 올바른 IP 형식이 아님
 - proxy header 신뢰·사용자 IP mapping 문제
-- runtime `ALTER TABLE` 권한과 schema 상태 불일치
+- Mailing·이력 테이블 schema와 helper query의 일치 여부
 
 ### 안전한 조치
 
@@ -276,7 +276,7 @@ stat <expected-file>
 - data/filesystem owner에게 expected path, 시각과 기능 범위를 마스킹해 전달한다.
 - history file만 실패한 부분 성공과 주 data 실패를 구분한다.
 - cache 문제로 단정하기 전에 source file publish·mtime 상태를 확인한다.
-- mapping 실패 중에는 Self·동일성·공통부 종속 조회와 My EQP·Mailing 등록 read/write가 fail-closed하는 것이 정상이다. 내장 mapping이나 임의 파일로 우회하지 않고 화면의 **다시 조회**와 request ID로 원인을 추적한다.
+- mapping 실패 중에는 Self·동일성·공통부 종속 조회와 Mailing 등록 read/write가 fail-closed하는 것이 정상이다. 내장 mapping이나 임의 파일로 우회하지 않고 화면의 **다시 조회**와 request ID로 원인을 추적한다.
 
 ### 정상 판정
 
@@ -334,7 +334,6 @@ file 생성·freshness는 data owner, mapping·집계·API 계약은 application
 ### 증상
 
 - `/self-equipment` 링크에서 STEP이 선택되지 않는다.
-- `step=ALL` MY EQP 또는 `eqpCh` 초기 선택이 기대와 다르다.
 - 비-`ALL` token이 검증되지 않는 것처럼 보인다.
 
 ### 확인 명령
@@ -349,7 +348,6 @@ line, sdwt, grade, step, eqpCh의 존재와 query 이름만 확인
 
 ### 가능한 원인
 
-- `sdwt=MY_EQP`에서 `step`이 현재 계약대로 `ALL`로 강제됨
 - `eqpCh`·`eqp_ch`, 반복 query 또는 URL encoding 차이
 - 비-`ALL` HMAC 생성·검증·매핑 구현이 현재 저장소에 없음
 - Self data·mapping·registration 조회 실패
@@ -362,7 +360,6 @@ line, sdwt, grade, step, eqpCh의 존재와 query 이름만 확인
 
 ### 정상 판정
 
-현재 확인된 계약에서는 MY EQP `step=ALL`, query round trip과 `eqpCh` 선택이 유지된다.
 비-`ALL` HMAC 성공 기준은 구현이 없어 `Unknown`이다.
 
 ### Escalation

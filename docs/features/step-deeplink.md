@@ -4,6 +4,7 @@
 |---|---|
 | 문서 목적 | `/self-equipment` STEP 딥링크의 현재 URL 계약과 HMAC 구현 경계를 정의한다. |
 | 문서 상태 | `Active Baseline` |
+| 현재 범위 | [ADR-004](../decisions/ADR-004-scs-my-eqp-scope.md)에 따라 My EQP `step=ALL`·`eqpCh` 흐름은 제거됨. 아래 관련 항목은 제거 전 분석임. |
 | 기능 범위 | `As-Is` |
 | 검증 기준 branch | `main` |
 | 검증 기준 코드 commit | `99c4361164d4109a71f0153a5c963fa4f5d52cb4` |

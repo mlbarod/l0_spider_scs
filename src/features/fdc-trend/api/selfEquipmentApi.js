@@ -39,34 +39,7 @@ export async function fetchSelfEquipmentData({
   return payload
 }
 
-export async function fetchMyEqpEquipmentData({
-  line,
-  priorities,
-  desc,
-  eqpCh,
-  sensor,
-  chStep,
-}) {
-  const searchParams = new URLSearchParams({ line })
-  priorities.forEach((priority) => searchParams.append("priority", priority))
-  if (desc) searchParams.set("desc", desc)
-  if (eqpCh) searchParams.set("eqpCh", eqpCh)
-  if (sensor) searchParams.set("sensor", sensor)
-  if (chStep) searchParams.set("chStep", chStep)
-
-  const response = await fetch(`/api/my-eqp-equipment-data?${searchParams.toString()}`, {
-    headers: { Accept: "application/json" },
-  })
-  const payload = await response.json().catch(() => ({}))
-
-  if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "My EQP 이상감지 데이터를 불러오지 못했습니다."))
-  }
-  return payload
-}
-
 export async function fetchEqpAllSkipTargets({
-  isMyEqp,
   line,
   pathSdwt,
   sdwt,
@@ -87,9 +60,7 @@ export async function fetchEqpAllSkipTargets({
     sensor: targetSensor,
     chStep: "ALL",
   }
-  const payload = isMyEqp
-    ? await fetchMyEqpEquipmentData(filters)
-    : await fetchSelfEquipmentData({ ...filters, pathSdwt, sdwt })
+  const payload = await fetchSelfEquipmentData({ ...filters, pathSdwt, sdwt })
 
   return (payload.rows ?? [])
     .map((row) => ({ filePath: row.history_file_path }))

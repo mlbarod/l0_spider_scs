@@ -2,8 +2,6 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
-  MY_EQP_TEAM_KEY,
-  MY_EQP_URL_SDWT,
   readSelfEquipmentUrlFilters,
   resolveSelfEquipmentGrades,
   resolveSelfEquipmentTeam,
@@ -38,30 +36,6 @@ test("SDWT URL 값은 내부 키와 화면 표시명 모두 대소문자 구분 
   assert.equal(resolveSelfEquipmentTeam(teams, ["dreams p1d"]), "S1")
   assert.equal(resolveSelfEquipmentTeam(teams, ["s2"]), "S2")
   assert.equal(resolveSelfEquipmentTeam(teams, ["missing"]), "")
-})
-
-test("My EQP URL SDWT 값은 자설비의 My EQP 가상 분임조로 매칭한다", () => {
-  const teams = [
-    { key: "S1", label: "DREAMS P1D" },
-    { key: MY_EQP_TEAM_KEY, label: "MY EQP" },
-  ]
-
-  assert.equal(resolveSelfEquipmentTeam(teams, [MY_EQP_URL_SDWT]), MY_EQP_TEAM_KEY)
-  assert.equal(resolveSelfEquipmentTeam(teams, ["MY EQP"]), MY_EQP_TEAM_KEY)
-  assert.equal(resolveSelfEquipmentTeam(teams, [MY_EQP_TEAM_KEY]), MY_EQP_TEAM_KEY)
-  assert.equal(resolveSelfEquipmentTeam(teams.slice(0, 1), [MY_EQP_URL_SDWT]), "")
-})
-
-test("My EQP URL은 step 누락 또는 다른 값과 관계없이 ALL로 해석한다", () => {
-  const missingStep = readSelfEquipmentUrlFilters(
-    new URLSearchParams("line=P1&sdwt=MY_EQP&grade=D"),
-  )
-  const otherStep = readSelfEquipmentUrlFilters(
-    new URLSearchParams("line=P1&sdwt=MY_EQP&grade=D&step=opaque-token"),
-  )
-
-  assert.equal(missingStep.stepToken, "ALL")
-  assert.equal(otherStep.stepToken, "ALL")
 })
 
 test("개별 A·B URL Grade는 화면의 A/B 필터로 합치고 유효한 조건만 선택한다", () => {

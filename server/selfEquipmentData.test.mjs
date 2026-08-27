@@ -9,7 +9,6 @@ import {
   authorizeSelfEquipmentDataPath,
   buildSelfEquipmentPayload,
   excludeRecentlySkippedRows,
-  filterMyEqpRows,
   handleErdScatterDataRequest,
   isSelfEquipmentDataPathAllowed,
   normalizeErdPathReferenceRow,
@@ -83,97 +82,6 @@ test("SKIP 등록 후 정확히 3일이 지나면 일반 이상건수에 다시 
   })
 
   assert.deepEqual(excludeRecentlySkippedRows([row], [expiredRecord], NOW), [row])
-})
-
-test("My EQP는 등록된 sdwt와 eqp가 모두 일치하는 이상건만 남긴다", () => {
-  const rows = [
-    createRow({ sdwt: "SDWT-1", eqp: "EQP-1.png" }),
-    createRow({ sdwt: "SDWT-2", eqp: "EQP-1.png" }),
-    createRow({ sdwt: "SDWT-1", eqp: "EQP-2.png" }),
-  ]
-  const registrations = [{ sdwt: "sdwt-1", eqp: "eqp-1" }]
-
-  assert.deepEqual(filterMyEqpRows(rows, registrations), [rows[0]])
-})
-
-test("SDWT 파일 경로가 매칭된 뒤에는 EQP의 구분자와 대소문자 차이를 허용한다", () => {
-  const row = createRow({ sdwt: "원본-SDWT", eqp: "EQP-01_CH A.png" })
-  const registrations = [{ sdwt: "화면 표시 SDWT", eqp: "eqp01-cha" }]
-
-  assert.deepEqual(
-    filterMyEqpRows([row], registrations, { sdwtMatchedBySource: true }),
-    [row],
-  )
-})
-
-test("My EQP 전체 Sensor Grade 조건에서는 모든 등급의 RECIPE_ID를 제공한다", () => {
-  const rows = [
-    createRow({ priority: "A", recipe_id: "RECIPE-A" }),
-    createRow({ priority: "D", recipe_id: "RECIPE-D", line_rev: "INTERNAL-LINE-NAME" }),
-    createRow({ priority: "M", recipe_id: "RECIPE-M" }),
-  ]
-  const payload = buildSelfEquipmentPayload(rows, {
-    line: "P1L",
-    pathSdwt: "__MY_EQP__",
-    sdwt: "MY EQP",
-    includeAllLines: true,
-    includeAllSdwt: true,
-    priorities: ["A", "B", "D", "N", "M"],
-    desc: "",
-    eqpCh: "",
-    sensor: "",
-    chStep: "",
-  })
-
-  assert.deepEqual(payload.steps.map((step) => step.desc), ["RECIPE-A", "RECIPE-D", "RECIPE-M"])
-})
-
-test("My EQP STEP ALL은 선택 Grade 내 모든 EQP를 eqp_ch 선택지로 제공한다", () => {
-  const rows = [
-    createRow({ priority: "A", step: "STEP-A", eqp: "EQP-1.png" }),
-    createRow({ priority: "D", step: "STEP-D", eqp: "EQP-2.png" }),
-    createRow({ priority: "D", step: "STEP-E", eqp: "EQP-3.png" }),
-  ]
-  const payload = buildSelfEquipmentPayload(rows, {
-    line: "P1L",
-    pathSdwt: "__MY_EQP__",
-    sdwt: "MY EQP",
-    includeAllLines: true,
-    includeAllSdwt: true,
-    allowAllSteps: true,
-    normalizeEqpCh: true,
-    priorities: ["A", "D"],
-    desc: "ALL",
-    eqpCh: "",
-    sensor: "",
-    chStep: "",
-  })
-
-  assert.equal(payload.filters.desc, "ALL")
-  assert.deepEqual(
-    payload.eqpChannels.map((item) => item.eqpCh).sort(),
-    ["EQP-1.png", "EQP-2.png", "EQP-3.png"],
-  )
-})
-
-test("My EQP URL의 eqp_ch는 확장자와 표기 차이가 있어도 실제 EQP로 선택한다", () => {
-  const rows = [createRow({ recipe_id: "RECIPE-A", eqp: "EQP-01_CH A.png" })]
-  const payload = buildSelfEquipmentPayload(rows, {
-    line: "P1L",
-    pathSdwt: "__MY_EQP__",
-    sdwt: "MY EQP",
-    includeAllLines: true,
-    includeAllSdwt: true,
-    allowAllSteps: true,
-    normalizeEqpCh: true,
-    priorities: ["A"],
-    desc: "RECIPE-A",
-    eqpCh: "eqp01-cha",
-    sensor: "",
-    chStep: "",
-  })
-
-  assert.equal(payload.filters.eqpCh, "EQP-01_CH A.png")
 })
 
 test("eqp_ch ALL에서 Sensor ALL과 ch_step ALL을 선택하면 모든 센서 차트를 반환한다", () => {
@@ -265,31 +173,26 @@ test("path_xian recipe_id는 RECIPE_ID 필터와 row 호환 필드로 정규화�
   })
 })
 
-test("ERD 경로 테이블은 기존 이력 식별 컬럼을 projection한다", () => {
+test("ERD 경로 테이블에서는 file_path와 ver만 projection한다", () => {
   assert.deepEqual(ERD_PATH_REFERENCE_COLUMNS, [
-    "sdwt",
-    "desc",
     "ver",
-    "recipe_id",
-    "priority",
-    "sensor",
-    "step",
-    "eqp",
     "file_path",
-    "line_rev",
   ])
 })
 
-test("path_xian row는 동일 file_path의 ERD 경로 테이블 ver를 참조한다", () => {
-  const indexRow = normalizeSelfEquipmentIndexRow({
-    sdwt: "SDWT-1",
-    recipe_id: "RECIPE-FILTER",
-    priority: "A",
-    sensor: "TEMP",
-    step: "10@MAIN",
-    eqp: "EQP-1.png",
-    file_path: "/appdata/abnormal_trend/pic_server2/erd/chart/EQP-1.png",
-  }, "2026-08-27")
+test("path_xian row는 다른 선택 필드를 덮어쓰지 않고 ERD 경로 테이블 ver만 참조한다", () => {
+  const indexRow = {
+    ...normalizeSelfEquipmentIndexRow({
+      sdwt: "SDWT-1",
+      recipe_id: "RECIPE-FILTER",
+      priority: "A",
+      sensor: "TEMP",
+      step: "10@MAIN",
+      eqp: "EQP-1.png",
+      file_path: "/appdata/abnormal_trend/pic_server2/erd/chart/EQP-1.png",
+    }, "2026-08-27"),
+    line_rev: "P1",
+  }
 
   const referenceRow = normalizeErdPathReferenceRow({
     sdwt: "SDWT-1",
@@ -305,11 +208,26 @@ test("path_xian row는 동일 file_path의 ERD 경로 테이블 ver를 참조한
   })
   const [row] = attachErdPathReferences([indexRow], [referenceRow])
 
-  assert.equal(row.desc, "ETCH")
+  assert.equal(row.desc, "RECIPE-FILTER")
   assert.equal(row.ver, "V1")
-  assert.equal(row.recipe_id, "PPID-1")
-  assert.equal(row.line_rev, "P1L")
+  assert.equal(row.recipe_id, "RECIPE-FILTER")
+  assert.equal(row.line_rev, "P1")
   assert.equal(row.history_file_path, referenceRow.file_path)
+
+  const payload = buildSelfEquipmentPayload([row], {
+    line: "P1",
+    sdwt: "SDWT-1",
+    priorities: ["A"],
+    desc: "",
+    eqpCh: "",
+    sensor: "",
+    chStep: "",
+  })
+  assert.deepEqual(payload.steps, [{
+    desc: "RECIPE-FILTER",
+    rowCount: 1,
+    equipmentCount: 1,
+  }])
 })
 
 test("ERD 경로 테이블에 동일 file_path 또는 ver가 없으면 DB 이력 경로를 열지 않는다", () => {

@@ -22,17 +22,16 @@
 | 사용자 목적 | 기존 메뉴얼·이미지 | 현재 화면 route | 기능 기준 | 데이터 흐름 | API·계약 | 운영·장애 안내 |
 |---|---|---|---|---|---|---|
 | 대시보드 조회 | [2. 메인 화면과 라인별 대시보드](USER_MANUAL.md#2-메인-화면과-라인별-대시보드), [01-main-screen.png](images/01-main-screen.png) | `/`, alias `/fdc_trend` | [dashboard.md](../features/dashboard.md) | [DF-DASH-01](../system/data-flow.md#9-대시보드-데이터-흐름) | `GET /api/dashboard-data`; [Dashboard Schema](../../harness/contracts/dashboard-api.schema.json) | [Dashboard 빈 데이터](../operations/troubleshooting.md#9-dashboard-빈-데이터오래된-데이터), [runbook](../operations/runbook.md) |
-| Self Equipment 조회 | [4. 자설비 이상감지](USER_MANUAL.md#4-자설비-이상감지), `03`~`07` 이미지 | `/self-equipment`, alias `/fdc_trend/self-equipment` | [self-equipment.md](../features/self-equipment.md) | [DF-SELF-01~03](../system/data-flow.md#10-self-equipment-및-이상-데이터-흐름) | `/api/self-equipment-data`, `/api/my-eqp-equipment-data`, `/api/erd-scatter-data`; 별도 JSON Schema 없음 | [파일 누락·권한](../operations/troubleshooting.md#8-appdata-파일-누락-또는-권한-오류) |
+| Self Equipment 조회 | [4. 자설비 이상감지](USER_MANUAL.md#4-자설비-이상감지), `03`~`07` 이미지 | `/self-equipment`, alias `/fdc_trend/self-equipment` | [self-equipment.md](../features/self-equipment.md) | `DF-SELF-01` in [data-flow.md](../system/data-flow.md) | `/api/self-equipment-data`, `/api/erd-scatter-data`; 별도 JSON Schema 없음 | [파일 누락·권한](../operations/troubleshooting.md#8-appdata-파일-누락-또는-권한-오류) |
 | 직접 URL로 Self Equipment 진입 | [Mailing Report LINK 설명](USER_MANUAL.md#7-mailing-report-메일-확인) | `/self-equipment?...` | [step-deeplink.md](../features/step-deeplink.md), [self-equipment.md](../features/self-equipment.md) | `DF-STEP-01` in [data-flow.md](../system/data-flow.md) | URL parser와 [integration test](../../tests/integration/step-deeplink.test.mjs) | [STEP/HMAC 오류](../operations/troubleshooting.md#10-step-딥링크hmac-오류), [security.md](../system/security.md) |
-| `step=ALL`·`eqpCh`로 My EQP 이동 | [7. Mailing Report 메일 확인](USER_MANUAL.md#7-mailing-report-메일-확인) | `/self-equipment?sdwt=MY_EQP&step=ALL&eqpCh=...` | [step-deeplink.md](../features/step-deeplink.md), [ADR-003](../decisions/ADR-003-step-hmac-token.md) | `DF-STEP-01`, `DF-SELF-03` | [unit test](../../tests/unit/step-hmac.test.mjs), [integration test](../../tests/integration/step-deeplink.test.mjs) | [STEP/HMAC 오류](../operations/troubleshooting.md#10-step-딥링크hmac-오류) |
 | 동일성 이상 이미지 확인 | [6.1 동일성 이상감지](USER_MANUAL.md#61-동일성-이상감지), [08-matching-anomaly.png](images/08-matching-anomaly.png) | `/matching-anomaly`, alias `/fdc_trend/matching-anomaly` | [abnormal-data.md](../features/abnormal-data.md) | `DF-ABN-01` in [data-flow.md](../system/data-flow.md) | `/api/commonality-data`, `/api/commonality-image`; 별도 JSON Schema 없음 | [파일 누락·권한](../operations/troubleshooting.md#8-appdata-파일-누락-또는-권한-오류) |
 | 공통부 차트·이미지 확인 | [6.2 공통부 이상감지](USER_MANUAL.md#62-공통부-이상감지), [09-common-anomaly-filters.png](images/09-common-anomaly-filters.png), [10-common-anomaly-image.png](images/10-common-anomaly-image.png) | `/common-anomaly`, alias `/fdc_trend/common-anomaly` | [abnormal-data.md](../features/abnormal-data.md) | `DF-ABN-02` in [data-flow.md](../system/data-flow.md) | `/api/common-anomaly-data`, `/api/common-anomaly-scatter-data`, `/api/common-anomaly-image`; 별도 JSON Schema 없음 | [파일 누락·권한](../operations/troubleshooting.md#8-appdata-파일-누락-또는-권한-오류) |
 | 공통부 동일성 이미지 확인 | [6.3 공통부 동일성 이상감지](USER_MANUAL.md#63-공통부-동일성-이상감지) | `/common-commonality-anomaly`, alias `/fdc_trend/common-commonality-anomaly` | [abnormal-data.md](../features/abnormal-data.md) | `DF-ABN-03` in [data-flow.md](../system/data-flow.md) | `/api/common-commonality-data`, `/api/common-commonality-image`; 별도 JSON Schema 없음 | [파일 누락·권한](../operations/troubleshooting.md#8-appdata-파일-누락-또는-권한-오류) |
-| Mailing·My EQP 조건 등록 | [5. My EQP 등록](USER_MANUAL.md#5-my-eqp-등록) | `/registration`; aliases `/my-eqp`, `/recipients` | [mailing.md](../features/mailing.md), [self-equipment.md](../features/self-equipment.md) | `DF-MAIL-01` in [data-flow.md](../system/data-flow.md) | 등록 API군; 메일 요약만 [Mailing Schema](../../harness/contracts/mailing-summary.schema.json) | [메일 등록·발송 실패](../operations/troubleshooting.md#11-mail-등록-또는-실제-발송-실패) |
+| Mailing 조건 등록 | [5. Mailing 등록](USER_MANUAL.md#5-mailing-등록) | `/registration`; alias `/recipients` | [mailing.md](../features/mailing.md) | `DF-MAIL-01` in [data-flow.md](../system/data-flow.md) | Mailing 등록 API; 메일 요약 [Mailing Schema](../../harness/contracts/mailing-summary.schema.json) | [메일 등록·발송 실패](../operations/troubleshooting.md#11-mail-등록-또는-실제-발송-실패) |
 | 메일 요약과 상세 LINK 확인 | [7. Mailing Report 메일 확인](USER_MANUAL.md#7-mailing-report-메일-확인) | 메일 LINK → `/self-equipment?...` | [mailing.md](../features/mailing.md), [dashboard.md](../features/dashboard.md) | `DF-MAIL-02` in [data-flow.md](../system/data-flow.md) | `lineDashboard.mailingSummary`; [Mailing Schema](../../harness/contracts/mailing-summary.schema.json) | [메일 장애 안내](../operations/troubleshooting.md#11-mail-등록-또는-실제-발송-실패) |
 | 오류·빈 데이터 대응 | [9. 문제 해결과 주의사항](USER_MANUAL.md#9-문제-해결과-주의사항) | 발생 화면 route 유지 | 관련 기능 문서의 오류·빈값 절 | [data-flow.md](../system/data-flow.md) | endpoint별 오류 계약 | [troubleshooting.md](../operations/troubleshooting.md), [runbook.md](../operations/runbook.md) |
 
-개별 STEP HMAC 링크는 현재 구현 기능이 아니다. 사용자에게 안내 가능한 직접 링크는 일반 Dashboard 상세 URL과 My EQP의 `step=ALL`·`eqpCh` 흐름이다.
+개별 STEP HMAC 링크는 현재 구현 기능이 아니다. 사용자에게 안내 가능한 직접 링크는 일반 Dashboard 상세 URL이다.
 
 ## 4. 현재 route와 메뉴 연결
 
@@ -43,7 +42,7 @@
 | 동일성 이상감지 | 동일성 이상감지 | `/matching-anomaly` | `/fdc_trend/matching-anomaly` | `Confirmed` | `routes.jsx:28-31`; `L0SpiderHomePage.jsx:20-28` |
 | 공통부 이상감지 | 공통부 이상감지 | `/common-anomaly` | `/fdc_trend/common-anomaly` | `Confirmed` | `routes.jsx:32-35`; `L0SpiderHomePage.jsx:29-37` |
 | 공통부 동일성 이상감지 | 공통부 동일성 이상감지 | `/under-construction/common-commonality` | 직접 호환 `/common-commonality-anomaly`, `/fdc_trend/common-commonality-anomaly` | `Confirmed` | `routes.jsx`; `L0SpiderHomePage.jsx` |
-| 등록 Hub | My EQP 등록 | `/registration` | `/my-eqp`, `/recipients` 및 `/fdc_trend/...` | `Confirmed` | `routes.jsx`; `L0SpiderHomePage.jsx` |
+| Mailing 등록 | Mailing 등록 | `/registration` | `/recipients` 및 `/fdc_trend/...` | `Confirmed` | `routes.jsx`; `L0SpiderHomePage.jsx` |
 | 사용자 메뉴얼 | 사용자 메뉴얼 | `/manual` | `/fdc_trend/manual` | `Confirmed` | `routes.jsx:36-39`; `L0SpiderHomePage.jsx:61-69` |
 
 라우트 alias는 현재 router에 등록돼 있지만 메인 카드가 직접 연결하는 주소는 canonical route 열의 값이다.
@@ -73,7 +72,7 @@
 
 | ID | 기존 자료 | 현재 코드·문서 | 사용자 영향 | 안내 기준 |
 |---|---|---|---|---|
-| `MAN-M01` | `02-main-menu.png`의 메뉴명·운영 상태 | 현재 메인에는 `My EQP 등록` 카드와 변경된 기능 상태가 있음 | 오래된 카드명으로 메뉴를 찾지 못할 수 있음 | 현재 `L0SpiderHomePage.jsx`의 메뉴명을 사용 |
+| `MAN-M01` | `02-main-menu.png`의 메뉴명·운영 상태 | 현재 메인에는 `Mailing 등록` 카드가 있음 | 오래된 카드명으로 메뉴를 찾지 못할 수 있음 | 현재 `L0SpiderHomePage.jsx`의 메뉴명을 사용 |
 | `MAN-M02` | `03`, `04` 이미지 | 현재 Self 화면에는 RECIPE_ID 필터, 3일 동일성 toggle과 모아보기 pair가 있음 | 이미지에 없는 필터명·조작을 놓칠 수 있음 | `USER_MANUAL.md:80-117` 본문과 `self-equipment.md`를 우선 |
 | `MAN-M03` | `08-matching-anomaly.png`는 SDWT 다음에 Sensor를 표시 | 현재 동일성 filter는 SDWT 다음 STEP 선택을 요구 | STEP을 선택하지 않아 하위 option이 비어 보일 수 있음 | `USER_MANUAL.md:169-179` 본문을 우선 |
 | `MAN-M04` | `15-manual-status.png`의 과거 문서 기준일 | 현재 `USER_MANUAL.md` 기준일은 2026-08-20 | 캡처만 보고 최신 문서 상태를 오판할 수 있음 | Markdown 기준일과 Git 변경 이력을 확인 |

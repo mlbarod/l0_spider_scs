@@ -15,15 +15,10 @@ import {
   buildTeamErdPath,
 } from "../src/config/spiderDataPaths.mjs"
 import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
-import { getRemoteIp } from "./currentUser.mjs"
 import { areDbConnectionsEnabled } from "./dataConnections.mjs"
 import { assertKnownMappingLineSdwt, readLineMapping } from "./mappingConfig.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
-import {
-  listMyEqpRegistrationRecords,
-  resolveRegistrationUserId,
-} from "./myEqpRegistration.mjs"
 import { listPassHistoryRecords } from "./passHistory.mjs"
 
 export const TEAM_ERD_COLUMNS = Object.freeze([
@@ -36,16 +31,8 @@ export const TEAM_ERD_COLUMNS = Object.freeze([
   "file_path",
 ])
 export const ERD_PATH_REFERENCE_COLUMNS = Object.freeze([
-  "sdwt",
-  "desc",
   "ver",
-  "recipe_id",
-  "priority",
-  "sensor",
-  "step",
-  "eqp",
   "file_path",
-  "line_rev",
 ])
 
 const PIC_FILE_ROOT = "/appdata/abnormal_trend/pic"
@@ -57,7 +44,6 @@ const SELF_EQUIPMENT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/
 const ALL_EQP_CHANNELS = "ALL"
 const ALL_SENSORS = "ALL"
 const ALL_CH_STEPS = "ALL"
-const ALL_STEPS = "ALL"
 const PARQUET_CACHE_MAX_ENTRIES = 16
 const ERD_SCATTER_CACHE_MAX_ENTRIES = 1
 const ERD_HISTORY_CACHE_MAX_ENTRIES = 1
@@ -138,10 +124,7 @@ export function attachErdPathReferences(indexRows, referenceRows) {
     if (!reference || !normalizeTextValue(reference.ver)) return row
     return {
       ...row,
-      desc: normalizeTextValue(reference.desc),
       ver: normalizeTextValue(reference.ver),
-      recipe_id: normalizeTextValue(reference.recipe_id),
-      line_rev: normalizeTextValue(reference.line_rev),
       history_file_path: normalizeSelfEquipmentFilePath(reference.file_path),
     }
   })
@@ -151,20 +134,8 @@ function normalizeSkipEqp(value) {
   return String(value ?? "").trim().replace(/\.png$/i, "")
 }
 
-function normalizeMyEqpMatchValue(value) {
-  return String(value ?? "")
-    .normalize("NFKC")
-    .trim()
-    .toLocaleUpperCase("en-US")
-    .replace(/[^\p{L}\p{N}]/gu, "")
-}
-
 function normalizeScopeMatchValue(value) {
   return String(value ?? "").normalize("NFKC").trim()
-}
-
-function buildMyEqpMatchKey(sdwt, eqp) {
-  return `${normalizeMyEqpMatchValue(sdwt)}\u0000${normalizeMyEqpMatchValue(normalizeSkipEqp(eqp))}`
 }
 
 function buildSkipComparisonKey(row) {
@@ -383,8 +354,8 @@ function sortByLabel(items, labelColumn) {
 export function buildSelfEquipmentPayload(rows, filters) {
   const priorities = new Set(filters.priorities)
   const baseRows = rows.filter((row) => (
-    (filters.includeAllLines || row.line_rev === filters.line)
-    && (filters.includeAllSdwt || row.sdwt === filters.sdwt)
+    row.line_rev === filters.line
+    && row.sdwt === filters.sdwt
     && priorities.has(row.priority)
   ))
   const steps = sortByLabel(aggregateBy(baseRows, "recipe_id", (recipeId, recipeRows) => ({
@@ -392,32 +363,20 @@ export function buildSelfEquipmentPayload(rows, filters) {
     rowCount: recipeRows.length,
     equipmentCount: uniqueCount(recipeRows, "eqp"),
   })), "desc")
-  const selectedDesc = filters.allowAllSteps && filters.desc === ALL_STEPS && steps.length > 0
-    ? ALL_STEPS
-    : steps.some((item) => item.desc === filters.desc)
+  const selectedDesc = steps.some((item) => item.desc === filters.desc)
     ? filters.desc
     : ""
-  const stepRows = selectedDesc === ALL_STEPS
-    ? baseRows
-    : selectedDesc
+  const stepRows = selectedDesc
     ? baseRows.filter((row) => row.recipe_id === selectedDesc)
     : []
   const eqpChannels = sortByRowCount(aggregateBy(stepRows, "eqp", (eqpCh, eqpChRows) => ({
     eqpCh,
     rowCount: eqpChRows.length,
   })), "eqpCh")
-  const matchedEqpCh = filters.normalizeEqpCh
-    ? eqpChannels.find((item) => (
-      normalizeMyEqpMatchValue(normalizeSkipEqp(item.eqpCh))
-        === normalizeMyEqpMatchValue(normalizeSkipEqp(filters.eqpCh))
-    ))?.eqpCh ?? ""
-    : ""
   const selectedEqpCh = filters.eqpCh === ALL_EQP_CHANNELS && eqpChannels.length > 0
     ? ALL_EQP_CHANNELS
     : eqpChannels.some((item) => item.eqpCh === filters.eqpCh)
     ? filters.eqpCh
-    : matchedEqpCh
-    ? matchedEqpCh
     : ""
   const eqpChannelRows = selectedEqpCh === ALL_EQP_CHANNELS
     ? stepRows
@@ -477,19 +436,6 @@ export function buildSelfEquipmentPayload(rows, filters) {
     chSteps,
     rows: chartRows.map((row, index) => ({ ...row, id: `${index}-${row.file_path}` })),
   }
-}
-
-export function filterMyEqpRows(rows, registrationRecords, { sdwtMatchedBySource = false } = {}) {
-  const registrationKeys = new Set(registrationRecords.map((record) => (
-    sdwtMatchedBySource
-      ? normalizeMyEqpMatchValue(normalizeSkipEqp(record.eqp))
-      : buildMyEqpMatchKey(record.sdwt, record.eqp)
-  )))
-  return rows.filter((row) => registrationKeys.has(
-    sdwtMatchedBySource
-      ? normalizeMyEqpMatchValue(normalizeSkipEqp(row.eqp))
-      : buildMyEqpMatchKey(row.sdwt, row.eqp),
-  ))
 }
 
 function readFilters(url) {
@@ -562,126 +508,6 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
       code: "SELF_EQUIPMENT_DATA_LOAD_FAILED",
       message: "분임조별 ERD 이상감지 경로 데이터를 불러오지 못했습니다.",
       scope: "self-equipment-data",
-    }))
-  }
-}
-
-export async function handleMyEqpEquipmentDataRequest(req, res, url) {
-  if (req.method !== "GET") {
-    sendJson(res, 405, { ok: false, error: "Method not allowed" })
-    return
-  }
-
-  try {
-    const filters = readFilters(url)
-    if (!filters.line) {
-      sendJson(res, 400, { ok: false, error: "line 조건이 필요합니다." })
-      return
-    }
-    const remoteIp = getRemoteIp(req)
-    if (!remoteIp) {
-      sendJson(res, 400, { ok: false, error: "접속자 IP를 확인하지 못했습니다." })
-      return
-    }
-
-    const userId = await resolveRegistrationUserId(remoteIp)
-    const [registrationRecords, mapping, sensorExclusionConfig, indexSource, passRecords] = await Promise.all([
-      listMyEqpRegistrationRecords({ line: filters.line, knoxId: userId, activeOnly: true }),
-      readLineMapping(),
-      readSensorExclusionConfig(),
-      readLatestSelfEquipmentRows(),
-      listPassHistoryRecords({ lineId: filters.line }),
-    ])
-    const pathBySdwt = new Map()
-    Object.entries(mapping.line_mapping)
-      .filter(([, line]) => line === filters.line)
-      .forEach(([pathSdwt]) => {
-        pathBySdwt.set(normalizeMyEqpMatchValue(mapping.sdwt_mapping[pathSdwt] ?? pathSdwt), pathSdwt)
-        pathBySdwt.set(normalizeMyEqpMatchValue(pathSdwt), pathSdwt)
-      })
-    const registrationsWithPath = registrationRecords.map((record) => ({
-      ...record,
-      pathSdwt: pathBySdwt.get(normalizeMyEqpMatchValue(record.sdwt)) ?? "",
-    }))
-    const registrationsByPath = new Map()
-    registrationsWithPath.forEach((record) => {
-      if (!record.pathSdwt) return
-      const pathRecords = registrationsByPath.get(record.pathSdwt) ?? []
-      pathRecords.push(record)
-      registrationsByPath.set(record.pathSdwt, pathRecords)
-    })
-    const paths = Array.from(registrationsByPath.keys())
-    const referenceSources = await Promise.all(paths.map((pathSdwt) => (
-      readErdPathReferenceRows({ line: filters.line, pathSdwt })
-    )))
-    const referenceRowsByPath = new Map(paths.map((pathSdwt, index) => [
-      pathSdwt,
-      referenceSources[index].rows,
-    ]))
-    const dataSources = paths.map((pathSdwt) => ({
-      filePath: indexSource.filePath,
-      latestDate: indexSource.latestDate,
-      rows: attachErdPathReferences(
-        scopeSelfEquipmentRows(indexSource.rows, {
-          line: filters.line,
-          pathSdwt,
-          sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt,
-          mapping,
-        }),
-        referenceRowsByPath.get(pathSdwt) ?? [],
-      ),
-      pathSdwt,
-      registrations: registrationsByPath.get(pathSdwt) ?? [],
-    }))
-    const sourceRows = dataSources.flatMap((source) => source.rows)
-    const registeredRows = dataSources.flatMap((source) => filterMyEqpRows(
-      source.rows,
-      source.registrations,
-      { sdwtMatchedBySource: true },
-    ))
-    const prioritySensorExclusion = excludeSensorRows(
-      registeredRows,
-      sensorExclusionConfig,
-      "selfEquipment",
-    )
-    const availablePriorities = Array.from(new Set(
-      prioritySensorExclusion.rows
-        .map((row) => String(row.priority ?? "").trim())
-        .filter(Boolean),
-    )).sort((left, right) => left.localeCompare(right, "ko", { numeric: true }))
-    const visibleRows = excludeRecentlySkippedRows(registeredRows, passRecords)
-    const sensorExclusion = excludeSensorRows(
-      visibleRows,
-      sensorExclusionConfig,
-      "selfEquipment",
-    )
-    const payload = buildSelfEquipmentPayload(sensorExclusion.rows, {
-      ...filters,
-      pathSdwt: "__MY_EQP__",
-      sdwt: "MY EQP",
-      includeAllLines: true,
-      includeAllSdwt: true,
-      allowAllSteps: true,
-      normalizeEqpCh: true,
-    })
-    sendJson(res, 200, {
-      ...payload,
-      counts: {
-        ...payload.counts,
-        sourceRows: sourceRows.length,
-        matchedRegistrationRows: registeredRows.length,
-        registeredEqps: new Set(registrationRecords.map((record) => normalizeSkipEqp(record.eqp))).size,
-        excludedSkipRows: registeredRows.length - visibleRows.length,
-        excludedSensorRows: sensorExclusion.excludedCount,
-      },
-      availablePriorities,
-      sourcePaths: dataSources.map((source) => source.filePath),
-    })
-  } catch {
-    sendJson(res, 500, createSafeApiError({
-      code: "MY_EQP_DATA_LOAD_FAILED",
-      message: "My EQP 이상감지 데이터를 불러오지 못했습니다.",
-      scope: "my-eqp-data",
     }))
   }
 }

@@ -4,6 +4,7 @@
 |---|---|
 | 문서 목적 | Self Equipment의 사용자 진입부터 화면 출력까지 현재 구현 기준을 정의한다. |
 | 문서 상태 | `Active Baseline` |
+| 현재 범위 | [ADR-004](../decisions/ADR-004-scs-my-eqp-scope.md)에 따라 SCS의 My EQP 메뉴·등록·조회·딥링크는 제거됨. 아래 My EQP 기술은 제거 전 구조를 기록한 과거 분석이며 현재 런타임 계약이 아님. |
 | 기능 범위 | `As-Is` |
 | 검증 기준 branch | `main` |
 | 검증 기준 코드 commit | `99c4361164d4109a71f0153a5c963fa4f5d52cb4` |
@@ -205,13 +206,13 @@ sequenceDiagram
 | Data Source ID | 유형 | 경로·테이블·자원 | 접근 코드 | 사용 목적 | 읽기·쓰기 | 생성 책임 | 상태 |
 |---|---|---|---|---|---|---|---|
 | `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | `readLatestSelfEquipmentRows` | 최신 index의 filter option·`file_path` | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
-| `DS-SELF-REF` | Parquet | `/pic/path/{line}/{sdwt}/df_path.parquet` | `readErdPathReferenceRows` | 동일 `file_path` row의 `desc`, `ver`, `recipe_id`, `line_rev`, 이력 경로 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
+| `DS-SELF-REF` | Parquet | `/pic/path/{line}/{sdwt}/df_path.parquet` | `readErdPathReferenceRows` | 동일 `file_path` row의 `ver`와 이력 경로만 참조; index 선택 필드는 유지 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02` | Parquet | index row `file_path`: `{eqp}.png` sibling 또는 directory 하위 `data.parquet`; 직접 `data.parquet` 호환 | `readErdScatterRows` | schema 기반 axis·EQP 식별 scatter와 `eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02-H` | Parquet | 선택한 `data.parquet` directory의 `{eqp}.parquet` | `readErdHistoryRows` | 변경점 이력 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-IMG` | image | 허용 ERD root의 image | `handleErdFileRequest` | stream endpoint | 읽기 | `Unknown` | endpoint `Confirmed` |
 | `DS-MAP` | JSON | mapping config | `readLineMapping` | 일반 Self와 MY EQP Line·SDWT scope | 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SENSOR-EXCLUSION` | JSON | 기본 `config/sensor-exclusions.json`, 선택적 `SENSOR_EXCLUSION_CONFIG_PATH` override | `readSensorExclusionConfig` | 일반 Self와 MY EQP sensor 제외 | 읽기 | 개발자·배포 담당자 | 코드 `Confirmed` |
-| `DS-DB-REG` | DB | `myeqp_regist` | registration helper | 등록 화면·Self MY EQP 조건 | 읽기·등록 기능 쓰기 | L0 Spider 구조와 동일 | 코드 `Confirmed`; 운영 DB `Unknown` |
+| `DS-DB-REG` | DB | `myeqp_regist` | registration helper | 등록 화면·Self MY EQP 조건 | 읽기·등록 기능 쓰기 | L0 Spider `is_public` 포함 schema와 미포함 기존 schema 모두 지원 | 코드 `Confirmed`; 운영 DB `Unknown` |
 | `DS-DB-HIST` | DB | `pass_history`, `hit_history`, `clicked_category_history` | history helper | Self와 다른 App의 SKIP·HIT·click | 읽기·쓰기 | L0 Spider 쓰기 | 코드 `Confirmed`; 운영 DB `Unknown` |
 
 통계 파일과 공통성 이미지 경로는 저장소에 존재하지만 현재 Self Equipment 요청 흐름의 직접 원천으로 확인되지 않았다.
@@ -321,7 +322,7 @@ history 부분 실패의 `historyError`도 원문 exception 없이 고정 메시
 | equipment query key | Line·team·Grade·모든 종속 filter 포함 | 일반 Self | 조건별 cache 분리 | `Confirmed` |
 | placeholder | chStep만 달라질 때 이전 payload 유지 | equipment query | filter 목록 깜박임 완화 | `Confirmed` |
 | query enabled | Line·team key·label 존재 | equipment query | 불완전 초기 조건 요청 차단 | `Confirmed` |
-| MY EQP registration | 15초 stale, 30초 refetch | active registration option | mutation invalidate | `Confirmed` |
+| MY EQP registration | 15초 stale, 자동 polling 없음 | active registration option | mutation invalidate | `Confirmed` |
 | PASS history | 30초 stale | 현재 Line의 active record | mutation invalidate | `Confirmed` |
 | 현재 사용자 | session 동안 stale Infinity | 접속 IP 표시·mutation identity | 없음 | `Confirmed` |
 | scatter lazy load | viewport 근접 시 enabled, stale/gc Infinity | card | off-page·off-viewport 요청 억제 | `Confirmed` |

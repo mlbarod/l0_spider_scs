@@ -4,6 +4,8 @@
 > 기준일/브랜치: 2026-08-27 / `main`<br>
 > 기준 파일: `server.mjs`, `vite.config.mjs`, `src/`, `server/`, `scripts/`, `src/config/spiderDataPaths.mjs`
 
+> 현재 범위: [ADR-004](docs/decisions/ADR-004-scs-my-eqp-scope.md)에 따라 SCS는 My EQP 기능을 제공하지 않습니다. 이 문서 아래의 My EQP 상세 기술은 제거 전 구조의 역사적 기록이며 현재 route·API 계약이 아닙니다.
+
 현재 SCS 분리 checkout은 별도 환경변수 없이 mapping과 자설비 index/chart read allowlist를
 연다. `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`은 이 allowlist도 차단하고,
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 다른 App API를 포함한 전역 gate를 연다. 읽기 가능한
@@ -500,7 +502,7 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 | `/appdata/l0_spider_scs/mapping_config.json` | `line_mapping`, `sdwt_mapping` | `mappingConfig.mjs`, `dashboardData.mjs`, `selfEquipmentData.mjs` | 전체 필터, 대시보드, MY EQP |
 | `/appdata/l0_spider_scs/db_info.pkl` | DB host/port/name/user/password | 모든 DB Python helper | DB 기능 전체 |
 | `pic/path_xian/{latest_date}` | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | `selfEquipmentData.mjs` | 자설비 index |
-| `pic/path/{line}/{sdwt}/df_path.parquet` | `desc`, `ver`, `recipe_id`, `line_rev`, `file_path` 등 | `selfEquipmentData.mjs` | index 동일 `file_path`의 이력 식별값 참조 |
+| `pic/path/{line}/{sdwt}/df_path.parquet` | `ver`, `file_path` | `selfEquipmentData.mjs` | index 동일 `file_path`의 `ver`와 이력 경로만 참조 |
 | `pic/path_common/{line}/{sdwt}/df_path.parquet` | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | `commonAnomalyData.mjs` | 공통부 |
 | index `file_path`에서 해석한 `data.parquet` | `act_time`, schema에 존재하는 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환, `eqp_cb` 또는 `eqp`; hover 보조 컬럼은 선택 | `selfEquipmentData.mjs` | 자설비 Scatter/동일성; 실패 시 화면에 실제 참조 경로 표시 |
 | 위 ERD 디렉터리의 `{eqp}.parquet` | `date`, `work_type`, `ctttm_url`, `desc` | `selfEquipmentData.mjs` | 변경점 이력 |
@@ -586,11 +588,11 @@ flowchart LR
 
 #### `myeqp_regist`
 
-- 컬럼: `line`, `sdwt`, `prc_group`, `eqp`, `exec_date`, `periode`, `comment`, `knox_id`, `is_public`.
-- 조회 조건은 선택 Line과 `knox_id = 현재 접속 IP OR is_public = 1`입니다.
+- 기본 컬럼: `line`, `sdwt`, `prc_group`, `eqp`, `exec_date`, `periode`, `comment`, `knox_id`; 원본 L0 Spider schema에는 선택적으로 `is_public`이 있습니다.
+- `is_public`이 있으면 선택 Line과 `knox_id = 현재 접속 IP OR is_public = 1`, 없으면 접속 IP owner만 조회합니다.
 - `activeOnly=true`는 `TIMESTAMPADD(DAY, periode, exec_date) > NOW()` 조건을 추가합니다.
 - 현재 신규 요청은 서버가 `isPublic=false`로 고정합니다.
-- `is_public`을 포함한 원본 `l0_spider` 테이블 구조를 전제로 하며 런타임 DDL은 수행하지 않습니다.
+- helper는 `is_public` 존재 여부를 읽기 전용으로 확인해 두 schema를 지원하며 런타임 DDL은 수행하지 않습니다.
 
 #### `email`
 
@@ -694,7 +696,7 @@ sequenceDiagram
 1. `server.mjs`와 `vite.config.mjs`가 API route를 각각 수동 등록하므로 route parity 회귀를 주의해야 합니다.
 2. DB 비밀번호가 포함된 `db_info.pkl`은 저장소에 포함하거나 웹 정적 경로 아래에 두면 안 됩니다.
 3. IP 기반 소유권은 프록시 헤더 신뢰 설정과 NAT·공용 IP 공유에 영향을 받습니다.
-4. `myeqp_regist.is_public`을 포함한 원본 schema가 사전에 준비돼야 하며 helper는 migration을 수행하지 않습니다.
+4. `myeqp_regist.is_public` 유무는 helper가 읽기 전용으로 확인하며 migration은 수행하지 않습니다.
 5. `pass_history`의 72시간 만료는 DB 정리가 아니라 조회 시 제외 규칙입니다. 테이블은 계속 증가할 수 있습니다.
 6. `SpiderFeaturePage.jsx`와 `fdcTrendMockData.js`에는 현재 운영 route에서 직접 쓰지 않는 prototype/mock 기능이 남아 있습니다.
 7. `public/mailing-report.html`은 템플릿일 뿐, 이 저장소에는 메일 스케줄러·렌더러·SMTP 발송기가 구현되어 있지 않습니다.

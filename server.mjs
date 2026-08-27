@@ -30,13 +30,10 @@ import {
 import { handleLatestCommonalityPathRequest } from "./server/latestCommonalityPath.mjs"
 import { handleMappingConfigRequest } from "./server/mappingConfig.mjs"
 import { handleMailingRegistrationRequest } from "./server/mailingRegistration.mjs"
-import { handleMyEqpReferenceRequest } from "./server/myEqpReference.mjs"
-import { handleMyEqpRegistrationRequest } from "./server/myEqpRegistration.mjs"
 import { handlePassHistoryRequest } from "./server/passHistory.mjs"
 import {
   handleErdFileRequest,
   handleErdScatterDataRequest,
-  handleMyEqpEquipmentDataRequest,
   handleSelfEquipmentDataRequest,
 } from "./server/selfEquipmentData.mjs"
 
@@ -244,20 +241,6 @@ const server = createServer((req, res) => {
     return
   }
 
-  if (url.pathname === "/api/my-eqp-reference") {
-    handleMyEqpReferenceRequest(req, res).catch((error) => {
-      sendJson(res, 500, { ok: false, error: error.message })
-    })
-    return
-  }
-
-  if (url.pathname === "/api/my-eqp-registration") {
-    handleMyEqpRegistrationRequest(req, res, url).catch((error) => {
-      sendJson(res, 500, { ok: false, error: error.message })
-    })
-    return
-  }
-
   if (url.pathname === "/api/mailing-registration") {
     handleMailingRegistrationRequest(req, res, url).catch((error) => {
       sendJson(res, 500, { ok: false, error: error.message })
@@ -267,13 +250,6 @@ const server = createServer((req, res) => {
 
   if (url.pathname === "/api/self-equipment-data") {
     handleSelfEquipmentDataRequest(req, res, url).catch((error) => {
-      sendJson(res, 500, { ok: false, error: error.message })
-    })
-    return
-  }
-
-  if (url.pathname === "/api/my-eqp-equipment-data") {
-    handleMyEqpEquipmentDataRequest(req, res, url).catch((error) => {
       sendJson(res, 500, { ok: false, error: error.message })
     })
     return
