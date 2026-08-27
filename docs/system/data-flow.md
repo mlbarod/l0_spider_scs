@@ -10,7 +10,7 @@
 > 조사 제한: 실제 운영 데이터, DB, `.env`, 비밀키와 메일 전송 시스템은 열거나 실행하지 않았다.
 > 브랜치 범위: `mock-agent`의 mock 서버·데이터·E2E 흐름은 `Out of Scope`이다.
 
-> SCS 분리 상태: 별도 환경변수 없이 자설비에 필요한 file read API만 허용한다. `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`이면 이 read allowlist도 차단한다. `SCS_DATA_CONNECTIONS_ENABLED=1`이 아니면 다른 App과 DB read/write API는 handler 진입 전에 `503 DATA_CONNECTIONS_DISABLED`로 차단된다. 자설비 코드 경로는 연결됐지만 실제 target server mount·Parquet 내용 검증은 `Unknown`이다.
+> SCS 분리 상태: 별도 환경변수 없이 Dashboard와 자설비 file read API를 허용한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 DB 전용 API도 허용한다. 각 범위는 대응하는 `SCS_DASHBOARD_DATA_ENABLED`, `SCS_SELF_EQUIPMENT_DATA_ENABLED`, `SCS_DB_CONNECTIONS_ENABLED`의 비-`1` 값으로 차단할 수 있다. 다른 App은 `SCS_DATA_CONNECTIONS_ENABLED=1`이 아니면 handler 진입 전에 `503 DATA_CONNECTIONS_DISABLED`로 차단된다. 실제 target server DB·mount·Parquet 검증은 `Unknown`이다.
 
 ## 1. 문서 목적과 범위
 

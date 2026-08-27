@@ -1,11 +1,18 @@
 import assert from "node:assert/strict"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import test from "node:test"
 
 import {
+  areDashboardDataConnectionsEnabled,
   areDataConnectionsEnabled,
+  areDbConnectionsEnabled,
   areSelfEquipmentDataConnectionsEnabled,
   blockDisabledDataRequest,
   getDataConnectionCapabilities,
+  isDbInfoReadable,
+  resolveDbInfoPath,
 } from "../../server/dataConnections.mjs"
 
 function createResponse() {
@@ -37,6 +44,33 @@ test("자설비 파일 연결은 기본 활성화되고 명시적인 비-1 값�
   assert.equal(areSelfEquipmentDataConnectionsEnabled({ SCS_SELF_EQUIPMENT_DATA_ENABLED: "1" }), true)
 })
 
+test("Dashboard read는 기본 활성화되고 명시적인 비-1 값으로 차단할 수 있다", () => {
+  assert.equal(areDashboardDataConnectionsEnabled({}), true)
+  assert.equal(areDashboardDataConnectionsEnabled({ SCS_DASHBOARD_DATA_ENABLED: "0" }), false)
+  assert.equal(areDashboardDataConnectionsEnabled({ SCS_DASHBOARD_DATA_ENABLED: "true" }), false)
+  assert.equal(areDashboardDataConnectionsEnabled({ SCS_DASHBOARD_DATA_ENABLED: "1" }), true)
+})
+
+test("DB 연결은 credential 파일이 읽기 가능할 때만 활성화된다", () => {
+  assert.equal(resolveDbInfoPath({}), "/appdata/l0_spider/db_info.pkl")
+  assert.equal(resolveDbInfoPath({ DB_INFO_PATH: " /secure/db_info.pkl " }), "/secure/db_info.pkl")
+  assert.equal(areDbConnectionsEnabled({}, () => false), false)
+  assert.equal(areDbConnectionsEnabled({}, () => true), true)
+  assert.equal(areDbConnectionsEnabled({ SCS_DB_CONNECTIONS_ENABLED: "0" }, () => true), false)
+  assert.equal(areDbConnectionsEnabled({ SCS_DB_CONNECTIONS_ENABLED: "1" }, () => true), true)
+})
+
+test("DB credential read 가능 여부는 파일 내용을 노출하지 않고 판정한다", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "l0-spider-db-info-"))
+  context.after(() => rm(directory, { recursive: true, force: true }))
+  const credentialPath = join(directory, "db_info.pkl")
+  await writeFile(credentialPath, "synthetic-placeholder", { mode: 0o600 })
+
+  assert.equal(isDbInfoReadable(credentialPath), true)
+  assert.equal(isDbInfoReadable(directory), false)
+  assert.equal(isDbInfoReadable(join(directory, "missing.pkl")), false)
+})
+
 test("mapping capability는 전체 gate에서도 호환되지 않는 Self DB 기능을 fail-close한다", () => {
   assert.deepEqual(getDataConnectionCapabilities({}), {
     selfEquipmentFileRead: true,
@@ -52,11 +86,11 @@ test("mapping capability는 전체 gate에서도 호환되지 않는 Self DB 기
   })
 })
 
-test("비활성 상태의 API 요청은 handler 실행 전에 503으로 차단된다", () => {
+test("비허용 API 요청은 handler 실행 전에 503으로 차단된다", () => {
   const response = createResponse()
   const logs = []
   const blocked = blockDisabledDataRequest(
-    { method: "GET", url: "/api/dashboard-data", headers: { host: "localhost" } },
+    { method: "GET", url: "/api/commonality-data", headers: { host: "localhost" } },
     response,
     {},
     (message) => logs.push(message),
@@ -81,8 +115,8 @@ test("API root와 encoded separator도 같은 차단 경계로 처리한다", ()
     "/api//dashboard-data",
     "/api%2Fdashboard-data",
     "/api%5Cdashboard-data",
-    "/safe/../api/dashboard-data",
-    "/safe/%2e%2e/api/dashboard-data",
+    "/safe/../api/commonality-data",
+    "/safe/%2e%2e/api/commonality-data",
   ]) {
     const response = createResponse()
     assert.equal(blockDisabledDataRequest(
@@ -109,7 +143,7 @@ test("요청 Host가 비정상이어도 고정 origin으로 API 경계를 판정
 test("HEAD 요청은 동일한 503 header를 반환하되 body를 보내지 않는다", () => {
   const response = createResponse()
   assert.equal(blockDisabledDataRequest(
-    { method: "HEAD", url: "/api/dashboard-data", headers: { host: "localhost" } },
+    { method: "HEAD", url: "/api/commonality-data", headers: { host: "localhost" } },
     response,
     {},
     () => {},
@@ -136,22 +170,24 @@ test("정적 UI 요청과 명시적으로 활성화한 API 요청은 기존 흐�
   assert.equal(enabledResponse.statusCode, null)
 })
 
-test("기본 실행은 자설비 read API만 열고 다른 App과 write API는 계속 차단한다", () => {
+test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 계속 차단한다", () => {
   const environment = {}
-  for (const pathname of [
-    "/api/mapping-config",
-    "/api/self-equipment-data",
-    "/api/erd-scatter-data",
+  for (const [method, pathname] of [
+    ["GET", "/api/dashboard-data"],
+    ["HEAD", "/api/dashboard-data"],
+    ["GET", "/api/mapping-config"],
+    ["GET", "/api/self-equipment-data"],
+    ["GET", "/api/erd-scatter-data"],
   ]) {
     assert.equal(blockDisabledDataRequest(
-      { method: "GET", url: pathname, headers: { host: "localhost" } },
+      { method, url: pathname, headers: { host: "localhost" } },
       createResponse(),
       environment,
     ), false, pathname)
   }
 
   for (const [method, pathname] of [
-    ["GET", "/api/dashboard-data"],
+    ["POST", "/api/dashboard-data"],
     ["GET", "/api/commonality-data"],
     ["GET", "/api/erd-file"],
     ["GET", "/api%2Fself-equipment-data"],
@@ -169,6 +205,39 @@ test("기본 실행은 자설비 read API만 열고 다른 App과 write API는 �
     ), true, `${method} ${pathname}`)
     assert.equal(response.statusCode, 503)
   }
+})
+
+test("읽기 가능한 credential이 있으면 DB API만 열고 Self DB 혼합 API는 유지 차단한다", () => {
+  const environment = { DB_INFO_PATH: "/synthetic/db_info.pkl" }
+  for (const [method, pathname] of [
+    ["GET", "/api/current-user"],
+    ["POST", "/api/hit-history"],
+    ["POST", "/api/clicked-category-history"],
+    ["GET", "/api/pass-history"],
+    ["POST", "/api/pass-history"],
+    ["DELETE", "/api/pass-history"],
+    ["HEAD", "/api/my-eqp-reference"],
+    ["POST", "/api/my-eqp-registration"],
+    ["DELETE", "/api/mailing-registration"],
+  ]) {
+    assert.equal(blockDisabledDataRequest(
+      { method, url: pathname, headers: { host: "localhost" } },
+      createResponse(),
+      environment,
+      () => {},
+      () => true,
+    ), false, `${method} ${pathname}`)
+  }
+
+  const response = createResponse()
+  assert.equal(blockDisabledDataRequest(
+    { method: "GET", url: "/api/my-eqp-equipment-data", headers: { host: "localhost" } },
+    response,
+    environment,
+    () => {},
+    () => true,
+  ), true)
+  assert.equal(response.statusCode, 503)
 })
 
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {

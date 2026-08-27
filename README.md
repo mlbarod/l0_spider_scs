@@ -11,10 +11,12 @@ npm run dev
 
 The app opens directly at `/`.
 
-현재 SCS 분리 checkout은 별도 환경변수 없이 자설비 이상감지의 read API(`mapping-config`,
-`self-equipment-data`, `erd-scatter-data`)를 활성화한다. 다른 App, image endpoint와 DB
-read/write API는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환한다. 자설비 read까지
-차단한 UI shell이 필요하면 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`을 명시한다.
+현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard와 자설비 이상감지의 read API
+(`dashboard-data`, `mapping-config`, `self-equipment-data`, `erd-scatter-data`)를 활성화한다.
+`DB_INFO_PATH`의 credential 파일이 읽기 가능하면 current-user·등록·Mailing·이력 DB API도
+활성화한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
+반환한다. UI shell이 필요하면 `SCS_DASHBOARD_DATA_ENABLED=0`,
+`SCS_SELF_EQUIPMENT_DATA_ENABLED=0`, `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 API를 한 번에 활성화하므로 다른 App의 새 경로와
 DB 연결정보가 확정되기 전에는 설정하지 않는다.
 
@@ -104,7 +106,7 @@ Python helper가 사용하는 PyMySQL을 설치한다.
 python3 -m pip install -r scripts/requirements.txt
 ```
 
-DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider/db_info.pkl`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. `db_info.pkl`은 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
+DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider/db_info.pkl`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. 전체 gate가 비활성인 기본 mode에서는 읽기 가능한 credential 파일이 확인되면 DB 전용 API allowlist가 활성화되며, `SCS_DB_CONNECTIONS_ENABLED=0`으로 차단할 수 있다. `db_info.pkl`은 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
 
 ```bash
 node server.mjs
@@ -112,9 +114,9 @@ node server.mjs
 
 ## Database References
 
-이하 데이터·DB 설명 중 자설비 파일 read는 기본 활성화된다. DB 기능과 다른 App은 여전히
-전체 gate 뒤의 재연결 기준선이며, 실제 배포 환경의 두 gate 값은 저장소만으로 확인할 수 없어
-`Unknown`이다.
+이하 데이터·DB 설명 중 Dashboard와 자설비 파일 read는 기본 활성화된다. DB 전용 API는
+credential 파일 read 가능 여부와 `SCS_DB_CONNECTIONS_ENABLED`에 따라 활성화된다. 다른 App은
+여전히 전체 gate 뒤의 재연결 기준선이며 실제 배포 환경 값과 운영 연결 결과는 `Unknown`이다.
 
 ### 메인 대시보드 데이터
 

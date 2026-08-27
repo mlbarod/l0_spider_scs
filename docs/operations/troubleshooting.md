@@ -188,9 +188,10 @@ host·TLS·WebSocket은 proxy/network owner, route 차이는 application owner�
 
 ## 7. DB 연결·현재 사용자·등록 기능 실패
 
-먼저 배포 mode를 확인한다. SCS UI shell과 자설비 file read 전용 배포에서 DB API의
-`503 DATA_CONNECTIONS_DISABLED`는 정상이며 DB 장애가 아니다. 이를 해소하려고
-`SCS_DATA_CONNECTIONS_ENABLED=1`을 설정하지 않는다. 전체 DB 연결 승인 배포로 확인된 경우에만 아래 절차를 적용한다.
+먼저 배포 mode를 확인한다. 읽기 가능한 `DB_INFO_PATH`가 없거나
+`SCS_DB_CONNECTIONS_ENABLED=0`인 배포에서 DB API의 `503 DATA_CONNECTIONS_DISABLED`는
+정상이며 DB 장애가 아니다. 이를 해소하려고 `SCS_DATA_CONNECTIONS_ENABLED=1`을 설정하지
+않는다. 승인된 credential이 application user에게 읽기 가능한 배포에서만 아래 절차를 적용한다.
 
 ### 증상
 
@@ -274,9 +275,9 @@ mount·ACL·보존은 filesystem owner, producer 지연·Schema는 data owner, p
 
 ## 9. Dashboard 빈 데이터·오래된 데이터
 
-SCS UI shell 또는 자설비 file read 전용 배포에서 Dashboard의 `503 DATA_CONNECTIONS_DISABLED`는
-파일 누락이 아니라 의도된 범위 차단이다. Dashboard 연결 승인 없이 전체 gate를 활성화하거나
-기존 root로 우회하지 않는다. Dashboard 연결 승인 배포에서만 아래 진단을 수행한다.
+`SCS_DASHBOARD_DATA_ENABLED=0`인 UI shell에서 Dashboard의 `503 DATA_CONNECTIONS_DISABLED`는
+파일 누락이 아니라 의도된 범위 차단이다. 기본값에서는 Dashboard GET/HEAD가 handler까지
+도달하므로 500 또는 빈 데이터라면 전체 gate를 활성화하지 말고 아래 read-only 진단을 수행한다.
 
 ### 증상
 

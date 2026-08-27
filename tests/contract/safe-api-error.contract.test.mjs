@@ -53,7 +53,7 @@ test("SCS 데이터 연결 차단 응답도 보호 대상 오류 계약을 만�
   }
 
   assert.equal(blockDisabledDataRequest(
-    { method: "GET", url: "/api/dashboard-data", headers: { host: "localhost" } },
+    { method: "GET", url: "/api/commonality-data", headers: { host: "localhost" } },
     response,
     {},
     () => {},

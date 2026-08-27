@@ -23,8 +23,8 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 7-column 계약에는 기존 Self DB 이력 식별자 `ver`가 없으므로,
 전역 gate와 무관하게 mapping 응답은 `capabilities.selfEquipmentDb=false`를 반환한다. 화면은
 MY EQP·SKIP LIST·SKIP·클릭이력·이력저장을 노출하거나 호출하지 않고 일반 자설비 파일 chart만
-제공한다. 다른 App과 DB API의 전체 gate 동작은 별도이며 실제 target server mount와 Parquet
-내용은 `Unknown`이다.
+제공한다. credential 기반 DB 전용 API allowlist는 별도지만 Self DB 혼합 기능은 계속
+`selfEquipmentDb=false`다. 실제 target server DB·mount와 Parquet 내용은 `Unknown`이다.
 ## 2. 사용자 목적과 주요 사용 시나리오
 
 Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 데이터를 EQP별 산점도와 동일성 차트로 확인하는 기능이다.

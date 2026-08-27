@@ -67,6 +67,8 @@ Dashboard route는 `startDate`, `endDate`, `line`을 브라우저 URL에서 읽�
 `lineDashboard.mailingSummary`와 `lineDashboard.meta`는 브라우저 client가 배열·shape를 확인하지만 현재 Dashboard 화면에 직접 표시하지 않는다.
 추이 chart는 응답의 `lineSummary` 정렬 기준 상위 최대 8개 Line만 그린다.
 상세 table은 한 페이지에 8개 Line을 표시한다.
+`GET`/`HEAD /api/dashboard-data`는 기본 Dashboard read allowlist에 포함되며,
+`SCS_DASHBOARD_DATA_ENABLED=0`을 명시한 UI shell에서만 handler 진입 전에 차단된다.
 
 ## 5. 프론트엔드 구성
 

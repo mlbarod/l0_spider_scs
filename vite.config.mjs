@@ -6,12 +6,14 @@ import process from "node:process"
 import { blockDisabledDataRequest } from "./server/dataConnections.mjs"
 import { handleDashboardDataRequest } from "./server/dashboardData.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
+import { handleClickedCategoryHistoryRequest } from "./server/clickedCategoryHistory.mjs"
 import {
   handleCommonAnomalyDataRequest,
   handleCommonAnomalyImageRequest,
   handleCommonAnomalyScatterRequest,
 } from "./server/commonAnomalyData.mjs"
 import { handleHitHistoryRequest } from "./server/hitHistory.mjs"
+import { handleMailingRegistrationRequest } from "./server/mailingRegistration.mjs"
 import {
   handleCommonalityDataRequest,
   handleCommonalityImageRequest,
@@ -22,6 +24,8 @@ import {
 } from "./server/commonCommonalityData.mjs"
 import { handleLatestCommonalityPathRequest } from "./server/latestCommonalityPath.mjs"
 import { handleMappingConfigRequest } from "./server/mappingConfig.mjs"
+import { handleMyEqpReferenceRequest } from "./server/myEqpReference.mjs"
+import { handleMyEqpRegistrationRequest } from "./server/myEqpRegistration.mjs"
 import { handlePassHistoryRequest } from "./server/passHistory.mjs"
 import {
   handleErdFileRequest,
@@ -58,6 +62,11 @@ function mappingConfigApi() {
 
         if (url.pathname === "/api/hit-history") {
           handleHitHistoryRequest(req, res)
+          return
+        }
+
+        if (url.pathname === "/api/clicked-category-history") {
+          handleClickedCategoryHistoryRequest(req, res)
           return
         }
 
@@ -108,6 +117,21 @@ function mappingConfigApi() {
 
         if (url.pathname === "/api/mapping-config") {
           handleMappingConfigRequest(req, res)
+          return
+        }
+
+        if (url.pathname === "/api/my-eqp-reference") {
+          handleMyEqpReferenceRequest(req, res)
+          return
+        }
+
+        if (url.pathname === "/api/my-eqp-registration") {
+          handleMyEqpRegistrationRequest(req, res, url)
+          return
+        }
+
+        if (url.pathname === "/api/mailing-registration") {
+          handleMailingRegistrationRequest(req, res, url)
           return
         }
 
