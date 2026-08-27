@@ -29,14 +29,22 @@ test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에
     console.info = originalConsoleInfo
   })
 
-  await assert.rejects(() => createClickedCategoryHistory({
-    app: "self",
-    lineId: "P1L",
-    filePaths: ["/appdata/abnormal_trend/pic/erd/chart.png"],
-    grades: ["ALL"],
-    selectedSensor: "ALL",
-    clickedAt: "2026-08-27T14:30:00+09:00",
-  }), /클릭이력 요청을 처리하지 못했습니다/)
+  let receivedError
+  try {
+    await createClickedCategoryHistory({
+      app: "self",
+      lineId: "P1L",
+      filePaths: ["/appdata/abnormal_trend/pic/erd/chart.png"],
+      grades: ["ALL"],
+      selectedSensor: "ALL",
+      clickedAt: "2026-08-27T14:30:00+09:00",
+    })
+  } catch (error) {
+    receivedError = error
+  }
+
+  assert.match(receivedError?.message ?? "", /클릭이력 요청을 처리하지 못했습니다/)
+  assert.deepEqual(receivedError?.debugRecord, debugRecord)
 
   const finalMessage = messages.find((message) => message.startsWith("[history-db-final] "))
   assert.ok(finalMessage)

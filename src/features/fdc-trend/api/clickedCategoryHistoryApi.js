@@ -35,10 +35,14 @@ export async function createClickedCategoryHistory({
     })
   }
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "클릭이력을 저장하지 못했습니다."))
+    const error = new Error(getApiErrorMessage(payload, "클릭이력을 저장하지 못했습니다."))
+    error.debugRecord = payload.debugRecord
+    throw error
   }
   if (Number(payload.affectedRows) < 1) {
-    throw new Error("클릭이력이 DB에 반영되지 않았습니다.")
+    const error = new Error("클릭이력이 DB에 반영되지 않았습니다.")
+    error.debugRecord = payload.debugRecord
+    throw error
   }
   return payload
 }
