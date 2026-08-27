@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   COMMON_PASS_HISTORY_VERSION,
   PASS_HISTORY_ACTIVE_DURATION_MS,
+  SELF_SKIP_LIST_PATH_SDWT,
   buildPassHistoryDbRecord,
   buildPassHistoryRecord,
   buildCommonPassHistoryFilterPayload,
@@ -160,8 +161,11 @@ test("SKIP LIST는 eqp_ch ALL과 sensor ALL 조합에서 ch_step ALL과 전체 �
   assert.equal(payload.filters.eqpCh, "ALL")
   assert.equal(payload.filters.sensor, "ALL")
   assert.equal(payload.filters.chStep, "ALL")
+  assert.equal(payload.filters.pathSdwt, SELF_SKIP_LIST_PATH_SDWT)
   assert.deepEqual(payload.chSteps.map((item) => item.step).sort(), ["10@MAIN", "20@MAIN"])
   assert.equal(payload.rows.length, 2)
+  assert.ok(payload.rows.every((row) => row.path_sdwt === SELF_SKIP_LIST_PATH_SDWT))
+  assert.ok(payload.rows.every((row) => row.latest_date === "2026-07-17"))
 })
 
 test("과거 빈 ver SKIP도 필터 행으로 반환해 SKIP해제할 수 있다", () => {

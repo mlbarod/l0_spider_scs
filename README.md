@@ -305,9 +305,11 @@ DB 응답의 `affectedRows`가
 차트 로드가 실패하면 오류 카드에 변환된 실제 `data.parquet` 참조 경로를 표시한다.
 차트는 실제 Parquet schema에서 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`도
 호환하며, 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series는 `eqp_cb`를 사용한다.
-hover 보조 컬럼은 존재하는 항목만 projection한다. 두 gate mode 모두 chart 요청의
+hover 보조 컬럼은 존재하는 항목만 projection한다. 일반 조회는 chart 요청의
 Line·SDWT·EQP·sensor·step·`ver`·경로가 선택한 분임조별 row와 모두 일치할 때만 후속
-Parquet를 읽는다. 단일설비 `data.parquet`에 선택적 `ver`가 있으면 같은 row를 우선 사용하고,
+Parquet를 읽는다. SKIP LIST는 `pathSdwt=__SKIP_LIST__`로 구분하고 현재 활성 `pass_history`의
+Line·경로·EQP·sensor·step·`ver`와 다시 일치할 때만 같은 파일을 읽는다. Scatter·3일 동일성·
+동일성 팝업은 공통 request builder로 이 필드를 전달한다. 단일설비 `data.parquet`에 선택적 `ver`가 있으면 같은 row를 우선 사용하고,
 파일 내부 `ver`가 단일 값이면 선택 경로로 이미 version이 한정된 것으로 처리한다. `ver` 컬럼이
 없어도 선택한 `file_path`가 version 범위를 한정한 것으로 보고 drawing을 유지한다.
 여러 `ver`가 섞였는데 요청값이 없으면 point를 반환하지 않는다. DB 이력에는

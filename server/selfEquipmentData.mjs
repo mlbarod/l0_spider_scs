@@ -18,7 +18,14 @@ import { areDbConnectionsEnabled } from "./dataConnections.mjs"
 import { assertKnownMappingLineSdwt, readLineMapping } from "./mappingConfig.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
-import { listPassHistoryRecords, parsePassHistoryPath } from "./passHistory.mjs"
+import {
+  COMMON_PASS_HISTORY_VERSION,
+  SELF_SKIP_LIST_PATH_SDWT,
+  buildPassHistoryErdImagePath,
+  isActivePassHistoryRecord,
+  listPassHistoryRecords,
+  parsePassHistoryPath,
+} from "./passHistory.mjs"
 
 export const TEAM_ERD_COLUMNS = Object.freeze([
   "sdwt",
@@ -45,12 +52,16 @@ const ALL_CH_STEPS = "ALL"
 const PARQUET_CACHE_MAX_ENTRIES = 16
 const ERD_SCATTER_CACHE_MAX_ENTRIES = 1
 const ERD_HISTORY_CACHE_MAX_ENTRIES = 1
+const SKIP_LIST_AUTH_CACHE_MAX_ENTRIES = 16
+const SKIP_LIST_AUTH_CACHE_TTL_MS = 5 * 1000
 export const SKIP_EXCLUSION_DURATION_MS = 3 * 24 * 60 * 60 * 1000
 const parquetCache = new Map()
 const erdScatterCache = new Map()
 const erdScatterPending = new Map()
 const erdHistoryCache = new Map()
 const erdHistoryPending = new Map()
+const skipListAuthorizationCache = new Map()
+const skipListAuthorizationPending = new Map()
 
 const imageMimeTypes = {
   ".png": "image/png",
@@ -283,6 +294,72 @@ export async function authorizeSelfEquipmentDataPath({
       step,
       ver,
     })
+  } catch {
+    return false
+  }
+}
+
+export function isSelfEquipmentSkipListDataPathAllowed(records, {
+  dataDirectoryPath,
+  eqp,
+  latestDate,
+  line,
+  sensor,
+  step,
+  ver,
+}, nowMs = Date.now()) {
+  const normalizedPath = normalizeSelfEquipmentFilePath(dataDirectoryPath)
+  const normalizedEqp = normalizeSkipEqp(eqp)
+
+  return records.some((record) => {
+    if (!isActivePassHistoryRecord(record, nowMs)) return false
+    if (normalizeTextValue(record.ver) === COMMON_PASS_HISTORY_VERSION) return false
+    if (normalizeTextValue(record.line_id) !== line) return false
+    if (normalizeTextValue(record.sensor) !== sensor) return false
+    if (normalizeTextValue(record.step) !== step) return false
+    if (normalizeTextValue(record.ver) !== ver) return false
+    if (normalizeSkipEqp(record.eqp) !== normalizedEqp) return false
+
+    let recordPath = ""
+    try {
+      recordPath = normalizeSelfEquipmentFilePath(buildPassHistoryErdImagePath(record))
+    } catch {
+      return false
+    }
+    if (!recordPath || recordPath !== normalizedPath) return false
+    return !latestDate || getSelfEquipmentLatestDateFromFilePath(recordPath) === latestDate
+  })
+}
+
+async function readCachedSkipListAuthorizationRecords(line) {
+  const cached = getLruEntry(skipListAuthorizationCache, line)
+  if (cached?.expiresAt > Date.now()) return cached.records
+  if (skipListAuthorizationPending.has(line)) return skipListAuthorizationPending.get(line)
+
+  const readPromise = listPassHistoryRecords({ lineId: line }).then((records) => {
+    setLruEntry(
+      skipListAuthorizationCache,
+      line,
+      { records, expiresAt: Date.now() + SKIP_LIST_AUTH_CACHE_TTL_MS },
+      SKIP_LIST_AUTH_CACHE_MAX_ENTRIES,
+    )
+    return records
+  })
+  skipListAuthorizationPending.set(line, readPromise)
+  try {
+    return await readPromise
+  } finally {
+    skipListAuthorizationPending.delete(line)
+  }
+}
+
+export async function authorizeSelfEquipmentSkipListDataPath(request, {
+  readRecords = ({ lineId }) => readCachedSkipListAuthorizationRecords(lineId),
+  nowMs = Date.now(),
+} = {}) {
+  try {
+    const records = await readRecords({ lineId: request.line })
+    return isSelfEquipmentSkipListDataPathAllowed(records, request, nowMs)
   } catch {
     return false
   }
@@ -855,6 +932,7 @@ export function buildErdIdentityPayload(rows, {
 
 export async function handleErdScatterDataRequest(req, res, url, {
   authorizeDataPath = authorizeSelfEquipmentDataPath,
+  authorizeSkipListDataPath = authorizeSelfEquipmentSkipListDataPath,
 } = {}) {
   if (req.method !== "GET") {
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
@@ -891,7 +969,7 @@ export async function handleErdScatterDataRequest(req, res, url, {
       sendJson(res, 400, { ok: false, error: "line, pathSdwt, sensor, chStep과 ver 조건이 필요합니다." })
       return
     }
-    const authorized = await authorizeDataPath({
+    const authorizationRequest = {
       dataDirectoryPath: imagePath,
       eqp,
       latestDate: requestedLatestDate,
@@ -900,7 +978,10 @@ export async function handleErdScatterDataRequest(req, res, url, {
       sensor: requestedSensor,
       step: requestedChStep,
       ver: requestedVer,
-    })
+    }
+    const authorized = requestedPathSdwt === SELF_SKIP_LIST_PATH_SDWT
+      ? await authorizeSkipListDataPath(authorizationRequest)
+      : await authorizeDataPath(authorizationRequest)
     if (!authorized) {
       sendJson(res, 403, { ok: false, error: "허용되지 않은 자설비 데이터 경로입니다." })
       return

@@ -40,6 +40,20 @@ export function getSelfEquipmentPassHistoryFields(row) {
   }
 }
 
+export function getErdChartRequest(row, eqp, extra = {}) {
+  return {
+    filePath: row?.file_path,
+    eqp,
+    sensor: row?.sensor,
+    chStep: row?.step,
+    ver: row?.ver,
+    latestDate: row?.latest_date,
+    line: row?.line_rev,
+    pathSdwt: row?.path_sdwt,
+    ...extra,
+  }
+}
+
 export function isSelfEquipmentHistoryActionAvailable(row) {
   return Boolean(getSelfEquipmentHistoryFilePath(row))
 }

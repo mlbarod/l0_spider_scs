@@ -62,6 +62,7 @@ import {
   fetchErdScatterData,
   fetchEqpAllSkipTargets,
   fetchSelfEquipmentData,
+  getErdChartRequest,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
   getSelfEquipmentPassHistoryFields,
@@ -503,17 +504,17 @@ export function IdentityChartDialog({
   const [referenceLineMode, setReferenceLineMode] = useState(false)
   const [referenceLines, setReferenceLines] = useState([])
   const identityQuery = useQuery({
-    queryKey: [queryKeyPrefix, row.file_path, row.latest_date, eqp, row.sensor, row.step],
-    queryFn: ({ signal }) => identityFetcher({
-      filePath: row.file_path,
+    queryKey: [
+      queryKeyPrefix,
+      row.file_path,
+      row.latest_date,
       eqp,
-      sensor: row.sensor,
-      chStep: row.step,
-      latestDate: row.latest_date,
-      line: row.line_rev,
-      pathSdwt: row.path_sdwt,
-      signal,
-    }),
+      row.sensor,
+      row.step,
+      row.ver,
+      row.path_sdwt,
+    ],
+    queryFn: ({ signal }) => identityFetcher(getErdChartRequest(row, eqp, { signal })),
     enabled: Boolean(open && row.file_path && eqp && row.sensor && row.step),
     staleTime: Infinity,
     gcTime: Infinity,
@@ -794,19 +795,21 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
   }, [])
 
   const identityQuery = useQuery({
-    queryKey: ["erd-identity-data", row.file_path, row.latest_date, eqp, row.sensor, row.step, row.ver, 3],
-    queryFn: ({ signal }) => fetchErdIdentityData({
-      filePath: row.file_path,
+    queryKey: [
+      "erd-identity-data",
+      row.file_path,
+      row.latest_date,
       eqp,
-      sensor: row.sensor,
-      chStep: row.step,
-      ver: row.ver,
-      latestDate: row.latest_date,
-      line: row.line_rev,
-      pathSdwt: row.path_sdwt,
+      row.sensor,
+      row.step,
+      row.ver,
+      row.path_sdwt,
+      3,
+    ],
+    queryFn: ({ signal }) => fetchErdIdentityData(getErdChartRequest(row, eqp, {
       days: 3,
       signal,
-    }),
+    })),
     enabled: Boolean(isNearViewport && row.file_path && eqp && row.sensor && row.step),
     staleTime: Infinity,
     gcTime: 10 * 60 * 1000,
@@ -1176,17 +1179,17 @@ const ErdScatterCard = memo(function ErdScatterCard({
   }, [])
 
   const chartQuery = useQuery({
-    queryKey: ["erd-scatter-data", row.file_path, row.latest_date, eqp, row.sensor, row.step, row.ver],
-    queryFn: () => fetchErdScatterData({
-      filePath: row.file_path,
+    queryKey: [
+      "erd-scatter-data",
+      row.file_path,
+      row.latest_date,
       eqp,
-      sensor: row.sensor,
-      chStep: row.step,
-      ver: row.ver,
-      latestDate: row.latest_date,
-      line: row.line_rev,
-      pathSdwt: row.path_sdwt,
-    }),
+      row.sensor,
+      row.step,
+      row.ver,
+      row.path_sdwt,
+    ],
+    queryFn: () => fetchErdScatterData(getErdChartRequest(row, eqp)),
     enabled: Boolean(isNearViewport && row.file_path && eqp && row.sensor && row.step),
     staleTime: Infinity,
     gcTime: Infinity,

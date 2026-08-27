@@ -147,6 +147,8 @@ legacy 경로 형식이나 운영 mount root에 의존하지 않는다.
 `ver`는 분임조별 경로 row의 컬럼 값을 그대로 사용한다. 공통부·동일성 App은 기존 경로 계약을
 유지한다. 과거 빈 `ver` PASS row는 version을 제외한 나머지 식별값으로
 72시간 제외를 유지하며, SKIP LIST에서는 chart를 복원하지 않고 SKIP해제만 제공한다.
+`ver`가 있는 활성 SKIP LIST row는 `pathSdwt=__SKIP_LIST__`를 chart 요청에 전달하고, 서버가
+`pass_history`의 Line·경로·EQP·sensor·step·`ver`를 재검증한 뒤 Scatter·동일성 chart를 읽는다.
 화면의 클릭이력 디버깅 표는 제공하지 않으며, 실패 응답은 안전한 오류 code와 문의용 request ID만 유지한다.
 ## 9. Self Equipment 요청 흐름
 
@@ -197,7 +199,7 @@ sequenceDiagram
 | 같은 API | `desc`, `eqpCh`, `sensor`, `chStep` | query | string | 선택 | option 불일치 시 빈 선택 | 종속 state | `Confirmed` |
 | `/api/my-eqp-equipment-data` | `line` 등 | query | strings | Line 필수 | 등록·mapping·EQP 표기 정규화 | MY EQP state | 코드 `Confirmed` |
 | `/api/erd-scatter-data` | `path`, `eqp` | query | string | 필수 | pic root·segment 검증 | chart row | `Confirmed` |
-| 같은 API | `line`, `pathSdwt` | query | string | 필수 | 분임조별 row의 path·EQP·sensor·step·ver 재검증 | chart row | `Confirmed` |
+| 같은 API | `line`, `pathSdwt` | query | string | 필수 | 일반 row는 분임조별 path table 재검증; SKIP LIST는 `__SKIP_LIST__` sentinel로 활성 PASS row 재검증 | chart row | `Confirmed` |
 | 같은 API | `sensor`, `chStep`, `ver`, `latestDate` | query | string | sensor·chStep·ver 필수, latestDate 선택 | row 값 사용; latestDate 형식 검증 | chart row | 코드 `Confirmed` |
 | 같은 API | `mode=identity`, `days` | query | string, integer string | 선택 | days는 0~30 정수 | chart mode | `Confirmed` |
 | `/api/my-eqp-registration` | `line`, `activeOnly=true` | query | string | Line 필요 | active 조건 | Self·등록 화면 | 코드 `Confirmed` |

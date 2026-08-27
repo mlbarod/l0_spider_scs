@@ -87,6 +87,9 @@ FdcTrendPage
 서버는 `/pic_server2/`를 `/pic/`로 정규화하고 Line·SDWT·EQP·latest date·sensor·step·`ver`가
 선택한 team row와 일치하는지 확인한다. 이후 `file_path`가 `.png`이면 sibling `data.parquet`,
 directory이면 하위 `data.parquet`, 직접 파일이면 해당 `data.parquet`를 선택한다.
+SKIP LIST chart는 `pathSdwt=__SKIP_LIST__`로 구분하며, 일반 team row 대신 현재 활성
+`pass_history`의 Line·경로·EQP·sensor·step·`ver`와 일치하는지 재검증한다. Scatter와 두
+동일성 chart 호출은 같은 request builder를 사용한다.
 
 자설비 클릭이력·SKIP·HIT는 최종 team row의 확정 필드로 DB record를 구성하고 같은
 `file_path`를 사용한다. SKIP의 `ver`는 row의 `ver` 컬럼을 그대로 사용하며 비어 있으면 저장을

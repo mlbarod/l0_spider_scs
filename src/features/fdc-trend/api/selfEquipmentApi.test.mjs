@@ -6,6 +6,7 @@ import {
   fetchEqpAllSkipTargets,
   fetchErdIdentityData,
   fetchErdScatterData,
+  getErdChartRequest,
   getSelfEquipmentPassHistoryFields,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
@@ -112,8 +113,41 @@ test("단일설비와 동일성 차트 요청은 선택한 ERD row의 ver를 전
     pathSdwt: "SDWT-1",
   })
 
-  assert.equal(requestedUrls.length, 2)
+  await fetchErdIdentityData(getErdChartRequest({
+    file_path: "/appdata/abnormal_trend/pic/erd/skip-chart.png",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    ver: "V7",
+    latest_date: "2026-08-27",
+    line_rev: "LINE-1",
+    path_sdwt: "__SKIP_LIST__",
+  }, "EQP-1"))
+
+  assert.equal(requestedUrls.length, 3)
   requestedUrls.forEach((url) => assert.match(url, /(?:\?|&)ver=V7(?:&|$)/))
+  assert.match(requestedUrls[2], /(?:\?|&)pathSdwt=__SKIP_LIST__(?:&|$)/)
+})
+
+test("모든 ERD 차트 호출은 row의 권한 필드를 공통 request로 구성한다", () => {
+  assert.deepEqual(getErdChartRequest({
+    file_path: "/appdata/abnormal_trend/pic/erd/chart.png",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    ver: "V7",
+    latest_date: "2026-08-27",
+    line_rev: "LINE-1",
+    path_sdwt: "__SKIP_LIST__",
+  }, "EQP-1", { days: 3 }), {
+    filePath: "/appdata/abnormal_trend/pic/erd/chart.png",
+    eqp: "EQP-1",
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+    ver: "V7",
+    latestDate: "2026-08-27",
+    line: "LINE-1",
+    pathSdwt: "__SKIP_LIST__",
+    days: 3,
+  })
 })
 
 test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", async (t) => {

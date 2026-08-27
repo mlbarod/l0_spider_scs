@@ -151,6 +151,8 @@ SKIP과 이력저장 버튼은 최종 chart row의
 `eqp_ch=ALL`과 `sensor=ALL`을 함께 선택하면 `ch_step`에 `ALL`이 표시됩니다. SKIP은 등록
 시각부터 72시간 동안 일반
 결과에서 제외되며, **SKIP LIST**에서 **SKIP해제**할 수 있습니다.
+`ver`가 있는 SKIP LIST 행의 Scatter·3일 동일성·동일성 팝업은 현재 활성 SKIP 이력의
+Line·경로·EQP·sensor·ch_step·`ver`가 모두 일치할 때 표시됩니다.
 
 클릭이력의 최종 `line_id`, `sdwt`, `grade`, `sensor`, `update_date`, `knox_id`는 마지막 조회 응답에서
 확정된 SDWT·등급·sensor 선택값으로 생성됩니다. 이 값과 요청 body는 화면 디버깅 표,

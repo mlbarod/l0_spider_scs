@@ -9,6 +9,7 @@ const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
 export const COMMON_PASS_HISTORY_VERSION = "NA"
 export const PASS_HISTORY_ACTIVE_DURATION_MS = 3 * 24 * 60 * 60 * 1000
+export const SELF_SKIP_LIST_PATH_SDWT = "__SKIP_LIST__"
 const helperPath = fileURLToPath(new URL("../scripts/pass_history.py", import.meta.url))
 const ALL_VALUES = "ALL"
 
@@ -117,7 +118,7 @@ function passRecordIdentity(record) {
   ].map(normalizeText).join("\u0000")
 }
 
-function buildErdImagePath(record) {
+export function buildPassHistoryErdImagePath(record) {
   const segments = [
     normalizeDbDate(record.update_date),
     record.sdwt,
@@ -223,6 +224,7 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
   return {
     filters: {
       line: filters.lineId,
+      pathSdwt: SELF_SKIP_LIST_PATH_SDWT,
       priorities: filters.priorities,
       desc: selectedDesc,
       eqpCh: selectedEqpCh,
@@ -236,7 +238,7 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
     sensors,
     chSteps,
     rows: chartRecords.map((record) => {
-      const filePath = buildErdImagePath(record)
+      const filePath = buildPassHistoryErdImagePath(record)
       return {
         id: `pass-${encodeURIComponent(passRecordIdentity(record))}`,
         sdwt: normalizeText(record.sdwt),
@@ -249,6 +251,8 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
         eqp: `${normalizeEqp(record.eqp)}.png`,
         file_path: filePath,
         line_rev: normalizeText(record.line_id),
+        path_sdwt: SELF_SKIP_LIST_PATH_SDWT,
+        latest_date: normalizeDbDate(record.update_date),
         pass_history: record,
       }
     }),
