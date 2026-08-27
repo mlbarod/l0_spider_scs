@@ -312,7 +312,8 @@ Line·SDWT·EQP·sensor·step·경로가
 노출하고 요청하며, DB capability가 없으면 서버가 `503 DATA_CONNECTIONS_DISABLED`로 거부한다.
 브라우저 개발자 도구에는 전송 직전 `[history-db-request]`를, 서버에는 정규화 전
 `[history-db-attempt]`와 실제 SQL 값 `[history-db-write]`를 한 줄 JSON으로 출력한다. 서버 gate에서
-거부한 요청은 credential 내용을 노출하지 않는 `[history-db-blocked]`로 원인을 구분한다.
+거부한 요청은 credential 내용을 노출하지 않는 `[history-db-blocked]`로 원인을 구분한다. 클릭이력
+helper가 최종 6컬럼을 만들면 성공·실패 모두 브라우저 Console의 `[history-db-final]`에 출력한다.
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와
 `src/config/spiderDataPaths.mjs`를 함께 업데이트한다.

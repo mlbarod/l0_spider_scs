@@ -146,7 +146,10 @@ ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. 버튼�
 장애 확인 시 브라우저 개발자 도구 Console에서 `[history-db-request]`를 검색하면 클릭 시 서버로 보낸
 endpoint, `filePath`/`filePaths`와 전체 body를 확인할 수 있습니다. 서버 로그의
 `[history-db-attempt]`는 정규화된 helper 입력, `[history-db-write]`는 실제 SQL에 전달되는 컬럼값입니다.
-`[history-db-blocked]`가 있으면 서버 DB gate가 요청을 차단한 상태입니다.
+클릭이력의 최종 `line_id`, `sdwt`, `grade`, `sensor`, `update_date`, `knox_id`는 DB 작업의
+성공·실패와 관계없이 브라우저 Console의 `[history-db-final]`에서 확인할 수 있습니다.
+`[history-db-blocked]`가 있으면 서버 DB gate가 요청을 차단한 상태이며, 이 경우 helper가 실행되지 않아
+`[history-db-final]`은 생성되지 않습니다.
 
 ![SKIP 확인](images/06-self-equipment-skip-dialog.png)
 

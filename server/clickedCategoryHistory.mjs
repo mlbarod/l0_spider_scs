@@ -163,7 +163,9 @@ function runHelper(payload) {
         return
       }
       if (!result.ok) {
-        reject(new Error(result.error || "클릭이력을 저장하지 못했습니다."))
+        const error = new Error(result.error || "클릭이력을 저장하지 못했습니다.")
+        error.debugRecord = result.debugRecord
+        reject(error)
         return
       }
       resolvePromise(result)
@@ -195,11 +197,14 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
       throw new Error("클릭이력이 DB에 반영되지 않았습니다.")
     }
     sendJson(res, 200, result)
-  } catch {
-    sendJson(res, 500, createSafeApiError({
+  } catch (error) {
+    const errorPayload = createSafeApiError({
       code: "CLICKED_CATEGORY_HISTORY_REQUEST_FAILED",
       message: "클릭이력 요청을 처리하지 못했습니다.",
       scope: "clicked-category-history",
-    }))
+    })
+    sendJson(res, 500, error?.debugRecord
+      ? { ...errorPayload, debugRecord: error.debugRecord }
+      : errorPayload)
   }
 }

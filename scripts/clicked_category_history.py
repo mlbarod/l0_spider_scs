@@ -46,9 +46,22 @@ def normalize_update_date(value):
     return parsed.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def build_db_record(payload):
+    return {
+        "line_id": payload["lineId"],
+        "sdwt": payload["sdwt"],
+        "grade": payload["grade"],
+        "sensor": payload["sensor"],
+        "update_date": normalize_update_date(payload.get("updateDate")),
+        "knox_id": payload["knoxId"],
+    }
+
+
 def main():
+    db_record = None
     try:
         payload = json.loads(sys.stdin.read() or "{}")
+        db_record = build_db_record(payload)
         db_info = load_db_info()
         import pymysql
 
@@ -62,14 +75,7 @@ def main():
         ) as connection:
             with connection.cursor() as cursor:
                 columns = ("line_id", "sdwt", "grade", "sensor", "update_date", "knox_id")
-                values = (
-                    payload["lineId"],
-                    payload["sdwt"],
-                    payload["grade"],
-                    payload["sensor"],
-                    normalize_update_date(payload.get("updateDate")),
-                    payload["knoxId"],
-                )
+                values = tuple(db_record[column] for column in columns)
                 log_db_write("clicked_category_history", "INSERT", columns, [values])
                 affected_rows = cursor.execute(
                     """
@@ -80,10 +86,13 @@ def main():
                     values,
                 )
             connection.commit()
-        write_json({"ok": True, "affectedRows": affected_rows})
+        write_json({"ok": True, "affectedRows": affected_rows, "debugRecord": db_record})
     except Exception as error:
         print(f"clicked category history operation failed: {error}", file=sys.stderr)
-        write_json({"ok": False, "error": "클릭이력 DB 작업에 실패했습니다."})
+        result = {"ok": False, "error": "클릭이력 DB 작업에 실패했습니다."}
+        if db_record is not None:
+            result["debugRecord"] = db_record
+        write_json(result)
 
 
 if __name__ == "__main__":

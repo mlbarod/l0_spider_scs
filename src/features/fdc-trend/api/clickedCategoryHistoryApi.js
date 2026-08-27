@@ -1,5 +1,5 @@
 import { getApiErrorMessage } from "./errorMessage.js"
-import { logHistoryRequest } from "./historyRequestDebug.js"
+import { logHistoryDbFinal, logHistoryRequest } from "./historyRequestDebug.js"
 
 export async function createClickedCategoryHistory({
   app,
@@ -27,6 +27,13 @@ export async function createClickedCategoryHistory({
     body: JSON.stringify(body),
   })
   const payload = await response.json().catch(() => ({}))
+  if (payload.debugRecord) {
+    logHistoryDbFinal({
+      table: "clicked_category_history",
+      operation: "INSERT",
+      record: payload.debugRecord,
+    })
+  }
   if (!response.ok) {
     throw new Error(getApiErrorMessage(payload, "클릭이력을 저장하지 못했습니다."))
   }
