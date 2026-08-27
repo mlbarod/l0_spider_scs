@@ -40,6 +40,7 @@ export async function createClickedCategoryHistory({
     const error = new Error(getApiErrorMessage(payload, "클릭이력을 저장하지 못했습니다."))
     error.debugRecord = payload.debugRecord
     error.failureStage = payload.failureStage
+    error.failureDetail = payload.failureDetail
     throw error
   }
   if (Number(payload.affectedRows) < 1) {

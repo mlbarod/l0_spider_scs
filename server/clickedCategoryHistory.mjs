@@ -10,10 +10,18 @@ import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugL
 
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
 const COMMON_COMMONALITY_FILE_ROOT = commonCommonalityRootPath
-const SELF_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
 const helperPath = fileURLToPath(new URL("../scripts/clicked_category_history.py", import.meta.url))
 const SUPPORTED_APPS = new Set(["self", "commonality", "common"])
 const ALL_VALUES = "ALL"
+const SAFE_RECORD_BUILD_FAILURES = new Set([
+  "클릭이력 App 구분값이 올바르지 않습니다.",
+  "Line Name이 필요합니다.",
+  "Chart Drawing 경로가 필요합니다.",
+  "클릭이력 카테고리 값을 찾지 못했습니다.",
+  "클릭 시각이 올바르지 않습니다.",
+  "요청 데이터가 너무 큽니다.",
+  "요청 JSON이 올바르지 않습니다.",
+])
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -91,14 +99,6 @@ function parseDrawingPath(app, filePath) {
   return app === "common" ? parseCommonPath(filePath) : parseCommonalityPath(filePath)
 }
 
-function assertAllowedSelfDrawingPath(filePath) {
-  const normalizedPath = normalizeText(filePath).replaceAll("/pic_server2/", "/pic/")
-  const resolvedPath = resolve(normalizedPath)
-  if (!resolvedPath.startsWith(`${SELF_FILE_ROOT}${sep}`)) {
-    throw new Error("허용되지 않은 ERD 차트 경로입니다.")
-  }
-}
-
 function normalizeDbUpdateDate(value, now = new Date()) {
   const date = normalizeText(value) ? new Date(value) : now
   if (Number.isNaN(date.getTime())) throw new Error("클릭 시각이 올바르지 않습니다.")
@@ -146,14 +146,11 @@ export function buildClickedCategoryHistoryRecord({
     && grades.length
     && normalizedSelectedSensor
   const pathValues = useSelfSelection
-    ? paths.map((filePath) => {
-      assertAllowedSelfDrawingPath(filePath)
-      return {
-        sdwt: normalizedSelectedSdwt,
-        grade: "",
-        sensor: normalizedSelectedSensor,
-      }
-    })
+    ? [{
+      sdwt: normalizedSelectedSdwt,
+      grade: "",
+      sensor: normalizedSelectedSensor,
+    }]
     : paths.map((filePath) => parseDrawingPath(normalizedApp, filePath))
   const suffix = normalizedApp === "commonality" ? "(g)" : normalizedApp === "common" ? "(c)" : ""
   const requestedGrades = normalizedApp === "self" && Array.isArray(grades) && grades.length
@@ -271,10 +268,16 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
       scope: "clicked-category-history",
     })
     const failureStage = error?.debugRecord ? "db-write" : "record-build"
+    const failureDetail = failureStage === "record-build"
+      ? SAFE_RECORD_BUILD_FAILURES.has(error?.message)
+        ? error.message
+        : "클릭이력 최종 6컬럼 생성 조건을 확인하지 못했습니다."
+      : undefined
     console.error(`[clicked-history-failure] requestId=${errorPayload.requestId} stage=${failureStage} reason=${JSON.stringify(error?.message ?? "unknown")}`)
     sendJson(res, 500, {
       ...errorPayload,
       failureStage,
+      ...(failureDetail ? { failureDetail } : {}),
       ...(error?.debugRecord ? { debugRecord: error.debugRecord } : {}),
     })
   }

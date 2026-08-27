@@ -1997,9 +1997,9 @@ export function FdcTrendPage() {
         app: "self",
         lineId: activeLine,
         filePaths,
-        grades: priorities,
-        selectedSdwt: activeTeamLabel,
-        selectedSensor,
+        grades: payload.filters?.priorities ?? priorities,
+        selectedSdwt: payload.filters?.sdwt || activeTeamLabel,
+        selectedSensor: payload.filters?.sensor || selectedSensor,
         clickedAt,
       })
       setClickedHistoryDebug({
@@ -2015,7 +2015,7 @@ export function FdcTrendPage() {
         record: error.debugRecord ?? null,
         message: error.debugRecord
           ? `아래 6컬럼으로 INSERT를 시도했지만 실패했습니다: ${error.message}`
-          : `최종 6컬럼을 만들기 전에 실패했습니다: ${error.message}`,
+          : `최종 6컬럼을 만들기 전에 실패했습니다 (${error.failureStage ?? "단계 미확인"}): ${error.failureDetail ?? error.message}`,
       })
       toast.error(`클릭이력 저장 실패: ${error.message}`)
     }

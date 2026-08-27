@@ -313,8 +313,9 @@ Line·SDWT·EQP·sensor·step·경로가
 브라우저 개발자 도구에는 전송 직전 `[history-db-request]`를, 서버에는 정규화 전
 `[history-db-attempt]`와 실제 SQL 값 `[history-db-write]`를 한 줄 JSON으로 출력한다. 서버 gate에서
 거부한 요청은 credential 내용을 노출하지 않는 `[history-db-blocked]`로 원인을 구분한다. 자설비
-클릭이력은 최신 index 조회에서 확정한 선택 `SDWT`·등급·sensor로 6컬럼을 구성하고 `file_path`는
-허용된 ERD root 검증에 사용하므로 legacy 9단계 경로 해석에 의존하지 않는다. 서버가 DB helper
+클릭이력은 최신 index 조회 응답의 `filters.sdwt`·`filters.priorities`·`filters.sensor`로 6컬럼을
+구성한다. `file_path`는 선택 결과 존재 확인과 요청 추적에만 남기며 6컬럼 구성에서는 경로 형식이나
+mount root를 해석하지 않는다. 서버가 DB helper
 호출 전에 확정한 최종 6컬럼은 성공·실패 모두 브라우저 Console의 `[history-db-final]`과 자설비 화면
 상단의 `클릭이력 DB 전송값 (디버깅)` 표에 출력한다.
 
