@@ -115,11 +115,15 @@
 | 데이터 | `SENSOR_EXCLUSION_CONFIG_PATH` | 기본 sensor 제외 JSON 경로 override | `config/sensor-exclusions.json` | 선택 | 경로는 프로세스 시작; 내용은 API 요청 | `server/sensorExclusionConfig.mjs` | 경로 주의 | 기본 파일 사용 | `Confirmed` |
 | 데이터 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 `path_xian` root override | `/appdata/abnormal_trend/pic/path_xian` | 선택 | 프로세스 시작 | `server/selfEquipmentData.mjs` | 경로 주의 | 코드 기본 root 사용 | 코드 `Confirmed`; 운영값 `Unknown` |
 | DB | `DB_INFO_PATH` | DB credential pickle 위치 | `/appdata/l0_spider_scs/db_info.pkl` | DB 기능에 조건부 | helper 실행 | `scripts/*.py` | 값 자체는 아니나 민감 경로 | 코드 경로 사용 | `Confirmed` |
+| 호환 | `REMOTE_ADDR` | 이전 Node artifact용 접속 IP 전달값 | 없음 | 혼합 배포 호환 시에만 사용 | legacy helper 실행 | `scripts/current_user.py` | 개인정보 주의 | IP 오류 JSON 반환; DB 조회 없음 | `Confirmed` |
 | 메뉴얼 | `MANUAL_BASE_URL` | 기존 UI 서버 사용 여부 | 코드 기본 loopback URL, port `4173` | 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:11-12` | 아니오 | 자체 Vite 시작 | `Confirmed` |
 | 메뉴얼 | `PLAYWRIGHT_LD_LIBRARY_PATH` | Playwright 동적 library 경로 보완 | 없음 | 환경별 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:19-20` | 경로 주의 | 변경 없음 | `Confirmed` |
 | 메뉴얼 | `LD_LIBRARY_PATH` | 기존 동적 library 검색 경로 | 실행 환경 상속 | 환경별 선택 | 도구 시작 | `scripts/generate-user-manual-screenshots.mjs:20` | 경로 주의 | 시스템 기본 사용 | `Confirmed` |
 
 - HMAC 비밀키와 SMTP 관련 환경변수 이름은 코드에서 확인되지 않았으므로 레지스트리에 가상의 이름을 추가하지 않았다.
+- 현재 `server/currentUser.mjs`는 `REMOTE_ADDR`나 Python helper를 사용하지 않는다. 이 변수는 이전
+  Node artifact와 새 파일이 혼재한 배포에서 `scripts/current_user.py`가 IP를 그대로 반환하기 위한
+  호환 입력이며 systemd에 고정값으로 설정하지 않는다.
 
 ## 9. 코드와 환경 예제의 일관성
 

@@ -68,6 +68,8 @@ PASS/HIT/클릭이력 요청
   아니라 이력 추적용 접속 주소다.
 - Node 처리: `server/currentUser.mjs`; DB 저장 helper: `scripts/pass_history.py`,
   `scripts/hit_history.py`, `scripts/clicked_category_history.py`.
+- `scripts/current_user.py`는 이전 Node artifact가 배포 중 남아 있어도 같은 IP 응답을 돌려주기 위한
+  호환 helper다. `REMOTE_ADDR`만 검증하며 DB credential과 사용자 테이블을 읽지 않는다.
 
 Python helper가 사용하는 PyMySQL을 설치한다.
 

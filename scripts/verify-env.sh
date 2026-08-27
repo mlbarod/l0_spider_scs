@@ -155,6 +155,7 @@ require_code_reference "server/latestCommonalityPath.mjs" "process.env.COMMONALI
 require_code_reference "server/latestCommonCommonalityPath.mjs" "process.env.COMMON_COMMONALITY_ROOT_PATH" "COMMON_COMMONALITY_ROOT_PATH"
 require_code_reference "server/dashboardData.mjs" "process.env.SPIDER_DASHBOARD_PATH_ROOT" "SPIDER_DASHBOARD_PATH_ROOT"
 require_code_reference "scripts/pass_history.py" 'os.environ.get("DB_INFO_PATH")' "DB_INFO_PATH"
+require_code_reference "scripts/current_user.py" 'os.environ.get("REMOTE_ADDR")' "REMOTE_ADDR compatibility input"
 require_code_reference "scripts/generate-user-manual-screenshots.mjs" "process.env.MANUAL_BASE_URL" "MANUAL_BASE_URL"
 require_code_reference "scripts/generate-user-manual-screenshots.mjs" "process.env.PLAYWRIGHT_LD_LIBRARY_PATH" "PLAYWRIGHT_LD_LIBRARY_PATH"
 require_code_reference "scripts/generate-user-manual-screenshots.mjs" "process.env.LD_LIBRARY_PATH" "LD_LIBRARY_PATH"
