@@ -135,9 +135,13 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 `SCS_DB_CONNECTIONS_ENABLED=0`이면 서버가 `503 DATA_CONNECTIONS_DISABLED`로 거부하며 일반 file chart는
 유지한다. 요청 직전 브라우저 콘솔의 `[history-db-request]`, 서버 정규화 payload의
 `[history-db-attempt]`, 실제 Python SQL 값의 `[history-db-write]`로 단계별 입력을 확인할 수 있다.
-클릭이력 helper가 산출한 실제 6컬럼은 성공·실패 모두 브라우저 `[history-db-final]`과 자설비 화면의
+자설비 클릭이력은 최신 index 조회에서 확정된 선택 `SDWT`·등급·sensor로 6컬럼을 구성하며,
+`file_path`는 허용된 ERD root 검증에만 사용하므로 legacy 9단계 경로 형식에 의존하지 않는다.
+서버가 DB helper 호출 전에 확정한 실제 6컬럼은 성공·실패 모두 브라우저 `[history-db-final]`과 자설비 화면의
 `클릭이력 DB 전송값 (디버깅)` 표에 표시한다.
 gate 거부는 credential 값을 제외한 `[history-db-blocked]`에 기록한다.
+handler 실패는 같은 문의 코드와 함께 `[clicked-history-failure]`에 `record-build` 또는 `db-write`
+단계로 기록해 경로·credential·DB 상세값을 노출하지 않고 실패 지점을 구분한다.
 ## 9. Self Equipment 요청 흐름
 
 `DF-SELF-01~03`의 현재 연결은 다음과 같다.

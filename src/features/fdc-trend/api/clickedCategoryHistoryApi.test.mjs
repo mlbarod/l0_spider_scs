@@ -7,6 +7,7 @@ test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에
   const originalFetch = globalThis.fetch
   const originalConsoleInfo = console.info
   const messages = []
+  let requestBody
   const debugRecord = {
     line_id: "P1L",
     sdwt: "SDWT-1",
@@ -15,14 +16,18 @@ test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에
     update_date: "2026-08-27 14:30:00",
     knox_id: "127.0.0.1",
   }
-  globalThis.fetch = async () => ({
-    ok: false,
-    json: async () => ({
+  globalThis.fetch = async (_url, options) => {
+    requestBody = JSON.parse(options.body)
+    return {
       ok: false,
-      error: "클릭이력 요청을 처리하지 못했습니다.",
-      debugRecord,
-    }),
-  })
+      json: async () => ({
+        ok: false,
+        error: "클릭이력 요청을 처리하지 못했습니다.",
+        failureStage: "db-write",
+        debugRecord,
+      }),
+    }
+  }
   console.info = (message) => messages.push(message)
   context.after(() => {
     globalThis.fetch = originalFetch
@@ -36,6 +41,7 @@ test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에
       lineId: "P1L",
       filePaths: ["/appdata/abnormal_trend/pic/erd/chart.png"],
       grades: ["ALL"],
+      selectedSdwt: "SDWT-1",
       selectedSensor: "ALL",
       clickedAt: "2026-08-27T14:30:00+09:00",
     })
@@ -45,6 +51,8 @@ test("DB 작업이 실패해도 서버가 계산한 최종 6컬럼을 Console에
 
   assert.match(receivedError?.message ?? "", /클릭이력 요청을 처리하지 못했습니다/)
   assert.deepEqual(receivedError?.debugRecord, debugRecord)
+  assert.equal(receivedError?.failureStage, "db-write")
+  assert.equal(requestBody.selectedSdwt, "SDWT-1")
 
   const finalMessage = messages.find((message) => message.startsWith("[history-db-final] "))
   assert.ok(finalMessage)

@@ -4,6 +4,7 @@ import test from "node:test"
 
 import {
   buildClickedCategoryHistoryRecord,
+  buildClickedCategoryHistoryDbRecord,
   parseCommonalityPath,
 } from "./clickedCategoryHistory.mjs"
 import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
@@ -47,6 +48,36 @@ test("자설비 sensor ALL 클릭이력은 실제 sensor 목록 대신 ALL을 �
   })
 
   assert.equal(record.sensor, "ALL")
+})
+
+test("자설비 클릭이력은 최신 index 선택값으로 6컬럼을 만들고 legacy 경로 계층에 의존하지 않는다", () => {
+  const record = buildClickedCategoryHistoryRecord({
+    app: "self",
+    lineId: "P1L",
+    filePaths: ["/appdata/abnormal_trend/pic/erd/current/chart-result.png"],
+    grades: ["A", "B"],
+    selectedSdwt: "SDWT-1",
+    selectedSensor: "TEMP",
+    clickedAt: "2026-08-27T13:00:00+09:00",
+    knoxId: "10.0.0.1",
+  })
+
+  assert.deepEqual(record, {
+    lineId: "P1L",
+    sdwt: "SDWT-1",
+    grade: "['A', 'B']",
+    sensor: "TEMP",
+    updateDate: "2026-08-27T13:00:00+09:00",
+    knoxId: "10.0.0.1",
+  })
+  assert.deepEqual(buildClickedCategoryHistoryDbRecord(record), {
+    line_id: "P1L",
+    sdwt: "SDWT-1",
+    grade: "['A', 'B']",
+    sensor: "TEMP",
+    update_date: "2026-08-27 13:00:00",
+    knox_id: "10.0.0.1",
+  })
 })
 
 test("자설비에서 ALL로 선택한 grade와 sensor는 목록이 아닌 ALL 문자열로 저장한다", () => {

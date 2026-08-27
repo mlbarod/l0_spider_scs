@@ -72,6 +72,9 @@ def main():
             db=db_info["DB_NAME"],
             charset="utf8",
             port=db_info["DB_PORT"],
+            connect_timeout=10,
+            read_timeout=15,
+            write_timeout=15,
         ) as connection:
             with connection.cursor() as cursor:
                 columns = ("line_id", "sdwt", "grade", "sensor", "update_date", "knox_id")

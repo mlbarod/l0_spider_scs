@@ -10,6 +10,7 @@ import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugL
 
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
 const COMMON_COMMONALITY_FILE_ROOT = commonCommonalityRootPath
+const SELF_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
 const helperPath = fileURLToPath(new URL("../scripts/clicked_category_history.py", import.meta.url))
 const SUPPORTED_APPS = new Set(["self", "commonality", "common"])
 const ALL_VALUES = "ALL"
@@ -90,11 +91,41 @@ function parseDrawingPath(app, filePath) {
   return app === "common" ? parseCommonPath(filePath) : parseCommonalityPath(filePath)
 }
 
+function assertAllowedSelfDrawingPath(filePath) {
+  const normalizedPath = normalizeText(filePath).replaceAll("/pic_server2/", "/pic/")
+  const resolvedPath = resolve(normalizedPath)
+  if (!resolvedPath.startsWith(`${SELF_FILE_ROOT}${sep}`)) {
+    throw new Error("허용되지 않은 ERD 차트 경로입니다.")
+  }
+}
+
+function normalizeDbUpdateDate(value, now = new Date()) {
+  const date = normalizeText(value) ? new Date(value) : now
+  if (Number.isNaN(date.getTime())) throw new Error("클릭 시각이 올바르지 않습니다.")
+  const pad = (number) => String(number).padStart(2, "0")
+  return [
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`,
+  ].join(" ")
+}
+
+export function buildClickedCategoryHistoryDbRecord(record, now = new Date()) {
+  return {
+    line_id: normalizeText(record.lineId),
+    sdwt: normalizeText(record.sdwt),
+    grade: normalizeText(record.grade),
+    sensor: normalizeText(record.sensor),
+    update_date: normalizeDbUpdateDate(record.updateDate, now),
+    knox_id: normalizeText(record.knoxId),
+  }
+}
+
 export function buildClickedCategoryHistoryRecord({
   app,
   lineId,
   filePaths,
   grades = [],
+  selectedSdwt = "",
   selectedSensor = "",
   clickedAt = "",
   knoxId,
@@ -102,22 +133,42 @@ export function buildClickedCategoryHistoryRecord({
   const normalizedApp = normalizeText(app)
   const normalizedLineId = normalizeText(lineId)
   const paths = uniqueValues(Array.isArray(filePaths) ? filePaths : [])
-  const isAllSensorSelection = normalizeText(selectedSensor) === ALL_VALUES
+  const normalizedSelectedSdwt = normalizeText(selectedSdwt)
+  const normalizedSelectedSensor = normalizeText(selectedSensor)
+  const isAllSensorSelection = normalizedSelectedSensor === ALL_VALUES
   if (!SUPPORTED_APPS.has(normalizedApp)) throw new Error("클릭이력 App 구분값이 올바르지 않습니다.")
   if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
   if (!paths.length) throw new Error("Chart Drawing 경로가 필요합니다.")
 
-  const pathValues = paths.map((filePath) => parseDrawingPath(normalizedApp, filePath))
+  const useSelfSelection = normalizedApp === "self"
+    && normalizedSelectedSdwt
+    && Array.isArray(grades)
+    && grades.length
+    && normalizedSelectedSensor
+  const pathValues = useSelfSelection
+    ? paths.map((filePath) => {
+      assertAllowedSelfDrawingPath(filePath)
+      return {
+        sdwt: normalizedSelectedSdwt,
+        grade: "",
+        sensor: normalizedSelectedSensor,
+      }
+    })
+    : paths.map((filePath) => parseDrawingPath(normalizedApp, filePath))
   const suffix = normalizedApp === "commonality" ? "(g)" : normalizedApp === "common" ? "(c)" : ""
   const requestedGrades = normalizedApp === "self" && Array.isArray(grades) && grades.length
     ? grades
     : pathValues.map((values) => values.grade)
   const sensor = isAllSensorSelection
     ? ALL_VALUES
-    : formatCategory(pathValues.map((values) => values.sensor))
+    : formatCategory(useSelfSelection
+      ? [normalizedSelectedSensor]
+      : pathValues.map((values) => values.sensor))
   return {
     lineId: `${normalizedLineId}${suffix}`,
-    sdwt: formatCategory(pathValues.map((values) => values.sdwt)),
+    sdwt: formatCategory(useSelfSelection
+      ? [normalizedSelectedSdwt]
+      : pathValues.map((values) => values.sdwt)),
     grade: formatCategory(requestedGrades, normalizedApp === "self"),
     sensor,
     updateDate: normalizeText(clickedAt),
@@ -141,36 +192,50 @@ async function readJsonBody(req) {
 
 function runHelper(payload) {
   return new Promise((resolvePromise, reject) => {
+    const debugRecord = buildClickedCategoryHistoryDbRecord(payload)
+    const helperPayload = { ...payload, updateDate: debugRecord.update_date }
     const child = spawn("python3", ["-B", helperPath], {
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
     })
     attachHistoryDbWriteLogger(child)
     let stdout = ""
-    const timeout = setTimeout(() => child.kill("SIGTERM"), 10_000)
+    let timedOut = false
+    const rejectWithDebugRecord = (error) => {
+      error.debugRecord = error.debugRecord ?? debugRecord
+      reject(error)
+    }
+    const timeout = setTimeout(() => {
+      timedOut = true
+      child.kill("SIGTERM")
+    }, 30_000)
     child.stdout.on("data", (chunk) => { stdout += chunk })
     child.on("error", (error) => {
       clearTimeout(timeout)
-      reject(error)
+      rejectWithDebugRecord(error)
     })
     child.on("close", () => {
       clearTimeout(timeout)
+      if (timedOut) {
+        rejectWithDebugRecord(new Error("클릭이력 DB 처리 시간이 초과되었습니다."))
+        return
+      }
       let result
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        reject(new Error("클릭이력 응답을 해석하지 못했습니다."))
+        rejectWithDebugRecord(new Error("클릭이력 응답을 해석하지 못했습니다."))
         return
       }
       if (!result.ok) {
         const error = new Error(result.error || "클릭이력을 저장하지 못했습니다.")
-        error.debugRecord = result.debugRecord
-        reject(error)
+        error.debugRecord = result.debugRecord ?? debugRecord
+        rejectWithDebugRecord(error)
         return
       }
-      resolvePromise(result)
+      resolvePromise({ ...result, debugRecord: result.debugRecord ?? debugRecord })
     })
-    child.stdin.end(JSON.stringify(payload))
+    child.stdin.end(JSON.stringify(helperPayload))
   })
 }
 
@@ -194,7 +259,9 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
     })
     const result = await runHelper(record)
     if (Number(result.affectedRows) < 1) {
-      throw new Error("클릭이력이 DB에 반영되지 않았습니다.")
+      const error = new Error("클릭이력이 DB에 반영되지 않았습니다.")
+      error.debugRecord = result.debugRecord
+      throw error
     }
     sendJson(res, 200, result)
   } catch (error) {
@@ -203,8 +270,12 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
       message: "클릭이력 요청을 처리하지 못했습니다.",
       scope: "clicked-category-history",
     })
-    sendJson(res, 500, error?.debugRecord
-      ? { ...errorPayload, debugRecord: error.debugRecord }
-      : errorPayload)
+    const failureStage = error?.debugRecord ? "db-write" : "record-build"
+    console.error(`[clicked-history-failure] requestId=${errorPayload.requestId} stage=${failureStage} reason=${JSON.stringify(error?.message ?? "unknown")}`)
+    sendJson(res, 500, {
+      ...errorPayload,
+      failureStage,
+      ...(error?.debugRecord ? { debugRecord: error.debugRecord } : {}),
+    })
   }
 }

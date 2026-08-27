@@ -1998,6 +1998,7 @@ export function FdcTrendPage() {
         lineId: activeLine,
         filePaths,
         grades: priorities,
+        selectedSdwt: activeTeamLabel,
         selectedSensor,
         clickedAt,
       })

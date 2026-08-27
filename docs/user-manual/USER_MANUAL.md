@@ -146,7 +146,8 @@ ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. 버튼�
 장애 확인 시 브라우저 개발자 도구 Console에서 `[history-db-request]`를 검색하면 클릭 시 서버로 보낸
 endpoint, `filePath`/`filePaths`와 전체 body를 확인할 수 있습니다. 서버 로그의
 `[history-db-attempt]`는 정규화된 helper 입력, `[history-db-write]`는 실제 SQL에 전달되는 컬럼값입니다.
-클릭이력의 최종 `line_id`, `sdwt`, `grade`, `sensor`, `update_date`, `knox_id`는 DB 작업의
+클릭이력의 최종 `line_id`, `sdwt`, `grade`, `sensor`, `update_date`, `knox_id`는 화면에서 확정한
+SDWT·등급·sensor 선택값으로 생성되며, DB 작업의
 성공·실패와 관계없이 차트 영역 위의 **클릭이력 DB 전송값 (디버깅)** 표와 브라우저 Console의
 `[history-db-final]`에서 확인할 수 있습니다. 표의 상태 배지는 `생성 중`, `INSERT 성공`,
 `INSERT 실패`를 구분하며 실패한 경우에도 생성된 최종 6컬럼을 그대로 유지합니다.
