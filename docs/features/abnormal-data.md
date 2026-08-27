@@ -90,8 +90,9 @@ directory이면 하위 `data.parquet`, 직접 파일이면 해당 `data.parquet`
 
 자설비 클릭이력·SKIP·HIT는 최종 team row의 확정 필드로 DB record를 구성하고 같은
 `file_path`를 사용한다. SKIP의 `ver`는 row의 `ver` 컬럼을 그대로 사용하며 비어 있으면 저장을
-거부한다. 단일설비 데이터는 요청과 같은 `ver`의 row를 우선 사용한다. 파일 내부 `ver`가
-단일 값이면 version 경로로 이미 한정된 파일로 처리하고, 여러 `ver`가 섞인 불일치는 차단한다.
+거부한다. 단일설비 데이터의 `ver`는 선택 컬럼이다. 컬럼이 있으면 요청과 같은 `ver`의 row를
+우선 사용하고, 단일 값이면 version 경로로 이미 한정된 파일로 처리한다. 컬럼이 없으면 선택한
+`file_path`에 한정된 데이터로 drawing하며, 여러 `ver`가 섞인 불일치는 차단한다.
 
 ### 3.3 동일성 이상감지
 
@@ -188,7 +189,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | `ABN-P01` | `/appdata/abnormal_trend/pic/path/{latest_date}` | Dashboard detail Parquet | root의 시각 파일명 나열 | `Confirmed` |
 | `ABN-P02` | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | Dashboard stats | 최신 detail 시각으로 조립 | `Confirmed` |
 | `ABN-P03` | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | Self team 경로 table | Line·SDWT mapping 검증 후 직접 선택; row의 `ver` 사용 | 코드 `Confirmed`; 운영 file `Unknown` |
-| `ABN-P04` | team row `file_path`에서 해석한 `data.parquet` | ERD point 원천 | `pic_server2` 정규화 후 png sibling·directory 하위·직접 file 구분, 같은 `ver` 우선·단일값 file-scope fallback | 코드 `Confirmed`; 운영 file `Unknown` |
+| `ABN-P04` | team row `file_path`에서 해석한 `data.parquet` | ERD point 원천 | `pic_server2` 정규화 후 png sibling·directory 하위·직접 file 구분, 선택적 `ver` 없음은 path-scoped·있으면 exact 우선/단일값 file-scope fallback | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P05` | team row `file_path` | ERD data/image 위치 identity | 선택한 scoped row 원문 | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ABN-P06` | 선택한 `data.parquet` sibling `{eqp}.parquet` | 변경점 이력 | 선택 EQP 이름으로 조립 | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P07` | `/appdata/abnormal_trend/pic/backup/...` | Self 데이터에서 거부되는 경로 | resolver에서 거부 | `Confirmed` |
@@ -217,7 +218,7 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 | `ch_step` | row `step`·directory suffix | query `chStep` | Self는 `${sensor}*${chStep}`, 공통부는 `${sensor}_${chStep}` column | filter·chart title | `Confirmed` |
 | `eqp` | index row·image basename·DB 등록 | query `eqp` 또는 `eqpCh` | EQP row filter, image·history filename | EQP group·chart | `Confirmed` |
 | `eqp_model` | 공통부 동일성 directory | query `eqpModel` | directory segment와 종속 filter | EQP_MODEL filter·group title | `Confirmed` |
-| `ver` | team ERD 경로 table과 단일설비 data row | chart query·SKIP body | scoped team row 검증, data exact/file-scope/mismatch 판정, PASS에 직접 저장 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
+| `ver` | team ERD 경로 table과 단일설비 data의 선택 컬럼 | chart query·SKIP body | scoped team row 검증, data 컬럼 없음 path-scope 또는 exact/file-scope/mismatch 판정, PASS에 직접 저장 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
 
 결과 이력의 `file_path`는 네 App 모두 slash를 `#`로 바꿔 보존한다. App별 image root는 다르지만 DB column 구조와 접속 IP를 `knox_id` 컬럼에 저장하는 방식은 동일하다.
 
@@ -236,7 +237,7 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 | Dashboard stats | `exec_date`, `recipe_id`, `priority`, `ng`, `total` | 숫자 합계·Grade 분류 | projection `Confirmed`, 타입·nullable `Unknown` |
 | Dashboard detail | `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` | 5-key 중복 제거·Line mapping | projection `Confirmed`, 전체 Schema `Unknown` |
 | Self index | `sdwt`, `eqp`, `recipe_id`, `priority`, `sensor`, `step`, `file_path` | 문자열 정규화·mapping scope·종속 filter | projection `Confirmed`, 타입·nullable `Unknown` |
-| ERD point | 필수 `act_time`, schema에 존재하는 `eqp_cb` 또는 `eqp`, 동적 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환; identity는 `eqp_cb` 필수, hover 컬럼 선택 | EQP 필터·날짜·숫자 변환; identity는 `eqp_cb` grouping | schema 선택 코드 `Confirmed`, 운영 schema `Unknown` |
+| ERD point | 필수 `act_time`, schema에 존재하는 `eqp_cb` 또는 `eqp`, 동적 `${sensor}_${chStep}` 우선·`${sensor}*${chStep}` 호환; `ver`·hover 컬럼 선택, identity는 `eqp_cb` 필수 | 선택적 `ver` filter·EQP 필터·날짜·숫자 변환; identity는 `eqp_cb` grouping | schema 선택 코드 `Confirmed`, 운영 schema `Unknown` |
 | ERD history | `date`, `ctttm_url`, `work_type`, `desc` | 날짜 정렬·부분 실패 분리 | projection `Confirmed`, 전체 Schema `Unknown` |
 | Common index | `file_path`, `sdwt`, `prc_group`, `date`, `priority`, `sensor`, `step`, `eqp`, `line_rev` | path→data/image, 종속 filter | projection `Confirmed`, 전체 Schema `Unknown` |
 | Common point | `eqp_id`, `disp_name`, `lotid`, `wafer_id`, `act_time`, `eqp_cb`, 동적 axis | EQP matching·invalid row 제외 | projection `Confirmed`, 전체 Schema `Unknown` |

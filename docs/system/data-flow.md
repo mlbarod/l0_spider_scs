@@ -183,7 +183,7 @@ flowchart LR
 | `ppid` | file path·Parquet row | chart grouping·표시 | ERD/commonality path와 grouping | 원천 값에 의존 | `Confirmed` | path config·pages |
 | `recipe_id` | dashboard detail row | 직접 query로 전달하지 않음 | 5-key 고유 이상건 집계 | 빈 문자열도 정규화 key에 참여 | `Confirmed` | `LINE_ANOMALY_ID_COLUMNS` |
 | `eqp` | row·등록 DB·사용자 선택 | `eqp` query 또는 `eqpCh` | file row filter·chart group·MY EQP match | endpoint별 조건부 필수 | `Confirmed` | Self/Common modules |
-| `ver` | team ERD 경로 table과 단일설비 `data.parquet` 컬럼 | chart API query·SKIP body | team row 일치 검증, data exact 우선·단일값 file-scope fallback·다중값 mismatch 차단, SKIP에 직접 저장 | 빈 team row ver는 새 SKIP 거부 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
+| `ver` | team ERD 경로 table과 단일설비 `data.parquet` 선택 컬럼 | chart API query·SKIP body | team row 일치 검증, data 컬럼 없음 path-scope 또는 exact 우선·단일값 file-scope fallback·다중값 mismatch 차단, SKIP에 직접 저장 | 빈 team row ver는 새 SKIP 거부 | 코드 `Confirmed`; 운영 match `Unknown` | self/history code |
 
 ## 9. 대시보드 데이터 흐름
 
@@ -234,9 +234,10 @@ chart row의 `file_path`가 `GET /api/erd-scatter-data`의 `path`가 된다.
 `file_path`가 `{eqp}.png`이면 같은 directory의 `data.parquet`, directory이면 하위
 `data.parquet`, 이미 `data.parquet`이면 해당 파일을 선택한다.
 요청 Line·path SDWT·EQP·latest date·sensor·ch_step·ver가 선택한 scoped team row와
-일치하는지 재검증한다. 일치할 때만 선택한 `data.parquet` schema에서 `ver`를 projection한다.
-요청과 정확히 같은 `ver`를 우선 사용하고, 파일 내부 `ver`가 단일 값이면 이미 version 경로로
-한정된 파일로 처리하며, 여러 `ver`가 섞인 mismatch는 point를 반환하지 않는다. 선택된 row에 대해
+일치하는지 재검증한다. 선택한 `data.parquet` schema의 `ver`는 선택적으로 projection한다.
+컬럼이 없으면 선택한 `file_path`에 version 범위가 한정된 것으로 처리한다. 컬럼이 있으면 요청과
+정확히 같은 `ver`를 우선 사용하고, 파일 내부 `ver`가 단일 값이면 version 경로로 이미 한정된
+파일로 처리하며, 여러 `ver`가 섞인 mismatch는 point를 반환하지 않는다. 선택된 row에 대해
 `{sensor}_{ch_step}`을 우선하고 `{sensor}*{ch_step}`을 호환 axis로 선택해 읽는다.
 scatter mode는 `eqp`가 선택 EQP인 point와 같은 directory의 `{eqp}.parquet` 이력을 반환하며,
 identity mode는 같은 `eqp` 범위에서 `eqp_cb`별 series를 만든다. history 읽기 실패는 `historyError`로 분리한다.

@@ -27,9 +27,10 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 일반 자설비 필터는 선택한 Line·SDWT의
 `/pic/path_xian/{line}/{sdwt}/df_path.parquet`를 직접 읽는다. 이 테이블의 `ver` 컬럼을
 차트 요청과 SKIP에 그대로 사용하며 경로 문자열에서 version을 추정하지 않는다. `ver`가 비어 있으면
-새 SKIP 저장을 거부해 빈 값을 추가하지 않는다. 단일설비 `data.parquet`은 같은 `ver` row를
-우선 사용한다. 정확히 일치하지 않더라도 파일 내 `ver`가 단일 값이면 이미 version 경로로
-한정된 파일로 처리해 drawing을 유지하고, 여러 `ver`가 섞인 불일치는 차단한다.
+새 SKIP 저장을 거부해 빈 값을 추가하지 않는다. 단일설비 `data.parquet`의 `ver`는 선택 컬럼이다.
+컬럼이 있으면 같은 `ver` row를 우선 사용하고, 정확히 일치하지 않더라도 파일 내 `ver`가 단일
+값이면 이미 version 경로로 한정된 파일로 처리한다. `ver` 컬럼이 없으면 선택한 `file_path`로
+version 범위가 한정된 것으로 보고 drawing을 유지하며, 여러 `ver`가 섞인 불일치는 차단한다.
 클릭이력·SKIP·HIT 요청은 차트와 같은 분임조별 row의 `file_path`를 사용한다.
 PASS 이력 조회 실패도 file filter 응답과 격리하며, 화면의 별도 PASS 조회가 오류를
 표시한다. 별도 `knox_id` 조회는 하지 않으며 검증된 접속 IP를 기존 DB의
@@ -261,7 +262,7 @@ row의 `file_path`를 후속 `data.parquet` 위치로 해석한다. `.png`, dire
 | history `file_path` | team ERD row | history API body | 차트와 동일한 `row.file_path`를 PASS/HIT/click 입력으로 사용 | DB action | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `latest_date` | team ERD row의 `file_path` 날짜 segment | chart API `latestDate` | server 형식·scoped row 일치 검증 | chart 기준 시각 | 코드 `Confirmed` |
 | `recipe_id` | team ERD row | row payload | RECIPE_ID option·chart context·기존 grouping 호환 | card metadata | 코드 `Confirmed`; 운영 값 `Unknown` |
-| `ver` | team ERD row와 단일설비 data row | chart API `ver`·SKIP body | scoped row 검증; data는 정확 일치 우선·단일값 file-scope fallback·다중값 mismatch 차단; PASS identity 비교 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
+| `ver` | team ERD row와 단일설비 data의 선택 컬럼 | chart API `ver`·SKIP body | scoped row 검증; data 컬럼이 없으면 path-scoped, 있으면 정확 일치 우선·단일값 file-scope fallback·다중값 mismatch 차단; PASS identity 비교 | chart·SKIP | 코드 `Confirmed`; 운영 match `Unknown` |
 
 `step_seq`와 `ppid`를 URL 또는 equipment API filter로 전달하는 흐름은 확인되지 않았다.
 `ppid`는 `file_path`/row context와 chart 모아보기 식별에 간접 사용된다.

@@ -141,9 +141,10 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 자설비 필터는 선택한 Line·SDWT의 분임조별 ERD 경로 테이블
 `/pic/path_xian/{line}/{sdwt}/df_path.parquet`를 직접 사용합니다. SKIP은 선택된 row의
 `ver` 컬럼을 그대로 저장하며 경로에서 version을 추정하지 않습니다. 이 `ver`가 비어 있으면
-빈 값을 저장하지 않고 SKIP 요청을 실패로 안내합니다. 단일설비 `data.parquet`은 같은 `ver`를
-우선 사용하며, 파일 내부 `ver`가 단일 값이면 version 경로로 이미 한정된 데이터로 처리하여
-표현 차이만으로 차트를 비우지 않습니다. SKIP과 이력저장 버튼은 최종 chart row의
+빈 값을 저장하지 않고 SKIP 요청을 실패로 안내합니다. 단일설비 `data.parquet`의 `ver`는 선택
+컬럼입니다. 컬럼이 없으면 선택 경로에 한정된 데이터로 차트를 그리고, 있으면 같은 `ver`를 우선
+사용합니다. 파일 내부 `ver`가 단일 값이면 version 경로로 이미 한정된 데이터로 처리합니다.
+SKIP과 이력저장 버튼은 최종 chart row의
 날짜·SDWT·RECIPE_ID·등급·sensor·ch_step·EQP 등 확정값을 사용합니다. 마지막 `ch_step`
 클릭이력도 최종 조회 응답의 filter 확정값을 사용합니다. 과거에 빈
 `ver`로 저장된 행은 SKIP LIST에서 chart 없이 표시되며 **SKIP해제**할 수 있습니다. SKIP LIST에서도

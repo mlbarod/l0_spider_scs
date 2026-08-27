@@ -301,15 +301,35 @@ test("ERD identity는 eqp 없이 eqp_cb group 전체를 읽을 수 있다", () =
   })
 })
 
-test("ERD 단일설비 data.parquet는 ver 컬럼이 필수다", () => {
-  assert.throws(() => resolveErdScatterProjection([
+test("ERD 단일설비 data.parquet에 ver 컬럼이 없어도 차트 projection을 만든다", () => {
+  assert.deepEqual(resolveErdScatterProjection([
     "act_time",
     "eqp",
     "TEMP_10@MAIN",
   ], {
     sensor: "TEMP",
     chStep: "10@MAIN",
-  }), /ver 컬럼/)
+  }), {
+    axisColumn: "TEMP_10@MAIN",
+    equipmentColumn: "eqp",
+    columns: ["act_time", "eqp", "TEMP_10@MAIN"],
+  })
+})
+
+test("ERD identity data.parquet에 ver 컬럼이 없어도 eqp_cb projection을 만든다", () => {
+  assert.deepEqual(resolveErdScatterProjection([
+    "act_time",
+    "eqp_cb",
+    "TEMP_10@MAIN",
+  ], {
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+    identity: true,
+  }), {
+    axisColumn: "TEMP_10@MAIN",
+    equipmentColumn: "",
+    columns: ["act_time", "eqp_cb", "TEMP_10@MAIN"],
+  })
 })
 
 test("자설비 경로의 pic_server2 segment만 pic로 정규화한다", () => {

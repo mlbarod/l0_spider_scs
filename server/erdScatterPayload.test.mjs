@@ -78,6 +78,26 @@ test("version 경로로 한정된 파일의 단일 ver 표현이 달라도 drawi
   ])
 })
 
+test("data.parquet에 ver 컬럼이 없으면 선택 경로에 한정된 row로 drawing한다", () => {
+  const payload = buildErdScatterPayload([
+    { eqp: "EQP-1", act_time: "2026-07-15 13:00:00", TEMP_STEP: 1 },
+    { eqp: "EQP-1", act_time: "2026-07-15 14:00:00", TEMP_STEP: 2 },
+  ], {
+    eqp: "EQP-1",
+    ver: "V2",
+    axisColumn: "TEMP_STEP",
+    filePath: "/tmp/version-scoped/data.parquet",
+    latestDate: "2026-07-15",
+  })
+
+  assert.equal(payload.versionMatch, "file-scoped")
+  assert.deepEqual(payload.dataVersions, [])
+  assert.deepEqual(payload.points.map(({ value, ver }) => ({ value, ver })), [
+    { value: 1, ver: "" },
+    { value: 2, ver: "" },
+  ])
+})
+
 test("여러 ver가 섞인 파일에서 요청 ver가 없으면 잘못된 point를 drawing하지 않는다", () => {
   const selection = selectErdRowsByVersion([
     { ver: "V1" },

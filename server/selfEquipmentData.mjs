@@ -522,9 +522,6 @@ export function resolveErdScatterProjection(schemaColumns, {
   if (!availableColumns.has("act_time")) {
     throw new Error("ERD scatter act_time 컬럼이 없습니다.")
   }
-  if (!availableColumns.has("ver")) {
-    throw new Error("ERD scatter ver 컬럼이 없습니다.")
-  }
 
   const axisColumn = [`${sensor}_${chStep}`, `${sensor}*${chStep}`]
     .find((column) => availableColumns.has(column))
@@ -546,7 +543,7 @@ export function resolveErdScatterProjection(schemaColumns, {
 
   const columns = Array.from(new Set([
     "act_time",
-    "ver",
+    ...(availableColumns.has("ver") ? ["ver"] : []),
     equipmentColumn,
     ...(identity ? ["eqp_cb"] : []),
     ...ERD_SCATTER_OPTIONAL_COLUMNS.filter((column) => availableColumns.has(column)),

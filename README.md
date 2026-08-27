@@ -293,8 +293,8 @@ DB 응답의 `affectedRows`가
 | `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
 | 최신 자설비 index | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `ver` 포함; 현재 일반 자설비 필터에서는 사용하지 않음 |
 | 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev` |
-| 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | `ver`를 읽고 정확히 일치하면 해당 row 사용; 파일 내 `ver`가 단일 값이면 version 경로로 이미 한정된 파일로 처리, `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 hover 컬럼 |
-| 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | 위와 같은 `ver` 선택 규칙, `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 hover 컬럼 |
+| 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | 선택적 `ver`가 있으면 정확히 일치하는 row 우선·단일값 file-scope fallback, 없으면 선택 경로에 한정된 파일로 처리; `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 hover 컬럼 |
+| 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | 위와 같은 선택적 `ver` 규칙, `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 hover 컬럼 |
 | EQP 변경점 이력 | `{eqp}.parquet` | 선택한 `data.parquet`와 같은 디렉터리의 `{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
 
 일반 자설비 구현은 선택한 Line·SDWT로 분임조별 `path_xian/{line}/{sdwt}/df_path.parquet`를
@@ -307,8 +307,9 @@ DB 응답의 `affectedRows`가
 호환하며, 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series는 `eqp_cb`를 사용한다.
 hover 보조 컬럼은 존재하는 항목만 projection한다. 두 gate mode 모두 chart 요청의
 Line·SDWT·EQP·sensor·step·`ver`·경로가 선택한 분임조별 row와 모두 일치할 때만 후속
-Parquet를 읽는다. 단일설비 `data.parquet`은 같은 `ver` row를 우선 사용하되, 파일 내부 `ver`가
-단일 값이면 선택 경로로 이미 version이 한정된 것으로 처리해 표현 차이 때문에 drawing을 비우지 않는다.
+Parquet를 읽는다. 단일설비 `data.parquet`에 선택적 `ver`가 있으면 같은 row를 우선 사용하고,
+파일 내부 `ver`가 단일 값이면 선택 경로로 이미 version이 한정된 것으로 처리한다. `ver` 컬럼이
+없어도 선택한 `file_path`가 version 범위를 한정한 것으로 보고 drawing을 유지한다.
 여러 `ver`가 섞였는데 요청값이 없으면 point를 반환하지 않는다. DB 이력에는
 분임조별 ERD 경로 row의 `ver`를 그대로 전달하며, 비어 있으면 SKIP 저장을 거부한다.
 클릭이력·SKIP·HIT에는 분임조별 row의 `file_path`를 사용한다. chart `file_path`가 있으면 action을
