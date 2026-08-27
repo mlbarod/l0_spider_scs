@@ -104,10 +104,11 @@ export function blockDisabledDataRequest(
     && isExactPath
     && SELF_EQUIPMENT_READ_METHODS.get(normalizedPathname)?.has(req.method)
   )
+  const dbConnectionsEnabled = areDbConnectionsEnabled(environment, canReadDbInfo)
+  const isKnownDbRequest = isExactPath && DB_METHODS.get(normalizedPathname)?.has(req.method)
   const isAllowedDbRequest = (
-    areDbConnectionsEnabled(environment, canReadDbInfo)
-    && isExactPath
-    && DB_METHODS.get(normalizedPathname)?.has(req.method)
+    dbConnectionsEnabled
+    && isKnownDbRequest
   )
   if (
     !isApiPath(url.pathname)
@@ -116,6 +117,16 @@ export function blockDisabledDataRequest(
     || isAllowedSelfEquipmentRead
     || isAllowedDbRequest
   ) return false
+
+  if (isKnownDbRequest) {
+    logger(`[history-db-blocked] ${JSON.stringify({
+      endpoint: normalizedPathname,
+      method: req.method,
+      dbGateExplicitlyDisabled: environment[DB_CONNECTIONS_ENABLED_ENV] !== undefined
+        && environment[DB_CONNECTIONS_ENABLED_ENV] !== DATA_CONNECTIONS_ENABLED_VALUE,
+      dbInfoReadable: canReadDbInfo(resolveDbInfoPath(environment)),
+    })}`)
+  }
 
   const payload = createSafeApiError({
     code: DISABLED_ERROR_CODE,

@@ -1,10 +1,13 @@
 import { getApiErrorMessage } from "./errorMessage.js"
+import { logHistoryRequest } from "./historyRequestDebug.js"
 
 export async function createHitHistory({ lineId, filePath, execDate }) {
+  const body = { lineId, filePath, execDate }
+  logHistoryRequest({ endpoint: "/api/hit-history", body })
   const response = await fetch("/api/hit-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ lineId, filePath, execDate }),
+    body: JSON.stringify(body),
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {

@@ -7,6 +7,7 @@ import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
 import { commonalityRootPath } from "./latestCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
+import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugLog.mjs"
 
 const helperPath = fileURLToPath(new URL("../scripts/hit_history.py", import.meta.url))
 
@@ -151,8 +152,9 @@ function runHitHistoryHelper(payload) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn("python3", ["-B", helperPath], {
       env: process.env,
-      stdio: ["pipe", "pipe", "ignore"],
+      stdio: ["pipe", "pipe", "pipe"],
     })
+    attachHistoryDbWriteLogger(child)
     let stdout = ""
     let timedOut = false
     const timeout = setTimeout(() => {
@@ -231,6 +233,11 @@ export async function handleHitHistoryRequest(req, res) {
     const record = buildHitHistoryRecord({
       ...body,
       knoxId: currentUser.knoxId,
+    })
+    logHistoryDbAttempt({
+      table: "hit_history",
+      operation: "INSERT",
+      records: [record],
     })
     const result = await runHitHistoryHelper(record)
     sendJson(res, 200, result)

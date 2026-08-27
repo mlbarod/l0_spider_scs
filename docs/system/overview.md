@@ -20,8 +20,9 @@
 L0 Spider는 L0 공정의 이상감지 결과를 Line, SDWT, 자설비 RECIPE_ID 또는 기능별 STEP, 설비와 sensor 조건으로 조회하는 웹서비스다.
 사용자는 메인 대시보드에서 Line별 현황을 확인하고, 자설비·동일성·공통부 화면에서 Parquet 기반 차트와 분석 이미지를 상세 조회한다.
 Mailing 조건 등록과 비-Self App의 SKIP·HIT·클릭 이력은 DB에 관리한다. 현재
-자설비 화면의 SKIP·HIT·클릭 이력은 file과 credential DB capability가 모두 준비되면
-활성화된다. 코드·synthetic 계약은 `Confirmed`, 실제 운영 DB write는 `Unknown`이다.
+자설비 화면의 SKIP·HIT·클릭 이력 action은 chart file이 준비되면 요청하고 credential DB gate가
+서버에서 최종 허용 여부를 결정한다. DB capability가 준비되면 처리하고, 준비되지 않으면 `503`으로
+거부한다. 코드·synthetic 계약은 `Confirmed`, 실제 운영 DB write는 `Unknown`이다.
 SCS에는 My EQP 메뉴·등록·조회·메일 Report 기능을 제공하지 않는다.
 React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와 이미지 제공을 담당하며, DB 작업은 Python helper를 통해 수행한다.
 메일용 요약 집계와 HTML 템플릿은 확인되지만 실제 메일 renderer, scheduler와 sender는 현재 저장소에서 확인되지 않았다.

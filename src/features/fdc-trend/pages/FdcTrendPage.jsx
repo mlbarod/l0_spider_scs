@@ -64,6 +64,7 @@ import {
   fetchSelfEquipmentData,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
+  isSelfEquipmentHistoryActionAvailable,
 } from "../api/selfEquipmentApi"
 import { SENSOR_GRADES } from "../utils/fdcTrendMockData"
 import { getLowestChStepRowsByPpid } from "../utils/chStepGrouping.mjs"
@@ -1110,7 +1111,6 @@ const ErdScatterCard = memo(function ErdScatterCard({
   passRecord,
   allSkipLoadTargets,
   dataQueryKeyPrefix,
-  dbActionsEnabled,
 }) {
   const eqp = stripPngExtension(row.eqp)
   const queryClient = useQueryClient()
@@ -1122,7 +1122,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const [zoomDomain, setZoomDomain] = useState(null)
   const isSkipped = Boolean(passRecord)
   const historyFilePath = getSelfEquipmentHistoryFilePath(row)
-  const historyActionsEnabled = dbActionsEnabled && Boolean(historyFilePath)
+  const historyActionsEnabled = isSelfEquipmentHistoryActionAvailable(row)
 
   const refreshPassHistory = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ["pass-history", lineId] }),
@@ -1572,9 +1572,9 @@ export function FdcTrendPage() {
       ...Object.entries(lineMapping)
         .filter(([, line]) => line === activeLine)
         .map(([key]) => ({ key, label: sdwtMapping[key] ?? key })),
-      ...(selfEquipmentDbEnabled && activeLine ? [{ key: SKIP_LIST_TEAM, label: SKIP_LIST_LABEL }] : []),
+      ...(activeLine ? [{ key: SKIP_LIST_TEAM, label: SKIP_LIST_LABEL }] : []),
     ],
-    [activeLine, lineMapping, sdwtMapping, selfEquipmentDbEnabled],
+    [activeLine, lineMapping, sdwtMapping],
   )
   const resolvedSelectedTeam = resolveSelfEquipmentTeam(teamOptions, [selectedTeam])
   const activeTeam = resolvedSelectedTeam
@@ -1657,7 +1657,6 @@ export function FdcTrendPage() {
     }),
     enabled: Boolean(
       mappingReady
-      && selfEquipmentDbEnabled
       && !isSkipList
       && activeLine
       && activeTeamLabel
@@ -1726,7 +1725,7 @@ export function FdcTrendPage() {
     if (chartPage !== activeChartPage) setChartPage(activeChartPage)
   }, [activeChartPage, chartPage])
   const allSkipLoadTargetsByEqp = useMemo(() => {
-    if (!selfEquipmentDbEnabled || isSkipList) return new Map()
+    if (isSkipList) return new Map()
     return new Map(chartGroups.map((group) => [group.eqp, async (sensor) => {
       return fetchEqpAllSkipTargets({
         line: activeLine,
@@ -1746,7 +1745,6 @@ export function FdcTrendPage() {
     chartGroups,
     isSkipList,
     priorities,
-    selfEquipmentDbEnabled,
   ])
 
   const filteredLines = filterItems(
@@ -1854,7 +1852,22 @@ export function FdcTrendPage() {
     const nextChStep = selectedChStep === chStep ? "" : chStep
     const clickedAt = new Date().toISOString()
     setSelectedChStep(nextChStep)
-    if (!nextChStep || !selfEquipmentDbEnabled || isSkipList) return
+    if (!nextChStep || isSkipList) {
+      console.info(`[history-db-request-skipped] ${JSON.stringify({
+        action: "clicked-category-history",
+        reason: !nextChStep ? "ch_step deselected" : "SKIP LIST",
+        selected: {
+          lineId: activeLine,
+          sdwt: activeTeamLabel,
+          grades: priorities,
+          recipeId: selectedDesc,
+          eqpCh: selectedEqpCh,
+          sensor: selectedSensor,
+          chStep: nextChStep,
+        },
+      })}`)
+      return
+    }
 
     try {
       const queryKey = [
@@ -1882,7 +1895,23 @@ export function FdcTrendPage() {
         }),
       })
       const filePaths = getSelfEquipmentHistoryFilePaths(payload.rows)
-      if (!filePaths.length) return
+      if (!filePaths.length) {
+        console.info(`[history-db-request-skipped] ${JSON.stringify({
+          action: "clicked-category-history",
+          reason: "file_path not found",
+          selected: {
+            lineId: activeLine,
+            sdwt: activeTeamLabel,
+            grades: priorities,
+            recipeId: selectedDesc,
+            eqpCh: selectedEqpCh,
+            sensor: selectedSensor,
+            chStep: nextChStep,
+          },
+          filePaths,
+        })}`)
+        throw new Error("클릭이력에 사용할 file_path가 없습니다.")
+      }
       await createClickedCategoryHistory({
         app: "self",
         lineId: activeLine,
@@ -2154,7 +2183,9 @@ export function FdcTrendPage() {
       <main className="grid min-w-0 gap-4 p-4">
         {selfEquipmentFileReadEnabled && !selfEquipmentDbEnabled ? (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-800 dark:text-sky-200">
-            현재 자설비 파일 조회와 차트만 연결되어 있습니다. DB credential이 준비되면 SKIP, 클릭이력과 이력저장이 활성화됩니다.
+            현재 서버가 DB capability를 비활성으로 응답했습니다. SKIP, 클릭이력과 이력저장 요청은
+            실행되지만 서버 DB gate에서 거부될 수 있으며, 브라우저 Console의 [history-db-request]에서
+            전송 경로와 내용을 확인할 수 있습니다.
           </div>
         ) : null}
         {dataQuery.isError ? (
@@ -2257,7 +2288,6 @@ export function FdcTrendPage() {
                                 : passHistoryByKey.get(buildChartPassHistoryKey(activeLine, row))}
                               allSkipLoadTargets={allSkipLoadTargetsByEqp.get(group.eqp) ?? null}
                               dataQueryKeyPrefix="self-equipment-data"
-                              dbActionsEnabled={selfEquipmentDbEnabled}
                             />
                           </div>
                           {group.gathered && showThreeDayIdentity ? (

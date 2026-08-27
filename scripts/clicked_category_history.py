@@ -12,6 +12,18 @@ def write_json(payload):
     print(json.dumps(payload, ensure_ascii=False, default=str))
 
 
+def log_db_write(table, operation, columns, rows):
+    payload = {
+        "table": table,
+        "operation": operation,
+        "rows": [dict(zip(columns, row)) for row in rows],
+    }
+    print(
+        f"[history-db-write] {json.dumps(payload, ensure_ascii=False, default=str)}",
+        file=sys.stderr,
+    )
+
+
 def load_db_info():
     with open(DB_INFO_PATH, "rb") as file:
         db_info = pickle.load(file)
@@ -49,20 +61,23 @@ def main():
             port=db_info["DB_PORT"],
         ) as connection:
             with connection.cursor() as cursor:
+                columns = ("line_id", "sdwt", "grade", "sensor", "update_date", "knox_id")
+                values = (
+                    payload["lineId"],
+                    payload["sdwt"],
+                    payload["grade"],
+                    payload["sensor"],
+                    normalize_update_date(payload.get("updateDate")),
+                    payload["knoxId"],
+                )
+                log_db_write("clicked_category_history", "INSERT", columns, [values])
                 affected_rows = cursor.execute(
                     """
                     INSERT INTO `clicked_category_history`
                         (`line_id`, `sdwt`, `grade`, `sensor`, `update_date`, `knox_id`)
                     VALUES (%s, %s, %s, %s, %s, %s)
                     """,
-                    (
-                        payload["lineId"],
-                        payload["sdwt"],
-                        payload["grade"],
-                        payload["sensor"],
-                        normalize_update_date(payload.get("updateDate")),
-                        payload["knoxId"],
-                    ),
+                    values,
                 )
             connection.commit()
         write_json({"ok": True, "affectedRows": affected_rows})

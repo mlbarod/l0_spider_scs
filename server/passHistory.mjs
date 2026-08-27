@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from "node:url"
 
 import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
+import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugLog.mjs"
 
 const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
@@ -382,8 +383,9 @@ function runPassHistoryHelper(action, payload) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn("python3", ["-B", helperPath, action], {
       env: process.env,
-      stdio: ["pipe", "pipe", "ignore"],
+      stdio: ["pipe", "pipe", "pipe"],
     })
+    attachHistoryDbWriteLogger(child)
     let stdout = ""
     let timedOut = false
     const timeout = setTimeout(() => {
@@ -519,11 +521,21 @@ export async function handlePassHistoryRequest(req, res, url) {
           execDate: body.execDate,
           knoxId: currentUser.knoxId,
         }))
+        logHistoryDbAttempt({
+          table: "pass_history",
+          operation: "UPSERT_MANY",
+          records,
+        })
         const result = await runPassHistoryHelper("insert-many", { records })
         sendJson(res, 200, result)
         return
       }
       const record = buildRecord({ ...body, knoxId: currentUser.knoxId })
+      logHistoryDbAttempt({
+        table: "pass_history",
+        operation: req.method === "POST" ? "UPSERT" : "DELETE",
+        records: [record],
+      })
       const result = await runPassHistoryHelper(req.method === "POST" ? "insert" : "delete", record)
       sendJson(res, 200, result)
       return

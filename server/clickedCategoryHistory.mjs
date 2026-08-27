@@ -6,6 +6,7 @@ import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
 import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
+import { attachHistoryDbWriteLogger, logHistoryDbAttempt } from "./historyDebugLog.mjs"
 
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
 const COMMON_COMMONALITY_FILE_ROOT = commonCommonalityRootPath
@@ -142,8 +143,9 @@ function runHelper(payload) {
   return new Promise((resolvePromise, reject) => {
     const child = spawn("python3", ["-B", helperPath], {
       env: process.env,
-      stdio: ["pipe", "pipe", "ignore"],
+      stdio: ["pipe", "pipe", "pipe"],
     })
+    attachHistoryDbWriteLogger(child)
     let stdout = ""
     const timeout = setTimeout(() => child.kill("SIGTERM"), 10_000)
     child.stdout.on("data", (chunk) => { stdout += chunk })
@@ -183,6 +185,11 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
     }
     const [body, currentUser] = await Promise.all([readJsonBody(req), resolveCurrentUser(remoteIp)])
     const record = buildClickedCategoryHistoryRecord({ ...body, knoxId: currentUser.knoxId })
+    logHistoryDbAttempt({
+      table: "clicked_category_history",
+      operation: "INSERT",
+      records: [record],
+    })
     const result = await runHelper(record)
     if (Number(result.affectedRows) < 1) {
       throw new Error("클릭이력이 DB에 반영되지 않았습니다.")

@@ -12,6 +12,18 @@ def write_json(payload):
     print(json.dumps(payload, ensure_ascii=False, default=str))
 
 
+def log_db_write(table, operation, columns, rows):
+    payload = {
+        "table": table,
+        "operation": operation,
+        "rows": [dict(zip(columns, row)) for row in rows],
+    }
+    print(
+        f"[history-db-write] {json.dumps(payload, ensure_ascii=False, default=str)}",
+        file=sys.stderr,
+    )
+
+
 def read_payload():
     text = sys.stdin.read()
     return json.loads(text) if text.strip() else {}
@@ -53,6 +65,7 @@ def normalize_exec_date(value):
 
 
 def insert_history(connection, payload):
+    columns = ("update_date", "line_id", "sdwt", "file_path", "knox_id", "exec_date")
     values = (
         payload["updateDate"],
         payload["lineId"],
@@ -61,6 +74,7 @@ def insert_history(connection, payload):
         payload["knoxId"],
         normalize_exec_date(payload.get("execDate")),
     )
+    log_db_write("hit_history", "INSERT", columns, [values])
     with connection.cursor() as cursor:
         cursor.execute(
             """

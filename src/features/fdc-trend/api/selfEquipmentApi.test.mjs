@@ -6,6 +6,7 @@ import {
   fetchEqpAllSkipTargets,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
+  isSelfEquipmentHistoryActionAvailable,
 } from "./selfEquipmentApi.js"
 
 test("자설비 EQP png 경로를 실제 data.parquet 참조 경로로 변환한다", () => {
@@ -15,6 +16,14 @@ test("자설비 EQP png 경로를 실제 data.parquet 참조 경로로 변환한
     ),
     "/appdata/abnormal_trend/pic/erd/2026-08-25/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
   )
+})
+
+test("자설비 이력 action은 DB capability가 아니라 chart file_path로 활성화한다", () => {
+  assert.equal(isSelfEquipmentHistoryActionAvailable({
+    file_path: "/appdata/abnormal_trend/pic/erd/chart.png",
+  }), true)
+  assert.equal(isSelfEquipmentHistoryActionAvailable({ file_path: "" }), false)
+  assert.equal(isSelfEquipmentHistoryActionAvailable({}), false)
 })
 
 test("자설비 directory와 data.parquet 경로 형식을 모두 호환한다", () => {

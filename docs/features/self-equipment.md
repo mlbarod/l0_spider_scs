@@ -22,8 +22,9 @@
 SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read API가 활성화된다.
 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`을 명시하면 이 read allowlist도 차단된다. 읽기 가능한
 `DB_INFO_PATH` credential이 있고 DB gate도 활성인 경우 mapping 응답은
-`capabilities.selfEquipmentDb=true`를 반환하고 MY EQP·SKIP LIST·SKIP·클릭이력·이력저장을
-함께 활성화한다. 새 `path_xian`의 7-column index에는 `ver`가 없으므로 분임조별
+`capabilities.selfEquipmentDb=true`를 반환한다. 자설비의 SKIP LIST·SKIP·클릭이력·이력저장은
+원본 `l0_spider` 구조와 같이 chart `file_path`를 기준으로 요청하고 서버 DB gate가 최종 허용한다.
+새 `path_xian`의 7-column index에는 `ver`가 없으므로 분임조별
 `/pic/path/{line}/{sdwt}/df_path.parquet`에서 동일 `file_path` row의 `ver`를 선택적으로
 참조한다. 이 보조 경로를 읽지 못해도 최신 `path_xian`의 `recipe_id`로 RECIPE_ID 필터와
 일반 file chart를 계속 제공한다. 클릭이력·SKIP·HIT 요청은 차트와 같은 index `file_path`를
@@ -130,8 +131,11 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 
 근거: `FdcTrendPage.jsx:1518-1569,1692-1858,1932-2234`, `selfEquipmentData.mjs:196-293`.
 
-위 DB 동작은 file과 DB capability가 모두 활성일 때만 화면에 노출된다. DB credential이 없거나
-`SCS_DB_CONNECTIONS_ENABLED=0`이면 일반 file chart는 유지하고 DB option과 action은 fail-close한다.
+위 DB action은 chart `file_path`가 있으면 화면에 노출하고 요청한다. DB credential이 없거나
+`SCS_DB_CONNECTIONS_ENABLED=0`이면 서버가 `503 DATA_CONNECTIONS_DISABLED`로 거부하며 일반 file chart는
+유지한다. 요청 직전 브라우저 콘솔의 `[history-db-request]`, 서버 정규화 payload의
+`[history-db-attempt]`, 실제 Python SQL 값의 `[history-db-write]`로 단계별 입력을 확인할 수 있다.
+gate 거부는 credential 값을 제외한 `[history-db-blocked]`에 기록한다.
 ## 9. Self Equipment 요청 흐름
 
 `DF-SELF-01~03`의 현재 연결은 다음과 같다.

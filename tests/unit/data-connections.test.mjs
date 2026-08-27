@@ -274,6 +274,29 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
   }
 })
 
+test("이력 API가 차단되면 credential 내용 없이 차단 원인을 로그로 남긴다", () => {
+  const response = createResponse()
+  const logs = []
+
+  assert.equal(blockDisabledDataRequest(
+    { method: "POST", url: "/api/hit-history", headers: { host: "localhost" } },
+    response,
+    { DB_INFO_PATH: "/synthetic/db_info.pkl" },
+    (message) => logs.push(message),
+    () => false,
+  ), true)
+
+  assert.match(logs[0], /^\[history-db-blocked\] /)
+  assert.deepEqual(JSON.parse(logs[0].replace(/^\[history-db-blocked\] /, "")), {
+    endpoint: "/api/hit-history",
+    method: "POST",
+    dbGateExplicitlyDisabled: false,
+    dbInfoReadable: false,
+  })
+  assert.match(logs[1], /^\[api-error\] scope=data-connections /)
+  assert.doesNotMatch(logs.join("\n"), /synthetic|DB_INFO_PATH/)
+})
+
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
   for (const pathname of [
     "/api/mapping-config",

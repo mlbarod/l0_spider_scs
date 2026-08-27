@@ -1,4 +1,5 @@
 import { getApiErrorMessage } from "./errorMessage.js"
+import { logHistoryRequest } from "./historyRequestDebug.js"
 
 export async function createClickedCategoryHistory({
   app,
@@ -8,17 +9,22 @@ export async function createClickedCategoryHistory({
   selectedSensor,
   clickedAt,
 }) {
+  const body = {
+    app,
+    lineId,
+    filePaths,
+    grades,
+    selectedSensor,
+    clickedAt,
+  }
+  logHistoryRequest({
+    endpoint: "/api/clicked-category-history",
+    body,
+  })
   const response = await fetch("/api/clicked-category-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({
-      app,
-      lineId,
-      filePaths,
-      grades,
-      selectedSensor,
-      clickedAt,
-    }),
+    body: JSON.stringify(body),
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {

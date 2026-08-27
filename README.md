@@ -16,8 +16,9 @@ The app opens directly at `/`.
 `erd-scatter-data`)를 활성화한다.
 `DB_INFO_PATH`의 credential 파일이 읽기 가능하면 사용자·세 이력 DB API도
 활성화하고 mapping 응답의 `capabilities.dbConnections=true`와
-`capabilities.selfEquipmentDb=true`로 이를 알린다. 자설비 화면은 접속 IP를 사용자 식별값으로
-사용해 SKIP·HIT·클릭이력을 활성화한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
+`capabilities.selfEquipmentDb=true`로 이를 알린다. 자설비 화면의 SKIP·HIT·클릭이력 action은
+원본 `l0_spider`처럼 chart `file_path`가 있으면 요청을 실행하고 서버 DB gate가 최종 허용 여부를
+결정한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
 반환한다. UI shell이 필요하면 `SCS_DASHBOARD_DATA_ENABLED=0`,
 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`, `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 API를 한 번에 활성화하므로 다른 App의 새 경로와
@@ -307,8 +308,11 @@ hover 보조 컬럼은 존재하는 항목만 projection한다. 두 gate mode �
 Line·SDWT·EQP·sensor·step·경로가
 최신 `path_xian`의 scoped row와 모두 일치할 때만 후속 Parquet를 읽는다. DB 이력에는
 분임조별 ERD 경로 테이블에서 같은 `file_path`로 찾은 row의 `ver`를 보조 참조하고,
-클릭이력·SKIP·HIT에는 최신 index row의 `file_path`를 사용한다. file 또는 DB capability가 없으면
-DB 기능만 fail-close한다.
+클릭이력·SKIP·HIT에는 최신 index row의 `file_path`를 사용한다. chart `file_path`가 있으면 action을
+노출하고 요청하며, DB capability가 없으면 서버가 `503 DATA_CONNECTIONS_DISABLED`로 거부한다.
+브라우저 개발자 도구에는 전송 직전 `[history-db-request]`를, 서버에는 정규화 전
+`[history-db-attempt]`와 실제 SQL 값 `[history-db-write]`를 한 줄 JSON으로 출력한다. 서버 gate에서
+거부한 요청은 credential 내용을 노출하지 않는 `[history-db-blocked]`로 원인을 구분한다.
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와
 `src/config/spiderDataPaths.mjs`를 함께 업데이트한다.

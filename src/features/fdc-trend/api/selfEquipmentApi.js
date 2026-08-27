@@ -22,6 +22,10 @@ export function getSelfEquipmentHistoryFilePaths(rows) {
   ))
 }
 
+export function isSelfEquipmentHistoryActionAvailable(row) {
+  return Boolean(getSelfEquipmentHistoryFilePath(row))
+}
+
 export async function fetchSelfEquipmentData({
   line,
   pathSdwt,

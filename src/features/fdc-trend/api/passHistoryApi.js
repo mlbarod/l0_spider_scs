@@ -1,4 +1,5 @@
 import { getApiErrorMessage } from "./errorMessage.js"
+import { logHistoryRequest } from "./historyRequestDebug.js"
 
 async function parseResponse(response) {
   const payload = await response.json().catch(() => ({}))
@@ -38,28 +39,34 @@ export async function fetchSkipListData({
 }
 
 export async function createPassHistory({ lineId, filePath, eqp, prcGroup, comment, execDate }) {
+  const body = { lineId, filePath, eqp, prcGroup, comment, execDate }
+  logHistoryRequest({ endpoint: "/api/pass-history", body })
   const response = await fetch("/api/pass-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ lineId, filePath, eqp, prcGroup, comment, execDate }),
+    body: JSON.stringify(body),
   })
   return parseResponse(response)
 }
 
 export async function createPassHistoryBatch({ records, comment, execDate }) {
+  const body = { records, comment, execDate }
+  logHistoryRequest({ endpoint: "/api/pass-history", body })
   const response = await fetch("/api/pass-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ records, comment, execDate }),
+    body: JSON.stringify(body),
   })
   return parseResponse(response)
 }
 
 export async function deletePassHistory({ lineId, filePath, eqp, prcGroup }) {
+  const body = { lineId, filePath, eqp, prcGroup }
+  logHistoryRequest({ endpoint: "/api/pass-history", method: "DELETE", body })
   const response = await fetch("/api/pass-history", {
     method: "DELETE",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ lineId, filePath, eqp, prcGroup }),
+    body: JSON.stringify(body),
   })
   return parseResponse(response)
 }

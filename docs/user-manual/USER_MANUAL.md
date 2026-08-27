@@ -22,7 +22,8 @@ SPIDER는 L0 공정의 이상감지 결과를 조회하고 개인 모니터링 �
 현재 SCS ETCH SPIDER는 기본적으로 자설비 file read가 활성화되어 자설비
 필터·Scatter·동일성·변경점 이력 차트를 사용할 수 있습니다.
 DB credential이 준비된 환경에서는 SKIP LIST, SKIP, 클릭이력과
-이력저장도 함께 사용할 수 있습니다. DB가 준비되지 않으면 이 기능들만 화면에서 비활성화됩니다.
+이력저장도 함께 사용할 수 있습니다. DB가 준비되지 않으면 action 요청이 서버에서 거부되고
+화면에 오류가 표시됩니다.
 다른 App은 각 데이터 경로가 연결되기 전까지 사용할 수 없습니다.
 
 SCS에는 My EQP 기능이 없습니다. 메인 메뉴, 자설비 선택 조건, 등록 화면과 메일 Report에서도
@@ -126,7 +127,8 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 
 ![자설비 차트 버튼](images/05-self-equipment-actions.png)
 
-아래 SKIP·이력저장 버튼은 file과 DB capability가 모두 활성인 경우 표시됩니다.
+아래 SKIP·이력저장 버튼은 차트에 `file_path`가 있으면 표시됩니다. DB 연결이 차단된 환경에서는
+버튼 요청이 서버에서 거부되고 오류 안내가 표시됩니다.
 
 | 버튼 | 동작 |
 | --- | --- |
@@ -140,6 +142,11 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. 버튼과 마지막 `ch_step` 클릭이력은
 차트가 사용하는 `path_xian`의 `file_path`를 그대로 사용합니다. SKIP은 등록 시각부터 72시간 동안 일반
 결과에서 제외되며, **SKIP LIST**에서 **SKIP해제**할 수 있습니다.
+
+장애 확인 시 브라우저 개발자 도구 Console에서 `[history-db-request]`를 검색하면 클릭 시 서버로 보낸
+endpoint, `filePath`/`filePaths`와 전체 body를 확인할 수 있습니다. 서버 로그의
+`[history-db-attempt]`는 정규화된 helper 입력, `[history-db-write]`는 실제 SQL에 전달되는 컬럼값입니다.
+`[history-db-blocked]`가 있으면 서버 DB gate가 요청을 차단한 상태입니다.
 
 ![SKIP 확인](images/06-self-equipment-skip-dialog.png)
 

@@ -237,7 +237,7 @@ service·unit·port가 확인되지 않으면 실제 배포 단계로 진행하�
 - [ ] `/` liveness가 정상이다.
 - [ ] 전용 health endpoint가 없으므로 dependency readiness를 별도로 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 Dashboard 성공·빈 상태와 latest 시각을 확인했다.
-- [ ] readable `DB_INFO_PATH`가 있으면 `selfEquipmentDb=true`와 MY EQP·SKIP·HIT·click UI/API가 일치하고, credential이 없으면 DB 기능만 비활성임을 확인했다.
+- [ ] readable `DB_INFO_PATH`가 있으면 `selfEquipmentDb=true`와 SKIP·HIT·click API가 일치하고, credential이 없으면 action 요청이 `503`으로 거부되며 `[history-db-blocked]`가 남는지 확인했다.
 - [ ] current user의 검증된 접속 IP가 기존 `knoxId` 응답 필드와 DB `knox_id` 컬럼에 사용되고 브라우저 body의 식별값을 신뢰하지 않는지 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 동일성·공통부 image·scatter의 정상·부분 결과를 확인했다.
 - [ ] 데이터 연결 승인 배포인 경우에만 `pass_history` read 흐름을 확인했다.
