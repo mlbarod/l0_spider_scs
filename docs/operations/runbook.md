@@ -35,10 +35,12 @@
 ## 3. 교대·작업 전 사전 점검
 
 SCS 기본 실행은 Dashboard와 자설비 file read를 허용하고, 읽기 가능한 `DB_INFO_PATH`가 있으면
-DB 전용 API도 허용한다. 다른 App의 503은 정상이다. 전체 UI shell이 필요하면
+접속 IP와 세 이력 DB API만 허용한다. 등록·Mailing과 다른 App의 503은 정상이다. 전체 UI shell이 필요하면
 `SCS_DASHBOARD_DATA_ENABLED=0`, `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`,
 `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
-`SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 file·DB 승인 전에는 설정하지 않는다. 실제 배포 값은 `Unknown`이다.
+`SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 file·DB 승인 전에는 설정하지 않는다. 세 이력 테이블만
+있는 SCS DB에서는 등록·Mailing API가 존재하지 않는 테이블에 접근할 수 있으므로 전역 gate를
+열지 않는다. 실제 배포 값은 `Unknown`이다.
 장애 시에도 gate 도입 이전 artifact로 rollback하지 않는다. shell-safe artifact가 없으면 service·traffic을 격리하고 owner 승인을 받은 뒤 다음 조치를 결정한다.
 
 1. 작업 ticket, 승인 범위, 대상 환경과 영향 시간을 확인한다.
@@ -106,10 +108,10 @@ curl --fail --silent --show-error --head <base-url>/
 |---|---|---|---|
 | Dashboard file | 승인된 read-only Dashboard 조회 | 계약된 payload 또는 설명 가능한 빈 상태 | `/appdata` 순회·수정 |
 | mapping | 주요 화면의 Line·SDWT option | API 오류 없이 option 표시 | 실제 file 원문 공유 |
-| DB | current-user 또는 등록 목록 read 흐름 | timeout·credential 오류 없음 | test row·DDL·직접 DB 접속 |
+| DB | `pass_history` read 흐름 | timeout·credential 오류 없음 | test row·DDL·직접 DB 접속 |
 | Self/common | 승인된 기존 조회 조건 | filter·chart의 정상/계약된 빈 상태 | 운영 path를 임의 query로 입력 |
 | STEP | MY EQP `step=ALL` | 전체 STEP 예약 분기 유지 | HMAC secret 추정·출력 |
-| Mailing | 등록 화면과 template 존재 | 등록 read·자산 제공 | test mail 발송 |
+| Mailing | template 존재 | 정적 자산 제공; 등록 DB API는 기본 3-table 범위에서 차단 | test mail 발송 |
 
 실제 HMAC과 mail sender는 저장소에서 확인되지 않아 readiness 대상으로 확정하지 않는다.
 

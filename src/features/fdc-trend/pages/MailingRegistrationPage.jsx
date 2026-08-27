@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
+import { forwardRef, useImperativeHandle, useMemo, useState } from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   ArrowLeft,
@@ -39,7 +39,6 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
-import { fetchCurrentUser } from "../api/currentUserApi"
 import {
   createMailingRegistration,
   deleteMailingRegistrationLine,
@@ -200,7 +199,6 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
   saveRef,
 ) {
   const queryClient = useQueryClient()
-  const initializedKnoxId = useRef(false)
   const [selectedLine, setSelectedLine] = useState("")
   const [selectedSdwts, setSelectedSdwts] = useState([])
   const [recipientKnoxInput, setRecipientKnoxInput] = useState("")
@@ -211,26 +209,12 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
   const [urlTarget, setUrlTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
 
-  const currentUserQuery = useQuery({
-    queryKey: ["current-user"],
-    queryFn: fetchCurrentUser,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
   const mappingQuery = useQuery({
     queryKey: ["l0-spider-line-mapping"],
     queryFn: fetchLineMapping,
     staleTime: 5 * 60 * 1000,
   })
   const mappingReady = isLineMappingQueryReady(mappingQuery)
-
-  useEffect(() => {
-    const currentKnoxId = normalizeKnoxId(currentUserQuery.data?.knoxId)
-    if (!currentKnoxId || initializedKnoxId.current) return
-    initializedKnoxId.current = true
-    setRecipientKnoxIds([currentKnoxId])
-    setLookupKnoxId(currentKnoxId)
-  }, [currentUserQuery.data?.knoxId])
 
   const lineMapping = mappingReady ? mappingQuery.data.line_mapping : EMPTY_MAPPING
   const sdwtMapping = mappingReady ? mappingQuery.data.sdwt_mapping : EMPTY_MAPPING
@@ -503,13 +487,11 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                     event.preventDefault()
                     addRecipientKnoxId()
                   }}
-                  placeholder={currentUserQuery.isLoading ? "접속자 정보를 확인하는 중…" : "knox_id 입력 후 Enter"}
+                  placeholder="knox_id 입력 후 Enter"
                   className="h-12 max-w-xl text-base font-semibold"
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {currentUserQuery.isError
-                    ? `현재 접속자 조회 오류: ${currentUserQuery.error.message}`
-                    : "복수 등록할 수 있으며, email 테이블에 수신인별로 1행씩 저장됩니다."}
+                  복수 등록할 수 있으며, email 테이블에 수신인별로 1행씩 저장됩니다.
                 </p>
                 {recipientKnoxIds.length ? (
                   <div className="mt-4 rounded-xl border bg-muted/20 p-4">

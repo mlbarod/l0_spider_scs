@@ -490,10 +490,10 @@ export function CommonAnomalyPage() {
           <div className="flex flex-wrap items-center justify-end gap-3">
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
-                ? `${currentUserQuery.data.knoxId}님 안녕하세요!`
+                ? `접속 IP: ${currentUserQuery.data.knoxId}`
                 : currentUserQuery.isLoading
-                ? "접속자 확인 중…"
-                : "접속자 정보를 확인할 수 없습니다."}
+                ? "접속 IP 확인 중…"
+                : "접속 IP를 확인할 수 없습니다."}
             </p>
             <Button type="button" variant="outline" size="sm" asChild>
               <Link to="/"><ArrowLeft className="size-4" aria-hidden="true" />SPIDER 메인</Link>

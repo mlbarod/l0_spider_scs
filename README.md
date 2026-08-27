@@ -14,13 +14,15 @@ The app opens directly at `/`.
 현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard와 자설비 이상감지의 read API
 (`dashboard-data`, `dashboard-latest-date`, `mapping-config`, `self-equipment-data`,
 `erd-scatter-data`)를 활성화한다.
-`DB_INFO_PATH`의 credential 파일이 읽기 가능하면 current-user·등록·Mailing·이력 DB API도
+`DB_INFO_PATH`의 credential 파일이 읽기 가능하면 접속 IP 확인 API와 세 이력 DB API도
 활성화하고 mapping 응답의 `capabilities.dbConnections=true`로 이를 알린다. 자설비 화면은
-이 값이 `true`일 때 current-user를 조회한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
+이 값이 `true`일 때 접속 IP를 조회한다. 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
 반환한다. UI shell이 필요하면 `SCS_DASHBOARD_DATA_ENABLED=0`,
 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`, `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 API를 한 번에 활성화하므로 다른 App의 새 경로와
-DB 연결정보가 확정되기 전에는 설정하지 않는다.
+DB 연결정보가 확정되기 전에는 설정하지 않는다. 특히 `pass_history`, `hit_history`,
+`clicked_category_history`만 있는 SCS DB에서는 등록·Mailing helper가 존재하지 않는 테이블을
+조회하지 않도록 이 전역 변수를 설정하지 않는다.
 
 기본 개발 실행은 다음과 같다.
 
@@ -45,62 +47,27 @@ LIVE_RELOAD=0 PORT=5173 node server.mjs
 
 정적 모드에서 `BUILD_ON_START=0`을 설정하면 기존 `dist`를 재빌드하지 않고 제공한다.
 
-## Defect SPIDER 접속자 `knox_id` 식별 구조
+## SCS 접속 IP 이력 식별 구조
 
-참고 저장소: [`mlbarod/defect_spider_for_p3d`](https://github.com/mlbarod/defect_spider_for_p3d)<br>
-확인 기준 커밋: [`4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a`](https://github.com/mlbarod/defect_spider_for_p3d/commit/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a) (`2026-07-10`)
-
-Defect SPIDER는 요청 헤더나 쿠키에서 `knox_id`를 직접 읽지 않는다. 서버에서 접속자의 IP를 구한 뒤 승인된 IP 정보와 사용자 정보를 DB에서 조인하여 `knox_id`를 역조회한다.
+SCS는 별도 사용자 테이블을 조회하지 않는다. Node 서버가 요청에서 접속 IP를 추출하고 IP 형식을
+검증한 뒤, 해당 문자열을 세 이력 테이블의 기존 `knox_id` 컬럼 값으로 직접 사용한다.
 
 ```text
-사용자 STEP 선택
-  → GET /api/click-history?lineName=...&selectStep=...
-  → Node 서버가 접속 IP 추출 및 정규화
-  → Python loader의 REMOTE_ADDR 환경변수로 전달
-  → v_ipms_ip_info에서 승인된 IP 조회
-  → user_info와 SUB_USER_ID = knox_id로 조인
-  → 첫 번째 조회 행의 knox_id 사용
-  → 클릭 이력 테이블 저장
+PASS/HIT/클릭이력 요청
+  → x-forwarded-for → x-real-ip → socket IP 순서로 접속 주소 선택
+  → 첫 번째 forwarded 주소 선택 및 IPv4-mapped IPv6 정규화
+  → IPv4/IPv6 형식 검증
+  → pass_history / hit_history / clicked_category_history의 knox_id에 IP 저장
 ```
 
-세부 처리 순서는 다음과 같다.
-
-1. 사용자가 main/FCC/개별 챔버 화면에서 STEP을 선택하면 프런트엔드가 `lineName`, `selectStep`, cache-busting용 `t`를 포함한 `/api/click-history` 요청을 보낸다. 요청 실패는 화면 흐름을 막지 않도록 비동기로 무시한다. 참고: [`src/main.jsx`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/src/main.jsx#L242-L267), [`src/main.jsx`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/src/main.jsx#L3066-L3071)
-2. Node 서버의 `getRemoteIp(req)`는 `x-forwarded-for` → `x-real-ip` → `req.socket.remoteAddress` 순서로 접속 IP를 결정한다. `x-forwarded-for`에 여러 값이 있으면 첫 번째 값을 사용하고, IPv4-mapped IPv6의 `::ffff:` 접두사는 제거한다. 참고: [`server.mjs`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/server.mjs#L57-L64)
-3. `/api/click-history` handler는 Python의 `click-history` 명령을 실행하면서 정규화한 IP를 `REMOTE_ADDR` 환경변수로 넘긴다. 운영 서버와 Vite 개발 서버가 같은 방식을 사용한다. 참고: [`server.mjs`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/server.mjs#L143-L150), [`server.mjs`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/server.mjs#L213-L225)
-4. Python loader는 `REMOTE_ADDR`을 읽고 로컬 `db_info.pkl`의 DB 접속정보로 아래 쿼리를 실행한다. `v_ipms_ip_info`에서 접속 IP와 일치하면서 `STATUS = '승인'`인 행만 선택한 후, `user_info.knox_id = v_ipms_ip_info.SUB_USER_ID` 조건으로 조인한다. 참고: [`scripts/data_loader.py`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/scripts/data_loader.py#L244-L297)
-
-   ```sql
-   WITH A AS (
-       SELECT IP_ADDR, SUB_USER_ID, USER_NAME
-       FROM v_ipms_ip_info
-       WHERE IP_ADDR = %s AND STATUS = '승인'
-   )
-   SELECT ip, knox_id, sdwt, available
-   FROM user_info
-   JOIN A ON knox_id = SUB_USER_ID
-   ```
-
-5. 조회 결과가 없거나 첫 번째 행의 `knox_id`가 비어 있으면 클릭 이력을 저장하지 않고 각각 `승인된 접속자 정보를 찾지 못했습니다`, `접속자 knox_id를 찾지 못했습니다` 오류를 반환한다. 정상 조회 시 `(line_name, select_step, 현재시각, knox_id)`를 `clicked_category_history`와 `clicked_history_defect`에 저장한다. 참고: [`scripts/data_loader.py`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/scripts/data_loader.py#L429-L465), [`scripts/data_loader.py`](https://github.com/mlbarod/defect_spider_for_p3d/blob/4f7ebbcaa83a6f1189fd52798d6c88a6bdcf004a/scripts/data_loader.py#L468-L518)
-
-주의사항:
-
-- 현재 구현에서 `knox_id` 식별은 단순 첫 화면 접속 시점이 아니라 사용자가 STEP을 선택하여 `/api/click-history`가 호출될 때 수행된다.
-- `/api/client-ip`는 정규화된 IP만 반환하며 현재 프런트엔드의 `knox_id` 식별 흐름에서는 사용하지 않는다.
-- 역방향 프록시 환경에서는 프록시가 `x-forwarded-for` 또는 `x-real-ip`를 신뢰할 수 있는 값으로 덮어쓰도록 구성해야 한다. 애플리케이션에 직접 접근할 수 있는 환경에서 클라이언트가 이 헤더를 임의로 지정하면 다른 IP로 위장할 수 있다.
-- 공용 IP, NAT 또는 중복 IP 매핑 환경에서는 IP만으로 사용자를 유일하게 식별할 수 없으므로 운영 DB의 승인 IP 정책과 일대일 매핑 여부를 보장해야 한다.
-
-### L0 Spider 적용
-
-L0 Spider에는 위 구조를 사용하는 `/api/current-user`와 화면 코드가 남아 있다. 다만 현재 SCS
-`path_xian` mode는 `selfEquipmentDb=false`로 fail-close하므로 자설비 화면 진입 시 이 API를
-호출하지 않고 사용자명도 표시하지 않는다. 아래 항목은 dormant legacy와 다른 DB 기능의
-참고 구현이다.
-
-- Node 처리: `server/currentUser.mjs`
-- DB 조회 helper: `scripts/current_user.py`
-- 프런트엔드 API: `src/features/fdc-trend/api/currentUserApi.js`
-- 화면 표시: `src/features/fdc-trend/pages/FdcTrendPage.jsx`
+- 브라우저 request body의 `knoxId`는 신뢰하지 않으며 세 이력 handler가 서버에서 확인한 IP로 덮어쓴다.
+- `/api/current-user`의 호환 응답 key는 `knoxId`를 유지하지만 그 값은 사용자 ID가 아니라 접속 IP다.
+- 역방향 프록시 환경에서는 proxy가 `x-forwarded-for` 또는 `x-real-ip`를 신뢰할 수 있는 값으로
+  덮어쓰고 애플리케이션 직접 접근을 통제해야 한다. 그렇지 않으면 유효한 다른 IP로 위장할 수 있다.
+- NAT·공용 IP 환경에서는 여러 접속자가 같은 값으로 기록될 수 있다. 이 값은 인증·인가 수단이
+  아니라 이력 추적용 접속 주소다.
+- Node 처리: `server/currentUser.mjs`; DB 저장 helper: `scripts/pass_history.py`,
+  `scripts/hit_history.py`, `scripts/clicked_category_history.py`.
 
 Python helper가 사용하는 PyMySQL을 설치한다.
 
@@ -108,7 +75,7 @@ Python helper가 사용하는 PyMySQL을 설치한다.
 python3 -m pip install -r scripts/requirements.txt
 ```
 
-DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider_scs/db_info.pkl`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. 전체 gate가 비활성인 기본 mode에서는 읽기 가능한 credential 파일이 확인되면 DB 전용 API allowlist가 활성화되며, `SCS_DB_CONNECTIONS_ENABLED=0`으로 차단할 수 있다. `db_info.pkl`은 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
+DB 접속정보 pickle의 기본 위치는 `/appdata/l0_spider_scs/db_info.pkl`이다. 예외적으로 다른 위치를 사용할 때만 서버 실행 환경에 `DB_INFO_PATH`를 지정한다. 전체 gate가 비활성인 기본 mode에서는 읽기 가능한 credential 파일이 확인되면 `/api/current-user`와 `pass_history`, `hit_history`, `clicked_category_history` 전용 API allowlist가 활성화되며, `SCS_DB_CONNECTIONS_ENABLED=0`으로 차단할 수 있다. `db_info.pkl`은 비밀번호를 포함하므로 Git 추적 대상에서 제외되어 있다.
 
 ```bash
 node server.mjs
@@ -117,7 +84,8 @@ node server.mjs
 ## Database References
 
 이하 데이터·DB 설명 중 Dashboard와 자설비 파일 read는 기본 활성화된다. DB 전용 API는
-credential 파일 read 가능 여부와 `SCS_DB_CONNECTIONS_ENABLED`에 따라 활성화된다. 다른 App은
+credential 파일 read 가능 여부와 `SCS_DB_CONNECTIONS_ENABLED`에 따라 세 이력 API만 활성화된다.
+등록·Mailing DB API와 다른 App은
 여전히 전체 gate 뒤의 재연결 기준선이며 실제 배포 환경 값과 운영 연결 결과는 `Unknown`이다.
 
 ### 메인 대시보드 데이터
@@ -247,7 +215,7 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 
 legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다.
 서버는 Chart drawing에 사용한 ERD 이미지 경로를 파싱하고 아래 규칙으로 저장한다.
-`knox_id`는 요청 본문이 아니라 접속 IP 기반 현재 사용자 조회 결과를 사용한다.
+`knox_id`는 요청 본문이 아니라 서버가 확인한 접속 IP를 사용한다.
 
 | `hit_history` 컬럼 | 이력저장 값 |
 | --- | --- |
@@ -255,7 +223,7 @@ legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다
 | `line_id` | 화면에서 선택한 Line Name |
 | `sdwt` | Chart 경로의 `{sdwt}` |
 | `file_path` | Chart drawing 원본 파일 경로의 모든 `/`를 `#`으로 치환한 값 |
-| `knox_id` | 현재 접속자의 `knox_id` |
+| `knox_id` | 현재 접속자의 IPv4 또는 IPv6 주소 |
 | `exec_date` | 이력저장 버튼 클릭 시각 |
 
 예를 들어 `/appdata/abnormal_trend/pic/erd/.../EQP-1.png`는
@@ -276,8 +244,8 @@ legacy Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다
 | `update_date` | `TIMESTAMP` |
 | `knox_id` | `VARCHAR` |
 
-`POST /api/clicked-category-history`는 실제 Drawing 결과 경로를 서버에서 파싱하고 접속
-IP로 현재 사용자를 확인한 후 한 행을 INSERT한다. 동일성은 `ch_step`, 공통부는 마지막
+`POST /api/clicked-category-history`는 실제 Drawing 결과 경로를 서버에서 파싱하고 서버가
+확인한 접속 IP를 결합해 한 행을 INSERT한다. 동일성은 `ch_step`, 공통부는 마지막
 필터인 `sensor`를 새로 선택할 때 호출한다. 필터를 다시 클릭해 선택 해제하거나 SKIP
 LIST를 조회하는 동작은 저장하지 않는다.
 
@@ -296,7 +264,7 @@ Drawing 결과를 `sdwt`, `grade`, `sensor` 기준 대표 경로로 압축해 �
 유지한다. 단, sensor 필터에서 `ALL`을 선택한 클릭이력은 여러 센서명을 긴 리스트로
 확장하지 않고 `sensor` 컬럼에 `ALL`을 저장한다. DB 응답의 `affectedRows`가
 0이면 저장 성공으로 처리하지 않고 화면에 오류를 표시한다. `knox_id`는 모든 App에서
-접속 IP 기반 현재 사용자 값을 사용한다.
+서버가 확인한 접속 IP를 사용한다.
 
 현재 확인된 정보에는 `VARCHAR` 길이, 기본키, 인덱스, NULL 허용 여부와 기본값이 포함되어 있지 않으므로 각 표에서는 별도로 가정하지 않는다.
 

@@ -1995,12 +1995,12 @@ export function FdcTrendPage() {
           <div className="flex flex-wrap items-center justify-end gap-3">
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
-                ? `${currentUserQuery.data.knoxId}님 안녕하세요!`
+                ? `접속 IP: ${currentUserQuery.data.knoxId}`
                 : !dbConnectionsEnabled
                 ? "DB 기능 연결 전입니다."
                 : currentUserQuery.isLoading
-                ? "접속자 확인 중…"
-                : "접속자 정보를 확인할 수 없습니다."}
+                ? "접속 IP 확인 중…"
+                : "접속 IP를 확인할 수 없습니다."}
             </p>
             <Button type="button" variant="outline" size="sm" asChild>
               <Link to="/">

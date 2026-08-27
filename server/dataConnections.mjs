@@ -20,9 +20,6 @@ const DB_METHODS = new Map([
   ["/api/hit-history", new Set(["POST"])],
   ["/api/clicked-category-history", new Set(["POST"])],
   ["/api/pass-history", new Set(["GET", "POST", "DELETE"])],
-  ["/api/my-eqp-reference", new Set(["GET", "HEAD"])],
-  ["/api/my-eqp-registration", new Set(["GET", "POST", "DELETE"])],
-  ["/api/mailing-registration", new Set(["GET", "POST", "DELETE"])],
 ])
 
 export const DATA_CONNECTIONS_ENABLED_ENV = "SCS_DATA_CONNECTIONS_ENABLED"

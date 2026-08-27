@@ -10,7 +10,7 @@
 `path_xian` 7-column 계약에는 기존 DB 식별자 `ver`가 없어 두 mode 모두
 `capabilities.selfEquipmentDb=false`이며 Self의 MY EQP·SKIP·이력 UI는 dormant다. 실제 배포
 환경의 변수 값과 target file은 `Unknown`이다. 읽기 가능한 `DB_INFO_PATH`가 있으면 별도
-`capabilities.dbConnections=true`가 되어 current-user 조회는 수행한다.
+`capabilities.dbConnections=true`가 되어 접속 IP 확인 API를 사용할 수 있다.
 
 ## 0. 한 장 요약
 
@@ -35,7 +35,7 @@ flowchart TB
     PYTHON["Python DB helper"]
 
     subgraph DATABASE["업무 DB"]
-        USERDB["사용자 확인<br/>v_ipms_ip_info · user_info"]
+        CLIENTIP["이력 식별값<br/>서버가 확인한 접속 IP"]
         CONDITION["조회·수신 조건<br/>myeqp_regist · email · erdtsum_info"]
         HISTORY["사용 이력<br/>pass_history · hit_history<br/>clicked_category_history"]
     end
@@ -50,7 +50,8 @@ flowchart TB
     SERVER --> IMAGE
     SERVER --> PYTHON
 
-    PYTHON --> USERDB
+    SERVER --> CLIENTIP
+    CLIENTIP --> HISTORY
     PYTHON --> CONDITION
     PYTHON --> HISTORY
 ```
@@ -130,7 +131,7 @@ flowchart LR
 - 브라우저는 `/appdata/...` 파일을 직접 읽지 않고 반드시 Node API를 통합니다.
 - Node는 Parquet·JSON·이미지를 직접 읽지만, 업무 DB에는 직접 접속하지 않습니다.
 - Python helper만 `db_info.pkl`을 읽고 PyMySQL로 DB에 접속합니다.
-- `knox_id`가 필요한 이력 기능은 대부분 접속 IP를 DB 사용자 정보로 변환하여 사용합니다.
+- 세 이력 기능은 서버가 확인한 접속 IP를 기존 `knox_id` 컬럼에 직접 저장합니다.
 
 ## 2. 실행 구조
 
@@ -340,7 +341,7 @@ flowchart LR
     PAGE["FdcTrendPage<br/>MY EQP 선택"]
     API["GET /api/my-eqp-equipment-data"]
     NODE["selfEquipmentData.mjs"]
-    IP["접속 IP → current_user.py"]
+    IP["서버가 확인한 접속 IP"]
     REG[("myeqp_regist")]
     MAP["mapping_config.json"]
     PATHS["최신 path_xian index"]
@@ -354,7 +355,7 @@ flowchart LR
     NODE --> SKIP
 ```
 
-- handler는 현재 사용자와 `myeqp_regist`를 최신 `path_xian` index에 결합하는 legacy 구현을 보존한다.
+- handler는 접속 IP와 `myeqp_regist`를 최신 `path_xian` index에 결합하는 legacy 구현을 보존한다.
 - 새 index에는 기존 Self PASS/SKIP 식별자 `ver`가 없으므로 UI capability는 항상
   `selfEquipmentDb=false`이며 이 흐름을 호출하지 않는다.
 - 새 DB 식별 계약이 정의되기 전까지 MY EQP·EQP ALL SKIP의 화면 동작은 `Blocked`다.
@@ -466,7 +467,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | `/api/dashboard-data` | GET, HEAD | `dashboardApi.js` / 메인 대시보드 | `dashboardData.mjs` | `path/{date time}`, `stats`, mapping JSON |
 | `/api/dashboard-latest-date` | GET, HEAD | `dashboardApi.js` / 메인 우측 상단 | `dashboardData.mjs` | `path/{date time}` 파일명 목록 |
-| `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | `current_user.py` → `v_ipms_ip_info`, `user_info` |
+| `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | 정규화·검증된 접속 IP를 호환 key `knoxId`로 반환 |
 | `/api/mapping-config` | GET, HEAD | `mappingConfigApi.js` / 대부분의 필터 화면 | `mappingConfig.mjs` | `mapping_config.json` |
 | `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}`; Self DB history 미결합 |
 | `/api/my-eqp-equipment-data` | GET | dormant legacy client | `selfEquipmentData.mjs` | 현재 Self UI capability에서 비활성; 새 DB 식별 계약 `Unknown` |
@@ -533,8 +534,7 @@ Node handler
 
 ```mermaid
 flowchart LR
-    IP[("v_ipms_ip_info<br/>승인 IP")]
-    USER[("user_info<br/>사용자")]
+    IP["서버가 확인한 접속 IP"]
     REF[("erdtsum_info<br/>EQP 기준정보")]
     EMAIL[("email<br/>Mailing 조건")]
     MY[("myeqp_regist<br/>MY EQP 조건")]
@@ -542,21 +542,17 @@ flowchart LR
     HIT[("hit_history<br/>이력저장")]
     CLICK[("clicked_category_history<br/>Drawing 이력")]
 
-    IP -->|"SUB_USER_ID = knox_id"| USER
-    USER -.->|"서버가 확인한 knox_id"| PASS
-    USER -.->|"서버가 확인한 knox_id"| HIT
-    USER -.->|"서버가 확인한 knox_id"| CLICK
-    USER -.->|"현재/입력 수신인 knox_id"| MY
-    USER -.->|"입력 수신인 knox_id를 email 컬럼에 저장"| EMAIL
+    IP -->|"knox_id 컬럼에 직접 저장"| PASS
+    IP -->|"knox_id 컬럼에 직접 저장"| HIT
+    IP -->|"knox_id 컬럼에 직접 저장"| CLICK
     REF -->|"등록 후보 제공"| MY
+    MY -.->|"입력 수신인 knox_id"| EMAIL
 ```
 
 ### 8.2 테이블별 사용처
 
 | 테이블 | 읽기/쓰기 | Python helper | API | 화면 및 목적 |
 | --- | --- | --- | --- | --- |
-| `v_ipms_ip_info` | SELECT | `current_user.py` | `/api/current-user` 및 내부 사용자 확인 | 접속 IP가 `STATUS='승인'`인지 확인 |
-| `user_info` | SELECT | `current_user.py` | 동일 | `SUB_USER_ID = knox_id` 조인 후 현재 `knox_id` 결정 |
 | `erdtsum_info` | SELECT DISTINCT | `my_eqp_reference.py` | `/api/my-eqp-reference` | My EQP 등록 후보: `main`, `disp_name`, `sdwt_prod`, `prc_group` |
 | `myeqp_regist` | SELECT, INSERT, DELETE, 조건부 ALTER | `my_eqp_registration.py` | `/api/my-eqp-registration`, 내부 MY EQP 조회 | 사용자별 EQP·기간·수신/열람 조건 |
 | `email` | SELECT, INSERT, UPDATE, DELETE | `mailing_registration.py` | `/api/mailing-registration` | Mailing 수신인의 SDWT·Grade 조건 |
@@ -591,7 +587,7 @@ flowchart LR
 #### `myeqp_regist`
 
 - 컬럼: `line`, `sdwt`, `prc_group`, `eqp`, `exec_date`, `periode`, `comment`, `knox_id`, `is_public`.
-- 조회 조건은 선택 Line과 `knox_id = 현재 사용자 OR is_public = 1`입니다.
+- 조회 조건은 선택 Line과 `knox_id = 접속 IP OR is_public = 1`입니다.
 - `activeOnly=true`는 `TIMESTAMPADD(DAY, periode, exec_date) > NOW()` 조건을 추가합니다.
 - 현재 신규 요청은 서버가 `isPublic=false`로 고정합니다.
 - helper 실행 시 `is_public` 컬럼이 없으면 자동 `ALTER TABLE ... ADD COLUMN`을 수행합니다.
@@ -610,21 +606,19 @@ flowchart LR
 sequenceDiagram
     participant B as Browser
     participant N as Node currentUser.mjs
-    participant P as current_user.py
-    participant D as DB
+    participant H as History handler
+    participant D as History DB
 
     B->>N: API 요청
     N->>N: x-forwarded-for → x-real-ip → socket IP
-    N->>P: REMOTE_ADDR 환경변수
-    P->>D: 승인 IP + user_info 조인
-    D-->>P: knox_id
-    P-->>N: JSON
-    N-->>B: 사용자 응답 또는 이력 작업 수행
+    N->>N: IPv4/IPv6 정규화·형식 검증
+    N-->>H: 접속 IP
+    H->>D: knox_id = 접속 IP로 저장
+    N-->>B: 호환 응답 knoxId = 접속 IP
 ```
 
-- 현재 사용자 성공 결과는 Node 메모리에 IP별 5분 캐시됩니다.
 - 프록시가 `x-forwarded-for`/`x-real-ip`를 신뢰 가능한 값으로 덮어쓰는 운영 구성이 필요합니다.
-- PASS, HIT, 클릭이력의 `knox_id`는 브라우저 요청값을 사용하지 않고 서버가 다시 결정합니다.
+- PASS, HIT, 클릭이력의 `knox_id`는 브라우저 요청값을 사용하지 않고 서버가 확인한 IP를 직접 사용합니다.
 - My EQP 등록은 접속 사용자를 기본값으로 쓰지만, UI가 전달한 복수 `knoxIds`도 등록 대상으로 허용합니다.
 - Mailing 등록은 요청으로 받은 `knoxId/knoxIds`를 형식 검증 후 사용합니다.
 - 일반 로그인 세션이나 JWT 기반 인증 계층은 현재 코드에 없습니다.
@@ -634,7 +628,6 @@ sequenceDiagram
 | 위치 | 캐시 방식 | 만료/무효화 |
 | --- | --- | --- |
 | 프런트 `QueryClient` | 기본 `staleTime=60초`, window focus 재조회 비활성 | mutation 성공 시 관련 query key invalidate |
-| 현재 사용자 | IP별 메모리 cache + 동시 요청 Promise 공유 | 5분 |
 | My EQP 기준정보 `erdtsum_info` | 서버 메모리 | 5분 |
 | 동일성 디렉터리 index | 최신경로+SDWT별 cache + 동시 탐색 공유 | 5분, 최신 폴더 변경 시 key 변경 |
 | 자설비 최신 `path_xian` index·공통부 경로 Parquet | LRU 1개 | 파일 `mtimeMs`/size가 바뀌면 재조회 |
@@ -700,7 +693,7 @@ sequenceDiagram
 
 1. `server.mjs`와 `vite.config.mjs`가 API route를 각각 수동 등록하여 이미 기능 범위가 다릅니다.
 2. DB 비밀번호가 포함된 `db_info.pkl`은 저장소에 포함하거나 웹 정적 경로 아래에 두면 안 됩니다.
-3. IP 기반 사용자 확인은 프록시 헤더 신뢰 설정과 IP-사용자 일대일 매핑에 의존합니다.
+3. IP 기반 이력 식별은 프록시 헤더 신뢰 설정에 의존하며 NAT 환경에서는 여러 접속자가 같은 값으로 기록될 수 있습니다.
 4. `myeqp_regist` helper가 런타임에 `ALTER TABLE`을 수행하므로 운영 DB 계정 권한과 배포 migration 정책을 확인해야 합니다.
 5. `pass_history`의 72시간 만료는 DB 정리가 아니라 조회 시 제외 규칙입니다. 테이블은 계속 증가할 수 있습니다.
 6. `SpiderFeaturePage.jsx`와 `fdcTrendMockData.js`에는 현재 운영 route에서 직접 쓰지 않는 prototype/mock 기능이 남아 있습니다.

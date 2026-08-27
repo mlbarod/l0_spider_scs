@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react"
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useState } from "react"
 import {
   ArrowLeft,
   Check,
@@ -34,7 +34,6 @@ import { cn } from "@/lib/utils"
 
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
-import { fetchCurrentUser } from "../api/currentUserApi"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import {
   createMyEqpRegistration,
@@ -275,7 +274,6 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
   saveRef,
 ) {
   const queryClient = useQueryClient()
-  const initializedKnoxId = useRef(false)
   const [selectedLine, setSelectedLine] = useState("")
   const [selectedSdwt, setSelectedSdwt] = useState("")
   const [selectedPrcGroup, setSelectedPrcGroup] = useState("")
@@ -286,20 +284,6 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
   const [recipientKnoxIds, setRecipientKnoxIds] = useState([])
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [queries, setQueries] = useState({ line: "", sdwt: "", prcGroup: "", eqp: "" })
-
-  const currentUserQuery = useQuery({
-    queryKey: ["current-user"],
-    queryFn: fetchCurrentUser,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
-
-  useEffect(() => {
-    const currentKnoxId = normalizeKnoxId(currentUserQuery.data?.knoxId)
-    if (!currentKnoxId || initializedKnoxId.current) return
-    initializedKnoxId.current = true
-    setRecipientKnoxIds([currentKnoxId])
-  }, [currentUserQuery.data?.knoxId])
 
   const mappingQuery = useQuery({
     queryKey: ["l0-spider-line-mapping"],
@@ -745,7 +729,7 @@ export const MyEqpRegistrationPage = forwardRef(function MyEqpRegistrationPage(
                     event.preventDefault()
                     addRecipientKnoxId()
                   }}
-                  placeholder={currentUserQuery.isLoading ? "접속자 정보를 확인하는 중…" : "knox_id 입력 후 Enter"}
+                  placeholder="knox_id 입력 후 Enter"
                   className="h-12 text-base font-semibold"
                 />
                 <p className="mt-2 text-xs text-muted-foreground">

@@ -63,7 +63,6 @@ test("DB 연결은 credential 파일이 읽기 가능할 때만 활성화된다"
 
 test("모든 DB Python helper는 SCS 기본 credential 경로를 공유한다", () => {
   const helperNames = [
-    "current_user.py",
     "hit_history.py",
     "clicked_category_history.py",
     "pass_history.py",
@@ -235,7 +234,7 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
   }
 })
 
-test("읽기 가능한 credential이 있으면 DB API만 열고 Self DB 혼합 API는 유지 차단한다", () => {
+test("읽기 가능한 credential이 있으면 접속 IP와 세 이력 API만 열고 다른 DB API는 차단한다", () => {
   const environment = { DB_INFO_PATH: "/synthetic/db_info.pkl" }
   for (const [method, pathname] of [
     ["GET", "/api/current-user"],
@@ -244,9 +243,6 @@ test("읽기 가능한 credential이 있으면 DB API만 열고 Self DB 혼합 A
     ["GET", "/api/pass-history"],
     ["POST", "/api/pass-history"],
     ["DELETE", "/api/pass-history"],
-    ["HEAD", "/api/my-eqp-reference"],
-    ["POST", "/api/my-eqp-registration"],
-    ["DELETE", "/api/mailing-registration"],
   ]) {
     assert.equal(blockDisabledDataRequest(
       { method, url: pathname, headers: { host: "localhost" } },
@@ -257,15 +253,22 @@ test("읽기 가능한 credential이 있으면 DB API만 열고 Self DB 혼합 A
     ), false, `${method} ${pathname}`)
   }
 
-  const response = createResponse()
-  assert.equal(blockDisabledDataRequest(
-    { method: "GET", url: "/api/my-eqp-equipment-data", headers: { host: "localhost" } },
-    response,
-    environment,
-    () => {},
-    () => true,
-  ), true)
-  assert.equal(response.statusCode, 503)
+  for (const [method, pathname] of [
+    ["GET", "/api/my-eqp-reference"],
+    ["POST", "/api/my-eqp-registration"],
+    ["DELETE", "/api/mailing-registration"],
+    ["GET", "/api/my-eqp-equipment-data"],
+  ]) {
+    const response = createResponse()
+    assert.equal(blockDisabledDataRequest(
+      { method, url: pathname, headers: { host: "localhost" } },
+      response,
+      environment,
+      () => {},
+      () => true,
+    ), true, `${method} ${pathname}`)
+    assert.equal(response.statusCode, 503)
+  }
 })
 
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {

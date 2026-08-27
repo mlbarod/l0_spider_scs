@@ -10,7 +10,7 @@
 > 조사 제한: 실제 운영 데이터, DB, `.env`, 비밀키와 메일 전송 시스템은 열거나 실행하지 않았다.
 > 브랜치 범위: `mock-agent`의 mock 서버·데이터·E2E 흐름은 `Out of Scope`이다.
 
-> SCS 분리 상태: 별도 환경변수 없이 Dashboard와 자설비 file read API를 허용한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 DB 전용 API도 허용한다. 각 범위는 대응하는 `SCS_DASHBOARD_DATA_ENABLED`, `SCS_SELF_EQUIPMENT_DATA_ENABLED`, `SCS_DB_CONNECTIONS_ENABLED`의 비-`1` 값으로 차단할 수 있다. 다른 App은 `SCS_DATA_CONNECTIONS_ENABLED=1`이 아니면 handler 진입 전에 `503 DATA_CONNECTIONS_DISABLED`로 차단된다. 실제 target server DB·mount·Parquet 검증은 `Unknown`이다.
+> SCS 분리 상태: 별도 환경변수 없이 Dashboard와 자설비 file read API를 허용한다. 읽기 가능한 `DB_INFO_PATH` credential이 있으면 접속 IP와 `pass_history`, `hit_history`, `clicked_category_history` API만 허용한다. 각 범위는 대응하는 `SCS_DASHBOARD_DATA_ENABLED`, `SCS_SELF_EQUIPMENT_DATA_ENABLED`, `SCS_DB_CONNECTIONS_ENABLED`의 비-`1` 값으로 차단할 수 있다. 등록·Mailing과 다른 App은 `SCS_DATA_CONNECTIONS_ENABLED=1`이 아니면 handler 진입 전에 `503 DATA_CONNECTIONS_DISABLED`로 차단된다. 실제 target server DB·mount·Parquet 검증은 `Unknown`이다.
 
 ## 1. 문서 목적과 범위
 
@@ -58,8 +58,8 @@
 | `DF-ABN-01` | 동일성 이상감지 | `/matching-anomaly` | 최신 directory index와 종속 필터 | `erd_commonality` directory·PNG | 분석 이미지 카드 | `Complete` | `Confirmed` |
 | `DF-ABN-02` | 공통부 이상감지 | `/common-anomaly` | path row·SKIP 제외·data/image 변환 | `path_common` Parquet, common Parquet·PNG, DB | 이미지·scatter·동일성 chart | `Complete` | `Confirmed` |
 | `DF-ABN-03` | 공통부 동일성 이상감지 | `/common-commonality-anomaly` | 최신 directory index와 EQP_MODEL 종속 필터 | `path_common_commonality` directory·PNG | 분석 이미지 카드 | `Complete` | `Confirmed` |
-| `DF-COMMON-01` | 조회 카테고리 이력 | 동일성·공통부 App의 최종 필터; Self는 dormant | drawing path→category 변환·사용자 결합 | `clicked_category_history` | 저장 성공·실패 toast | Self 제외 `Complete` | `Confirmed` |
-| `DF-COMMON-02` | 결과 이력 저장 | 동일성·공통부·공통부 동일성 결과 카드; Self는 dormant | App별 image path 검증·사용자 결합 | `hit_history` | 비-Self 카드별 저장 성공·실패 toast | Self 제외 `Complete` | `Confirmed` |
+| `DF-COMMON-01` | 조회 카테고리 이력 | 동일성·공통부 App의 최종 필터; Self는 dormant | drawing path→category 변환·접속 IP 결합 | `clicked_category_history` | 저장 성공·실패 toast | Self 제외 `Complete` | `Confirmed` |
+| `DF-COMMON-02` | 결과 이력 저장 | 동일성·공통부·공통부 동일성 결과 카드; Self는 dormant | App별 image path 검증·접속 IP 결합 | `hit_history` | 비-Self 카드별 저장 성공·실패 toast | Self 제외 `Complete` | `Confirmed` |
 | `DF-MAIL-01` | Mailing·MY EQP 조건 등록 | `/registration` | 입력 정규화·Python helper·transaction | `email`, `myeqp_regist`, `erdtsum_info` | 등록 목록·저장/삭제 결과 | `Complete` | `Confirmed` |
 | `DF-MAIL-02` | Mailing Report | HTML template | Dashboard summary와 등록 조건 결합 후보 | Dashboard 응답, DB 조건, template | HTML·메일 후보 | `Partial` | 일부 `Confirmed`, 전달은 `Unknown` |
 | `DF-STEP-01` | STEP·MY EQP 딥링크 | Dashboard 또는 메일 LINK | URL query 생성·정규화·초기 필터 적용 | URL query | 일반 Self 진입; MY EQP 화면은 Blocked | `Partial` | link 형식 `Documented`, HMAC `Mismatch` |
@@ -119,7 +119,6 @@ flowchart LR
 | `DS-ABN-01` | directory·PNG | `erd_commonality/{latest_date}/.../{sensor}_{ch_step}/img.png` | Node | directory 읽기·stream | `Unknown` | `DF-ABN-01` | `Confirmed` | `commonalityData.mjs` — `collectCommonalityRows` |
 | `DS-ABN-02` | Parquet·PNG | `path_common/{line}/{sdwt}/df_path.parquet` → `common/.../data.parquet`, PNG | Node | 읽기·stream | `Unknown` | `DF-ABN-02` | `Confirmed` | `commonAnomalyData.mjs` |
 | `DS-ABN-03` | directory·PNG | `path_common_commonality/{latest_date}/{sdwt}/{eqp_model}/{grade}/{sensor}@{ch_step}/img.png` | Node | directory 읽기·stream | `Unknown` | `DF-ABN-03` | `Confirmed` | `commonCommonalityData.mjs` |
-| `DS-DB-USER` | DB | `v_ipms_ip_info`, `user_info` | Python | 읽기 | DB 관리 주체 `Unknown` | 등록·다른 App 이력; Self는 dormant | `Confirmed` | `scripts/current_user.py` |
 | `DS-DB-REF` | DB | `erdtsum_info` | Python | 읽기 | DB 관리 주체 `Unknown` | `DF-MAIL-01` MY EQP 기준 | `Confirmed` | `scripts/my_eqp_reference.py` |
 | `DS-DB-REG` | DB | `myeqp_regist`, `email` | Python | 읽기·쓰기; 일부 DDL | L0 Spider 쓰기, schema 책임 `Unknown` | `DF-MAIL-01/02`; `DF-SELF-03` dormant | `Confirmed` | registration helper |
 | `DS-DB-HIST` | DB | `pass_history`, `hit_history`, `clicked_category_history` | Python | 읽기·쓰기 | L0 Spider 쓰기 | 다른 App·registration; Self DB 흐름 dormant | `Confirmed` | history helper |
@@ -144,7 +143,7 @@ flowchart LR
 | `DF-ABN-03` | `/common-commonality-anomaly` | `CommonalityAnomalyPage` — `common-commonality-data` | data·image API | EQP_MODEL option·rows → paged PNG card | `Confirmed` | `commonCommonalityApi.js`; page |
 | `DF-COMMON-01` | 비-Self App 최종 필터 click | page mutation성 호출 | `POST /api/clicked-category-history` | `affectedRows` → 실패 toast | `Confirmed`; Self dormant | `clickedCategoryHistoryApi.js` |
 | `DF-COMMON-02` | 비-Self 결과 image/chart card | 각 card의 `createHitHistory` mutation | `POST /api/hit-history` | `affectedRows` → 성공·실패 toast | `Confirmed`; Self dormant | `hitHistoryApi.js`; 비-Self 세 page |
-| `DF-MAIL-01` | `/registration` | registration query·mutation | registration·reference·current user API | 등록 목록·toast·삭제 결과 | `Confirmed` | 두 registration page |
+| `DF-MAIL-01` | `/registration` | registration query·mutation | registration·reference API와 직접 입력 `knox_id` | 등록 목록·toast·삭제 결과 | `Confirmed` | 두 registration page |
 | `DF-MAIL-02` | 발송 메일 후보 | renderer 미확인 | 현재 저장소의 HTTP 호출 없음 | template KPI·표·LINK | `Partial` | `public/mailing-report.html` |
 | `DF-STEP-01` | `/self-equipment?...` | URL filter utility, `FdcTrendPage` | 초기 query가 이후 Self API filter로 변환 | Line·SDWT·Grade·ALL STEP·EQP 초기 선택 | `Partial` | `selfEquipmentUrlFilters.mjs` |
 
@@ -160,8 +159,8 @@ flowchart LR
 | `DF-ABN-01` | commonality data/image API | latest path·directory index·filter payload | `DS-ABN-01` | folder segment를 image row로 변환 | `Confirmed` | commonality modules |
 | `DF-ABN-02` | common anomaly APIs | path·scatter·image handler | `DS-ABN-02`, `pass_history` | path→data/image, EQP match, point group | `Confirmed` | `commonAnomalyData.mjs` |
 | `DF-ABN-03` | common-commonality APIs | latest path·directory index·filter payload | `DS-ABN-03` | folder segment를 image row로 변환 | `Confirmed` | common-commonality modules |
-| `DF-COMMON-01` | clicked history POST | `buildClickedCategoryHistoryRecord`, Python helper | drawing path, 사용자 DB, `clicked_category_history` | category 문자열·sensor `ALL` 정규화 | `Confirmed` | clicked history Node/Python |
-| `DF-COMMON-02` | hit history POST | `buildHitHistoryRecord`, Python helper | 비-Self App image path, 사용자 DB, `hit_history` | 날짜·SDWT 추출, slash→`#`, 6-column INSERT; Self UI 미호출 | 비-Self `Confirmed`; Self dormant | `hitHistory.mjs`; `hit_history.py` |
+| `DF-COMMON-01` | clicked history POST | `buildClickedCategoryHistoryRecord`, Python helper | drawing path, 접속 IP, `clicked_category_history` | category 문자열·sensor `ALL` 정규화; IP를 `knox_id`에 저장 | `Confirmed` | clicked history Node/Python |
+| `DF-COMMON-02` | hit history POST | `buildHitHistoryRecord`, Python helper | 비-Self App image path, 접속 IP, `hit_history` | 날짜·SDWT 추출, slash→`#`, IP 포함 6-column INSERT; Self UI 미호출 | 비-Self `Confirmed`; Self dormant | `hitHistory.mjs`; `hit_history.py` |
 | `DF-MAIL-01` | registration APIs | Node validation→Python action | `DS-DB-REF`, `DS-DB-REG` | group·list serialize·transaction | `Confirmed` | registration Node/Python |
 | `DF-MAIL-02` | 실행 진입점 없음 | Dashboard producer와 template만 확인 | `lineDashboard`, 등록 DB 후보 | 최종 결합·render·send 미확인 | `Partial` | Dashboard module·template |
 
@@ -339,7 +338,7 @@ sensor `ALL`이면 선택 EQP_MODEL의 모든 sensor row와 `chStep=ALL`만 허�
 | ERD history 읽기 실패 | scatter handler | main payload `200`+`historyError` | 변경이력 오류만 분리 | `Confirmed` | scatter handler |
 | 동일성 날짜·SDWT 없음 | commonality handler | `404` | 화면 query 오류 | `Confirmed` | commonality modules |
 | 동일성·공통부 image 없음 | image handler | `404`; 잘못된 root `403` | image card 오류 | `Confirmed` | image handlers |
-| DB 사용자 없음 | current user handler | `404`; 기타 `500` | 사용자·등록 기능 오류 | `Confirmed` | current user module |
+| 접속 IP 없음·형식 오류 | current user와 history handler | `400` 또는 history 보호 오류 | 이력 저장 불가 | `Confirmed` | current user module |
 | 등록·이력 DB 실패 | 각 handler | 주로 `500` | toast 또는 오류 panel | `Confirmed` | API/page |
 | HMAC key·token 오류 | 구현 위치 없음 | 처리 미확인 | 화면 정책 미확인 | `Unknown` | 구현 부재 |
 | 메일 대상 없음 | template | 실행 결과 미확인 | template은 빈 table row 정의 | `Partial` | template |
@@ -351,7 +350,7 @@ sensor `ALL`이면 선택 EQP_MODEL의 모든 sensor row와 `chStep=ALL`만 허�
 |---|---|---|---|---|---|
 | mapping·Dashboard·path·ERD Parquet | 조회·집계·변환 | 예 | scoped flow에서 미확인 | `Unknown` | `Confirmed` |
 | 동일성·공통부 PNG | 경로 검증·stream | 예 | scoped flow에서 미확인 | `Unknown` | `Confirmed` |
-| 사용자·reference DB | 식별·기준 조회 | 예 | 해당 flow에서 미확인 | DB 관리 주체 `Unknown` | `Confirmed` |
+| reference DB | 등록 기준 조회 | 예 | 해당 flow에서 미확인 | DB 관리 주체 `Unknown` | `Confirmed` |
 | `pass_history` | SKIP 조회·등록·해제 | 예 | INSERT/UPDATE/DELETE | L0 Spider 작업 | `Confirmed` |
 | `hit_history` | 네 App의 카드별 결과 이력 저장 | 해당 흐름에서 미확인 | INSERT | L0 Spider 작업 | `Confirmed` |
 | `clicked_category_history` | 최종 filter 조회 이력 | 해당 흐름에서 미확인 | INSERT | L0 Spider 작업 | `Confirmed` |
@@ -376,7 +375,6 @@ sensor `ALL`이면 선택 EQP_MODEL의 모든 sensor row와 `chStep=ALL`만 허�
 | file cache | Node | 대체로 `mtimeMs`·size; bounded entry | file flows | `Confirmed` | data modules |
 | commonality index | Node | 5분 TTL | `DF-ABN-01` | `Confirmed` | commonality module |
 | common-commonality index | Node | 5분 TTL | `DF-ABN-03` | `Confirmed` | common-commonality module |
-| current user | Node | 주소별 5분 TTL | DB flows | `Confirmed` | current user module |
 
 - 날짜 filename 검증에는 UTC 계산이 쓰이지만 DB와 운영 timezone 일치 정책은 `Unknown`이다.
 - 브라우저의 `staleTime: Infinity` chart query는 page session에서 동일 key 재조회 빈도를 줄인다.

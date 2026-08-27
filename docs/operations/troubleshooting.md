@@ -186,7 +186,7 @@ git rev-parse --short HEAD
 
 host·TLS·WebSocket은 proxy/network owner, route 차이는 application owner에게 전달한다.
 
-## 7. DB 연결·현재 사용자·등록 기능 실패
+## 7. DB 연결·접속 IP·등록 기능 실패
 
 먼저 배포 mode를 확인한다. 읽기 가능한 `DB_INFO_PATH`가 없거나
 `SCS_DB_CONNECTIONS_ENABLED=0`인 배포에서 DB API의 `503 DATA_CONNECTIONS_DISABLED`는
@@ -195,7 +195,7 @@ host·TLS·WebSocket은 proxy/network owner, route 차이는 application owner�
 
 ### 증상
 
-- current-user, MY EQP·Mailing 등록, PASS·HIT·click 이력 API가 timeout 또는 `500`이다.
+- 접속 IP API가 `400`이거나 MY EQP·Mailing 등록, PASS·HIT·click 이력 API가 timeout 또는 `500`이다.
 - Python helper exit·JSON parse·credential permission 오류가 기록된다.
 
 ### 확인 명령
@@ -213,6 +213,7 @@ test -r <confirmed-db-info-path>
 - credential file 누락·읽기 권한·형식 오류
 - DB network·account·schema·permission 장애
 - Python dependency 또는 helper timeout
+- proxy forwarded header 또는 socket 주소가 올바른 IP 형식이 아님
 - proxy header 신뢰·사용자 IP mapping 문제
 - runtime `ALTER TABLE` 권한과 schema 상태 불일치
 

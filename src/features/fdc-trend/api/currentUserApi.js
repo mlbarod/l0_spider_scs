@@ -7,7 +7,7 @@ export async function fetchCurrentUser() {
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "접속자 정보를 확인하지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "접속 IP를 확인하지 못했습니다."))
   }
 
   return payload

@@ -149,7 +149,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 최신 날짜 directory가 없을 때와 선택 SDWT directory가 없을 때는 서로 다른 안전한 오류 코드·문구를 반환한다.
 
 동일성·공통부·공통부 동일성의 각 결과 카드에는 자설비와 같은 **이력저장** action이 있다.
-브라우저는 카드의 결과 이미지 경로와 선택 Line을 `POST /api/hit-history`로 보내며, 서버는 현재 사용자를 결합해 기존 `hit_history`의
+브라우저는 카드의 결과 이미지 경로와 선택 Line을 `POST /api/hit-history`로 보내며, 서버는 확인한 접속 IP를 결합해 기존 `hit_history`의
 `update_date`, `line_id`, `sdwt`, `file_path`, `knox_id`, `exec_date` 여섯 column에 저장한다.
 공통부는 같은 data path를 공유하는 EQP를 구분하기 위해 `data.parquet`가 아니라 카드별 `{eqp_cb}.png` 경로를 저장한다.
 
@@ -170,7 +170,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | `GET` | `/api/common-anomaly-data` | `handleCommonAnomalyDataRequest` | common path Parquet, `pass_history` | filter option·image/chart row |
 | `GET` | `/api/common-anomaly-scatter-data` | `handleCommonAnomalyScatterRequest` | common `data.parquet` | scatter·identity JSON |
 | `GET/HEAD` | `/api/common-anomaly-image` | `handleCommonAnomalyImageRequest` | common PNG | PNG stream |
-| `POST` | `/api/hit-history` | `handleHitHistoryRequest` | 현재 사용자, 결과 이미지 path, `hit_history` | 카드별 결과 이력 저장 |
+| `POST` | `/api/hit-history` | `handleHitHistoryRequest` | 접속 IP, 결과 이미지 path, `hit_history` | 카드별 결과 이력 저장 |
 
 `GET /api/latest-commonality-path`는 현재 화면의 직접 호출 위치가 확인되지 않았지만 같은 최신 path 함수는 commonality data/image handler에서 사용된다.
 
@@ -214,7 +214,7 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 | `eqp_model` | 공통부 동일성 directory | query `eqpModel` | directory segment와 종속 filter | EQP_MODEL filter·group title | `Confirmed` |
 | `ver` | team index row·ERD path | query로 직접 전달하지 않음 | ERD path와 history identity | 일부 chart metadata·이력 | `Confirmed` |
 
-결과 이력의 `file_path`는 네 App 모두 slash를 `#`로 바꿔 보존한다. App별 image root는 다르지만 DB column 구조와 현재 사용자 결정 방식은 동일하다.
+결과 이력의 `file_path`는 네 App 모두 slash를 `#`로 바꿔 보존한다. App별 image root는 다르지만 DB column 구조와 접속 IP를 `knox_id`에 저장하는 방식은 동일하다.
 
 ### 6.1 명칭 대응
 

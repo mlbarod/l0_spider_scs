@@ -96,7 +96,7 @@ URL query는 page 또는 utility에서 정규화하며 화면은 loading·빈 �
 | Dashboard 응답 | `handleDashboardDataRequest` | `getDashboardSummary` | Confirmed | `server/dashboardData.mjs` |
 | Self Equipment | `handleSelfEquipmentDataRequest`, scatter·file handler | Parquet, 이미지, 이력 DB | Confirmed | `server/selfEquipmentData.mjs` |
 | 동일성·공통부 | `handleCommonality*`, `handleCommonAnomaly*` | 디렉터리, Parquet와 PNG | Confirmed | 대응 data 모듈 |
-| 사용자·등록·이력 | current user, registration, history handler | Python helper | Confirmed | 대응 Node·Python 파일 |
+| 접속 IP·등록·이력 | IP resolver, registration, history handler | Node IP 처리와 Python DB helper | Confirmed | 대응 Node·Python 파일 |
 | 정적 제공 | Vite middleware 또는 `dist` fallback | SPA asset | Confirmed | `server.mjs` |
 | 오류 처리 | handler별 status와 JSON, 최상위 catch | 브라우저 | Confirmed | `sendJson`, route catch |
 
@@ -111,7 +111,7 @@ Node는 파일에 직접 접근하고 DB는 `python3 -B` helper를 실행하며,
 | Dashboard detail·stats | Node | hyparquet 집계와 metadata cache | `dashboardData.mjs` | Unknown | Confirmed |
 | Self Equipment Parquet | Node | 허용 경로 변환, hyparquet와 LRU | `selfEquipmentData.mjs` | Unknown | Confirmed |
 | 동일성·공통부 데이터 | Node | 디렉터리 index, Parquet 조회와 PNG stream | `commonalityData.mjs`, `commonAnomalyData.mjs` | Unknown | Confirmed |
-| 사용자·기준정보 | Python helper | SELECT | `current_user.py`, `my_eqp_reference.py` | DB 관리 주체 Unknown | Confirmed |
+| 접속 IP·기준정보 | Node 직접 IP 처리 / Python helper | IP 정규화·검증 / SELECT | `currentUser.mjs`, `my_eqp_reference.py` | IP는 요청에서 수집; 기준 DB 주체 Unknown | Confirmed |
 | 등록·이력 | Python helper | SELECT·INSERT·UPDATE·DELETE, 일부 runtime DDL | registration·history helper | L0 Spider 쓰기 | Confirmed |
 | 사용자 메뉴얼 | Vite·브라우저 | build resource import | `UserManualPage.jsx` | 저장소 문서 | Confirmed |
 
@@ -185,7 +185,7 @@ Python helper는 요청 시 생성되는 자식 프로세스이며 미확인 STE
 | 경계 또는 자원 | 신뢰 수준 | 주요 위험 | 현재 보호 방식 | 상태 | 후속 문서 |
 |---|---|---|---|---|---|
 | 브라우저 입력 | 신뢰하지 않음 | 잘못된 query·body, 과대 요청 | handler validation, 일부 body·개수 제한 | Confirmed | `security.md` |
-| 사용자 식별 | 조건부 신뢰 | proxy header 위조와 오식별 | forwarded IP→DB 승인 사용자 조회 | Risk | `security.md`, 환경 정의 |
+| 이력 식별 | 조건부 신뢰 | proxy header 위조와 NAT 중복 | forwarded IP→history `knox_id` 직접 기록 | Risk | `security.md`, 환경 정의 |
 | 파일 시스템 | 서버 신뢰 경계 | path traversal, 운영 파일 노출 | 허용 root·확장자·파일 존재 검사 | Confirmed | `security.md` |
 | DB credential | 고신뢰 비밀 | 노출·과도한 DB 권한 | 서버 측 파일과 `DB_INFO_PATH` 사용 | Confirmed | `security.md` |
 | HMAC 비밀키 | 정의되지 않음 | 키 노출, 검증 부재 | 구현·키 이름 미확인 | Unknown | `security.md`, STEP ADR |

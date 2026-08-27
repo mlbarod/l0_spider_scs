@@ -271,7 +271,7 @@ async function installApiFixtures(page) {
     if (url.pathname === "/api/mapping-config") {
       return json(route, { line_mapping: { [demoTeam]: "H1L" }, sdwt_mapping: { [demoTeam]: demoSdwt } })
     }
-    if (url.pathname === "/api/current-user") return json(route, { ok: true, knoxId: "manual.test" })
+    if (url.pathname === "/api/current-user") return json(route, { ok: true, knoxId: "192.0.2.10" })
     if (url.pathname === "/api/self-equipment-data") return json(route, selfPayload(url))
     if (url.pathname === "/api/erd-scatter-data" || url.pathname === "/api/common-anomaly-scatter-data") return json(route, scatterPayload(url))
     if (url.pathname === "/api/commonality-data") return json(route, commonalityPayload(url))

@@ -1,12 +1,6 @@
-import { spawn } from "node:child_process"
-import { fileURLToPath, URL } from "node:url"
+import { isIP } from "node:net"
 
 import { createSafeApiError } from "./safeApiError.mjs"
-
-const lookupScriptPath = fileURLToPath(new URL("../scripts/current_user.py", import.meta.url))
-const CACHE_TTL_MS = 5 * 60 * 1000
-const userCache = new Map()
-const pendingLookups = new Map()
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -22,80 +16,23 @@ export function normalizeRemoteIp(value) {
 }
 
 export function getRemoteIp(req) {
-  return normalizeRemoteIp(
+  const remoteIp = normalizeRemoteIp(
     req.headers["x-forwarded-for"]
     ?? req.headers["x-real-ip"]
     ?? req.socket?.remoteAddress
     ?? "",
   )
+  return isIP(remoteIp) ? remoteIp : ""
 }
 
-export function resolveCurrentUser(remoteIp) {
-  const now = Date.now()
-  userCache.forEach((entry, ip) => {
-    if (entry.expiresAt <= now) userCache.delete(ip)
-  })
-  const cached = userCache.get(remoteIp)
-  if (cached) return Promise.resolve(cached.payload)
-  if (pendingLookups.has(remoteIp)) return pendingLookups.get(remoteIp)
-
-  const lookup = new Promise((resolve, reject) => {
-    const child = spawn("python3", ["-B", lookupScriptPath], {
-      env: { ...process.env, REMOTE_ADDR: remoteIp },
-      stdio: ["ignore", "pipe", "ignore"],
-    })
-    let stdout = ""
-    let timedOut = false
-    const timeout = setTimeout(() => {
-      timedOut = true
-      child.kill("SIGTERM")
-    }, 10_000)
-
-    child.stdout.on("data", (chunk) => { stdout += chunk })
-    child.on("error", (error) => {
-      clearTimeout(timeout)
-      reject(error)
-    })
-    child.on("close", () => {
-      clearTimeout(timeout)
-      if (timedOut) {
-        reject(new Error("접속자 조회 시간이 초과되었습니다."))
-        return
-      }
-
-      let payload
-      try {
-        payload = JSON.parse(stdout.trim())
-      } catch {
-        reject(new Error("접속자 조회 응답을 해석하지 못했습니다."))
-        return
-      }
-
-      if (!payload.ok) {
-        const error = new Error(payload.error || "접속자 정보를 확인하지 못했습니다.")
-        error.code = payload.code
-        reject(error)
-        return
-      }
-
-      const normalizedPayload = {
-        ok: true,
-        knoxId: String(payload.knoxId ?? "").trim(),
-      }
-      if (!normalizedPayload.knoxId) {
-        reject(new Error("접속자 knox_id를 확인하지 못했습니다."))
-        return
-      }
-      userCache.set(remoteIp, {
-        payload: normalizedPayload,
-        expiresAt: Date.now() + CACHE_TTL_MS,
-      })
-      resolve(normalizedPayload)
-    })
-  }).finally(() => pendingLookups.delete(remoteIp))
-
-  pendingLookups.set(remoteIp, lookup)
-  return lookup
+export async function resolveCurrentUser(remoteIp) {
+  const normalizedRemoteIp = normalizeRemoteIp(remoteIp)
+  if (!isIP(normalizedRemoteIp)) {
+    const error = new Error("접속자 IP를 확인하지 못했습니다.")
+    error.code = "IP_NOT_FOUND"
+    throw error
+  }
+  return { ok: true, knoxId: normalizedRemoteIp }
 }
 
 export async function handleCurrentUserRequest(req, res) {
@@ -113,13 +50,10 @@ export async function handleCurrentUserRequest(req, res) {
   try {
     const payload = await resolveCurrentUser(remoteIp)
     sendJson(res, 200, payload)
-  } catch (error) {
-    const userNotFound = error.code === "USER_NOT_FOUND"
-    sendJson(res, userNotFound ? 404 : 500, createSafeApiError({
-      code: userNotFound ? "CURRENT_USER_NOT_FOUND" : "CURRENT_USER_LOOKUP_FAILED",
-      message: userNotFound
-        ? "접속자 정보를 확인하지 못했습니다."
-        : "접속자 조회를 처리하지 못했습니다.",
+  } catch {
+    sendJson(res, 400, createSafeApiError({
+      code: "CURRENT_USER_IP_INVALID",
+      message: "접속자 IP를 확인하지 못했습니다.",
       scope: "current-user",
     }))
   }

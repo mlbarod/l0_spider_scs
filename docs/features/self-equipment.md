@@ -23,7 +23,7 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 7-column 계약에는 기존 Self DB 이력 식별자 `ver`가 없으므로,
 전역 gate와 무관하게 mapping 응답은 `capabilities.selfEquipmentDb=false`를 반환한다. 화면은
 MY EQP·SKIP LIST·SKIP·클릭이력·이력저장을 노출하거나 호출하지 않고 일반 자설비 파일 chart만
-제공한다. credential 기반 DB 전용 API allowlist는 별도지만 Self DB 혼합 기능은 계속
+제공한다. credential 기반 접속 IP·세 이력 API allowlist는 별도지만 Self DB 혼합 기능은 계속
 `selfEquipmentDb=false`다. mapping의 `capabilities.dbConnections`는 credential read 가능 여부를
 별도로 전달하며, 화면은 이 값이 `true`일 때 접속자 조회를 수행한다. 실제 target server
 DB·mount와 Parquet 내용은 `Unknown`이다.
@@ -157,7 +157,7 @@ sequenceDiagram
 | 기능 | 메서드 | 경로 | 서버 핸들러 | 응답 소비 위치 | 상태 |
 |---|---|---|---|---|---|
 | 기준 mapping | `GET` | `/api/mapping-config` | `handleMappingConfigRequest` | Line·SDWT option | `Confirmed` |
-| 현재 사용자 | `GET` | `/api/current-user` | `handleCurrentUserRequest` | Self capability가 false라 현재 화면 미호출 | dormant legacy |
+| 접속 IP | `GET` | `/api/current-user` | `handleCurrentUserRequest` | Self capability가 false라 현재 화면 미호출 | dormant compatibility API |
 | MY EQP 등록 조회 | `GET` | `/api/my-eqp-registration` | `handleMyEqpRegistrationRequest` | 현재 화면 미호출 | dormant legacy |
 | 일반 Self Equipment | `GET` | `/api/self-equipment-data` | `handleSelfEquipmentDataRequest` | 종속 option·chart row | `Confirmed` |
 | MY EQP | `GET` | `/api/my-eqp-equipment-data` | `handleMyEqpEquipmentDataRequest` | 현재 화면 미호출 | dormant legacy / 식별 계약 `Unknown` |
@@ -196,7 +196,7 @@ sequenceDiagram
 | scatter API | `points`, `axisColumn`, timing fields | scatter builder | 산점도·최근 point 구분 | point 없음은 card 빈 상태 | `Confirmed` |
 | scatter API | `changeHistory`, `historyError` | scatter builder | 변경점 이력 dialog | history만 실패해도 HTTP 200 | `Confirmed` |
 | identity API | `groups`, `windowDays`, point counts | identity builder | 동일성 chart | group 없음 안내 | `Confirmed` |
-| mapping API | `capabilities.dbConnections`, `selfEquipmentFileRead`, `selfEquipmentDb` | mapping handler | 접속자 DB 조회, file query, Self DB option·action 활성 여부 | credential read 가능 시 `dbConnections=true`; file은 exact `true`만 조회; Self DB 작업은 항상 `false` | `Confirmed` |
+| mapping API | `capabilities.dbConnections`, `selfEquipmentFileRead`, `selfEquipmentDb` | mapping handler | 이력 DB, file query, Self DB option·action 활성 여부 | credential read 가능 시 `dbConnections=true`; file은 exact `true`만 조회; Self DB 작업은 항상 `false` | `Confirmed` |
 
 전체 JSON Schema는 이번 단계에서 만들지 않았다.
 ## 13. 데이터 원천
@@ -319,7 +319,7 @@ history 부분 실패의 `historyError`도 원문 exception 없이 고정 메시
 | query enabled | Line·team key·label 존재 | equipment query | 불완전 초기 조건 요청 차단 | `Confirmed` |
 | MY EQP registration | query disabled | dormant legacy | 없음 | `Confirmed` |
 | PASS history | query disabled | dormant legacy | 없음 | `Confirmed` |
-| current user | query disabled | dormant legacy | 없음 | `Confirmed` |
+| 접속 IP | query disabled | dormant compatibility API | 없음 | `Confirmed` |
 | scatter lazy load | viewport 근접 시 enabled, stale/gc Infinity | card | off-page·off-viewport 요청 억제 | `Confirmed` |
 | 3일 identity | viewport 근접, stale Infinity, gc 10분 | paired chart | 최근 window 결과 재사용 | `Confirmed` |
 | server Parquet cache | mtime·size 확인, LRU 최대 1 | latest index/scatter/history | 파일 변경 감지 후 재읽기 | `Confirmed` |
@@ -361,7 +361,7 @@ history 부분 실패의 `historyError`도 원문 exception 없이 고정 메시
 |---|---|---|---|---|---|
 | 공유 URL→browser | Line·SDWT·Grade·STEP·eqpCh | client parser | history·referrer·로그 노출 | `Risk` | STEP·security 문서 |
 | browser→API | filter·`file_path`·EQP | server validation·root 제한 | 임의 입력·경로 정보 | `Confirmed`/`Risk` | security 문서 |
-| proxy→현재 사용자 | forwarding header·remote address | IP 기반 사용자 조회 | proxy 신뢰 정책 미확인 | `Risk` | environment·security 문서 |
+| proxy→이력 식별 | forwarding header·remote address | IP 정규화·형식 검증 | proxy 신뢰 정책 미확인 | `Risk` | environment·security 문서 |
 | server→DB | 사용자·등록·history 조건 | Python helper | 권한·개인정보 범위 | `Risk` | operations·security 문서 |
 | server→운영 file | mapping·Parquet·image path | root·segment 검사 | 운영 경로 의존 | `Confirmed`/`Risk` | data-flow·operations |
 | API→browser | payload·error | JSON | 성공 row `file_path`; 차트 실패 UI가 파생 `data.parquet` 경로 표시; 실패 exception 원문은 CORE-03A에서 차단 | `Risk` / 사용자 승인 `Implemented` | error contract·chart error card |
@@ -432,7 +432,7 @@ mock 구현을 이유로 `main`의 route·query·API 계약을 바꾸지 않는�
 | React Query 기본 정책 | `Unknown` | focus retry·재조회 | QueryClient 설정 조사 | 중간 |
 | 공유 URL 노출 | `Risk` | query가 log/referrer에 남을 수 있음 | proxy·logging 정책 확인 | 높음 |
 | success path 노출 | `Risk` | API 성공 `sourcePath(s)`가 browser에 전달됨 | CORE-03B opaque resource 전환 | 높음 |
-| IP header 신뢰 | `Risk` | 현재 사용자·MY EQP 범위 | proxy trust 정책 확인 | 높음 |
+| IP header 신뢰 | `Risk` | 세 이력의 `knox_id` 값 | proxy trust 정책 확인 | 높음 |
 | 운영 file·DB 의존 | `Risk` | 누락 시 기능 실패 | runbook·health 검증 | 높음 |
 | 메뉴얼 image 최신성 | `Mismatch` | 화면 안내 혼선 | 현재 UI capture | 중간 |
 ## 29. 연계 산출물
