@@ -131,6 +131,8 @@ L0 Spider의 DB 접속정보는 `/appdata/l0_spider_scs/db_info.pkl`에서 읽�
 자설비 PASS/SKIP은 최신 `path_xian` row와 분임조별
 `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet`의 동일 `file_path` row를
 매칭하고, 해당 ERD 경로 테이블의 `ver`를 사용해 원본 `l0_spider`와 같은 테이블 구조를 사용한다.
+이 DB 이력용 보조 file 또는 PASS 조회가 실패해도 `path_xian.recipe_id` 기반 RECIPE_ID와 일반
+file chart 조회는 유지한다.
 
 | 컬럼 | 타입 |
 | --- | --- |

@@ -14,6 +14,8 @@ import {
   normalizeErdPathReferenceRow,
   normalizeSelfEquipmentIndexRow,
   normalizeSelfEquipmentFilePath,
+  readOptionalErdPathReferenceRows,
+  readOptionalPassHistoryRecords,
   resolveErdScatterProjection,
   resolveErdDataFilePath,
   resolveErdHistoryFilePath,
@@ -251,6 +253,75 @@ test("ERD 경로 테이블에 동일 file_path 또는 ver가 없으면 DB 이력
     attachErdPathReferences([indexRow], [referenceWithoutVersion])[0].history_file_path,
     "",
   )
+})
+
+test("클릭이력 보조 경로 조회 실패는 자설비 RECIPE_ID 원천 조회를 막지 않는다", async () => {
+  const referenceRows = await readOptionalErdPathReferenceRows({
+    line: "P1L",
+    pathSdwt: "SDWT-1",
+  }, {
+    dbConnectionsEnabled: true,
+    readReferenceRows: async () => {
+      throw new Error("synthetic reference failure")
+    },
+  })
+  const row = createRow({ recipe_id: "RECIPE-AVAILABLE" })
+  const payload = buildSelfEquipmentPayload(
+    attachErdPathReferences([row], referenceRows),
+    {
+      line: "P1L",
+      sdwt: "SDWT-1",
+      priorities: ["A"],
+      desc: "",
+      eqpCh: "",
+      sensor: "",
+      chStep: "",
+    },
+  )
+
+  assert.deepEqual(referenceRows, [])
+  assert.deepEqual(payload.steps.map((item) => item.desc), ["RECIPE-AVAILABLE"])
+})
+
+test("DB 기능이 비활성이면 클릭이력 보조 경로를 읽지 않는다", async () => {
+  let readCount = 0
+  const referenceRows = await readOptionalErdPathReferenceRows({
+    line: "P1L",
+    pathSdwt: "SDWT-1",
+  }, {
+    dbConnectionsEnabled: false,
+    readReferenceRows: async () => {
+      readCount += 1
+      return { rows: [createRow()] }
+    },
+  })
+
+  assert.deepEqual(referenceRows, [])
+  assert.equal(readCount, 0)
+})
+
+test("DB PASS 이력 조회 실패도 자설비 RECIPE_ID 원천 조회와 분리한다", async () => {
+  const passRecords = await readOptionalPassHistoryRecords({ lineId: "P1L" }, {
+    dbConnectionsEnabled: true,
+    readRecords: async () => {
+      throw new Error("synthetic DB failure")
+    },
+  })
+  const payload = buildSelfEquipmentPayload(
+    excludeRecentlySkippedRows([createRow({ recipe_id: "RECIPE-AVAILABLE" })], passRecords),
+    {
+      line: "P1L",
+      sdwt: "SDWT-1",
+      priorities: ["A"],
+      desc: "",
+      eqpCh: "",
+      sensor: "",
+      chStep: "",
+    },
+  )
+
+  assert.deepEqual(passRecords, [])
+  assert.deepEqual(payload.steps.map((item) => item.desc), ["RECIPE-AVAILABLE"])
 })
 
 test("ERD scatter는 실제 schema의 underscore axis와 eqp_cb를 선택한다", () => {

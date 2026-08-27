@@ -116,7 +116,7 @@ flowchart LR
 | `DS-DASH-01` | Parquet | `path/{latest_date}` | Node | 읽기 | `Unknown` | `DF-DASH-01`, `DF-MAIL-02` | `Confirmed` | `dashboardData.mjs` — `listDashboardDateFiles` |
 | `DS-DASH-02` | Parquet | `stats/{latest_date}_spider_step_stats.parquets` | Node | 읽기 | `Unknown` | `DF-DASH-01`, `DF-MAIL-02` | `Confirmed` | `buildDashboardStatsPath` |
 | `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | Node | 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readLatestSelfEquipmentRows` |
-| `DS-SELF-REF` | Parquet | `path/{line}/{sdwt}/df_path.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readErdPathReferenceRows` |
+| `DS-SELF-REF` | Parquet | `path/{line}/{sdwt}/df_path.parquet` | Node | DB 활성 시 선택적 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 실패 격리 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readOptionalErdPathReferenceRows` |
 | `DS-SELF-02` | Parquet | path row `file_path`: `{eqp}.png`의 sibling 또는 directory 하위 `data.parquet`; 같은 directory의 `{eqp}.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-02` | 코드 `Confirmed`; 운영 file `Unknown` | `resolveErdDataFilePath`, scatter handler |
 | `DS-ABN-01` | directory·PNG | `erd_commonality/{latest_date}/.../{sensor}_{ch_step}/img.png` | Node | directory 읽기·stream | `Unknown` | `DF-ABN-01` | `Confirmed` | `commonalityData.mjs` — `collectCommonalityRows` |
 | `DS-ABN-02` | Parquet·PNG | `path_common/{line}/{sdwt}/df_path.parquet` → `common/.../data.parquet`, PNG | Node | 읽기·stream | `Unknown` | `DF-ABN-02` | `Confirmed` | `commonAnomalyData.mjs` |
@@ -224,7 +224,7 @@ Portal의 마지막 알고리즘 수행 시간은 `GET /api/dashboard-latest-dat
 | 2 | `fetchSelfEquipmentData` | filter state | 반복 priority와 선택 query 직렬화 | `GET /api/self-equipment-data` | `Confirmed` | API module |
 | 3 | Self handler | `line`, `pathSdwt`, `sdwt` 등 | 필수값·path segment 검증 | 조회 조건 | `Confirmed` | `readFilters` |
 | 4 | `readLatestSelfEquipmentRows` | path_xian root | 최신 날짜·시각 Parquet 읽기·정규화 | 전체 path rows | 코드 `Confirmed`; 운영 `Unknown` | `DS-SELF-01` |
-| 5 | ERD 경로 table·mapping·설정 결합 | path rows·Line/SDWT·team df_path·sensor 제외 JSON·PASS | 동일 file_path의 ver 참조, mapping 범위, active SKIP과 sensor 제외 | visible rows | 코드 `Confirmed` | `readErdPathReferenceRows`; `attachErdPathReferences`; 제외 함수 |
+| 5 | ERD 경로 table·mapping·설정 결합 | path rows·Line/SDWT·선택적 team df_path·sensor 제외 JSON·PASS | DB 활성 시 동일 file_path의 ver와 PASS를 참조하되 보조 file·DB 실패는 빈 결과로 격리, mapping 범위, active SKIP과 sensor 제외 | visible rows | 코드 `Confirmed` | `readOptionalErdPathReferenceRows`; `readOptionalPassHistoryRecords`; `attachErdPathReferences`; 제외 함수 |
 | 6 | payload builder | visible rows·filter | 제외 후 종속 option과 최종 chart rows 생성 | JSON | `Confirmed` | `buildSelfEquipmentPayload` |
 | 7 | page | JSON rows | EQP grouping·pagination | 최대 20 실제 chart/page | `Confirmed` | `paginateChartGroups` |
 

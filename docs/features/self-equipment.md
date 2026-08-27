@@ -25,7 +25,10 @@ SCS 분리 checkout에서는 별도 환경변수 없이 자설비 파일 read AP
 `capabilities.selfEquipmentDb=true`를 반환하고 MY EQP·SKIP LIST·SKIP·클릭이력·이력저장을
 함께 활성화한다. 새 `path_xian`의 7-column index에는 `ver`가 없으므로 분임조별
 `/pic/path/{line}/{sdwt}/df_path.parquet`에서 동일 `file_path` row를 찾아 그 row의 `ver`와
-이력 원본 경로를 사용한다. 별도 `knox_id` 조회는 하지 않으며 검증된 접속 IP를 기존 DB의
+이력 원본 경로를 사용한다. 이 클릭이력 보조 경로를 읽지 못해도 최신 `path_xian`의
+`recipe_id`로 RECIPE_ID 필터와 일반 file chart를 계속 제공하며, 참조가 없는 row의 DB action만
+비노출한다. PASS 이력 조회 실패도 file filter 응답과 격리하며, 화면의 별도 PASS 조회가 오류를
+표시한다. 별도 `knox_id` 조회는 하지 않으며 검증된 접속 IP를 기존 DB의
 `knox_id` 컬럼과 MY EQP owner 기준에 저장한다.
 실제 target server DB·mount와 Parquet 내용의 end-to-end 결과는 `Unknown`이다.
 ## 2. 사용자 목적과 주요 사용 시나리오
@@ -144,7 +147,8 @@ sequenceDiagram
     User->>Browser: route 진입 및 filter 선택
     Browser->>API: mapping, self-equipment-data GET
     API->>Index: path_xian/{latest_date} 읽기
-    API->>Ref: 동일 file_path row의 ver와 이력 경로 참조
+    API->>Ref: DB 활성 시 동일 file_path row의 ver와 이력 경로 참조
+    Note over API,Ref: 보조 참조 실패는 빈 참조로 격리
     API-->>Browser: filters, options, rows
     Browser->>API: erd-scatter-data GET
     API->>Erd: file_path에서 해석한 data.parquet와 sibling {eqp}.parquet 읽기
@@ -206,7 +210,7 @@ sequenceDiagram
 | Data Source ID | 유형 | 경로·테이블·자원 | 접근 코드 | 사용 목적 | 읽기·쓰기 | 생성 책임 | 상태 |
 |---|---|---|---|---|---|---|---|
 | `DS-SELF-01` | Parquet | `path_xian/{latest_date}` | `readLatestSelfEquipmentRows` | 최신 index의 filter option·`file_path` | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
-| `DS-SELF-REF` | Parquet | `/pic/path/{line}/{sdwt}/df_path.parquet` | `readErdPathReferenceRows` | 동일 `file_path` row의 `ver`와 이력 경로만 참조; index 선택 필드는 유지 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
+| `DS-SELF-REF` | Parquet | `/pic/path/{line}/{sdwt}/df_path.parquet` | `readOptionalErdPathReferenceRows` | DB 활성 시 동일 `file_path` row의 `ver`와 이력 경로만 참조; 실패는 빈 참조로 격리하고 index 선택 필드는 유지 | Self 이력 보조 읽기 | `Unknown` | 코드·실패 격리 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02` | Parquet | index row `file_path`: `{eqp}.png` sibling 또는 directory 하위 `data.parquet`; 직접 `data.parquet` 호환 | `readErdScatterRows` | schema 기반 axis·EQP 식별 scatter와 `eqp_cb` identity point | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-02-H` | Parquet | 선택한 `data.parquet` directory의 `{eqp}.parquet` | `readErdHistoryRows` | 변경점 이력 | Self 흐름 읽기 | `Unknown` | 코드 `Confirmed`; 운영 file `Unknown` |
 | `DS-SELF-IMG` | image | 허용 ERD root의 image | `handleErdFileRequest` | stream endpoint | 읽기 | `Unknown` | endpoint `Confirmed` |
@@ -221,7 +225,7 @@ sequenceDiagram
 | 경로 또는 자원 ID | 코드의 경로 패턴 | 용도 | 경로 변수 | 누락 처리 | 상태 |
 |---|---|---|---|---|---|
 | latest index | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | 일반 Self·MY EQP 대상 row | 날짜·시각 이름 중 최신 file, mapping의 Line·SDWT | root·file 예외→API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
-| ERD path reference | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | DB 이력용 `ver`와 원본 `file_path` | mapping으로 검증된 Line·SDWT, index와 동일 `file_path` | 참조 없음→해당 chart DB action 비노출 | 코드 `Confirmed`; 운영 file `Unknown` |
+| ERD path reference | `/appdata/abnormal_trend/pic/path/{line}/{sdwt}/df_path.parquet` | DB 이력용 `ver`와 원본 `file_path` | DB 활성, mapping으로 검증된 Line·SDWT, index와 동일 `file_path` | 읽기 실패·참조 없음→RECIPE_ID와 file chart 유지, 해당 chart DB action 비노출 | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD data | row `file_path`가 `.png`이면 sibling `data.parquet`; directory이면 하위 파일; `data.parquet` 직접 입력 호환 | scatter·identity | index row, sensor, chStep | `/pic_server2/`→`/pic/`; 예외→chart API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD history | 선택한 `data.parquet` directory의 `{eqp}.parquet` | 변경점 이력 | 선택 EQP | 실패를 `historyError`로 분리 | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD image | `/appdata/abnormal_trend/pic/erd/...` | image stream endpoint | 요청 `path` | 금지 `403`, 없음 `404` | endpoint `Confirmed` |

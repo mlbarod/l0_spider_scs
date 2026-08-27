@@ -248,6 +248,40 @@ export async function readErdPathReferenceRows({ line, pathSdwt }) {
   return { filePath, rows }
 }
 
+export async function readOptionalErdPathReferenceRows(
+  { line, pathSdwt },
+  {
+    dbConnectionsEnabled = areDbConnectionsEnabled(),
+    readReferenceRows = readErdPathReferenceRows,
+  } = {},
+) {
+  if (!dbConnectionsEnabled) return []
+
+  try {
+    const result = await readReferenceRows({ line, pathSdwt })
+    return Array.isArray(result?.rows) ? result.rows : []
+  } catch {
+    return []
+  }
+}
+
+export async function readOptionalPassHistoryRecords(
+  { lineId },
+  {
+    dbConnectionsEnabled = areDbConnectionsEnabled(),
+    readRecords = listPassHistoryRecords,
+  } = {},
+) {
+  if (!dbConnectionsEnabled) return []
+
+  try {
+    const records = await readRecords({ lineId })
+    return Array.isArray(records) ? records : []
+  } catch {
+    return []
+  }
+}
+
 export function scopeSelfEquipmentRows(rows, { line, pathSdwt, mapping }) {
   assertPathSegment("line", line)
   assertPathSegment("pathSdwt", pathSdwt)
@@ -464,20 +498,25 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
       return
     }
 
+    const dbConnectionsEnabled = areDbConnectionsEnabled()
     const [
       { filePath, rows: sourceRows },
-      { rows: referenceRows },
+      referenceRows,
       mapping,
       sensorExclusionConfig,
       passRecords,
     ] = await Promise.all([
       readLatestSelfEquipmentRows(),
-      readErdPathReferenceRows({ line: filters.line, pathSdwt: filters.pathSdwt }),
+      readOptionalErdPathReferenceRows(
+        { line: filters.line, pathSdwt: filters.pathSdwt },
+        { dbConnectionsEnabled },
+      ),
       readLineMapping(),
       readSensorExclusionConfig(),
-      areDbConnectionsEnabled()
-        ? listPassHistoryRecords({ lineId: filters.line })
-        : Promise.resolve([]),
+      readOptionalPassHistoryRecords(
+        { lineId: filters.line },
+        { dbConnectionsEnabled },
+      ),
     ])
     const rows = attachErdPathReferences(
       scopeSelfEquipmentRows(sourceRows, { ...filters, mapping }),
