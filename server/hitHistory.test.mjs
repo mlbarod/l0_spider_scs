@@ -1,7 +1,39 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { buildHitHistoryRecord, parseHitHistoryPath } from "./hitHistory.mjs"
+import {
+  buildHitHistoryDbRecord,
+  buildHitHistoryRecord,
+  parseHitHistoryPath,
+} from "./hitHistory.mjs"
+
+test("자설비 이력저장은 chart row 날짜와 SDWT로 HIT record를 만들고 file_path 형식에 의존하지 않는다", () => {
+  const record = buildHitHistoryRecord({
+    lineId: "P1L",
+    updateDate: "2026-08-27 13:00:00",
+    sdwt: "SDWT-1",
+    filePath: "/mounted/runtime/path_xian/result",
+    knoxId: "10.0.0.1",
+    execDate: "2026-08-27T13:05:00+09:00",
+  })
+
+  assert.deepEqual(record, {
+    updateDate: "2026-08-27 13:00:00",
+    lineId: "P1L",
+    sdwt: "SDWT-1",
+    filePath: "#mounted#runtime#path_xian#result",
+    knoxId: "10.0.0.1",
+    execDate: "2026-08-27T13:05:00+09:00",
+  })
+  assert.deepEqual(buildHitHistoryDbRecord(record), {
+    update_date: "2026-08-27 13:00:00",
+    line_id: "P1L",
+    sdwt: "SDWT-1",
+    file_path: "#mounted#runtime#path_xian#result",
+    knox_id: "10.0.0.1",
+    exec_date: "2026-08-27 13:05:00",
+  })
+})
 
 test("Chart 경로를 hit_history 컬럼 값으로 변환한다", () => {
   const filePath = "/appdata/abnormal_trend/pic/erd/2026-07-16 12:30:00/SDWT-1/MAIN ETCH/V1/PPID-1/A/TEMP/10@001/EQP-1.png"

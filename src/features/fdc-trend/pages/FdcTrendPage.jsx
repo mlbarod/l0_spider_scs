@@ -64,6 +64,7 @@ import {
   fetchSelfEquipmentData,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
+  getSelfEquipmentPassHistoryFields,
   isSelfEquipmentHistoryActionAvailable,
 } from "../api/selfEquipmentApi"
 import { SENSOR_GRADES } from "../utils/fdcTrendMockData"
@@ -324,7 +325,7 @@ function buildChartPassHistoryKey(lineId, row) {
     row.sdwt,
     row.desc,
     row.recipe_id,
-    normalizePassHistoryDate(getLatestDateFromErdPath(getSelfEquipmentHistoryFilePath(row))),
+    normalizePassHistoryDate(row.latest_date || getLatestDateFromErdPath(getSelfEquipmentHistoryFilePath(row))),
     row.priority,
     row.sensor,
     row.step,
@@ -994,6 +995,7 @@ export const SkipChartDialog = memo(function SkipChartDialog({
   eqp,
   filePath,
   lineId,
+  historyFields,
   disabled,
   prcGroup = "",
   dataQueryKeyPrefix = "self-equipment-data",
@@ -1037,6 +1039,7 @@ export const SkipChartDialog = memo(function SkipChartDialog({
       filePath,
       eqp,
       prcGroup,
+      ...historyFields,
       comment: skipComment,
       execDate: skipClickedAt || new Date().toISOString(),
     })
@@ -1192,6 +1195,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const [zoomDomain, setZoomDomain] = useState(null)
   const isSkipped = Boolean(passRecord)
   const historyFilePath = getSelfEquipmentHistoryFilePath(row)
+  const passHistoryFields = getSelfEquipmentPassHistoryFields(row)
   const historyActionsEnabled = isSelfEquipmentHistoryActionAvailable(row)
 
   const refreshPassHistory = () => Promise.all([
@@ -1208,7 +1212,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
     onError: (error) => toast.error(error.message),
   })
   const handleSkipDelete = () => {
-    deleteSkipMutation.mutate({ lineId, filePath: historyFilePath })
+    deleteSkipMutation.mutate({ lineId, filePath: historyFilePath, ...passHistoryFields })
   }
   const saveHitHistoryMutation = useMutation({
     mutationFn: createHitHistory,
@@ -1218,6 +1222,8 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const handleHistorySave = () => {
     saveHitHistoryMutation.mutate({
       lineId,
+      updateDate: passHistoryFields.updateDate,
+      sdwt: passHistoryFields.sdwt,
       filePath: historyFilePath,
       execDate: new Date().toISOString(),
     })
@@ -1466,6 +1472,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               eqp={eqp}
               filePath={historyFilePath}
               lineId={lineId}
+              historyFields={passHistoryFields}
               dataQueryKeyPrefix={dataQueryKeyPrefix}
               disabled={isSkipped}
             />

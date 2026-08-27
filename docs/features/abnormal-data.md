@@ -87,7 +87,8 @@ FdcTrendPage
 서버는 `/pic_server2/`를 `/pic/`로 정규화하고 두 gate mode 모두 Line·SDWT·EQP·latest date·sensor·step이 최신 scoped row와 일치하는지 확인한다. 이후 `file_path`가 `.png`이면 sibling `data.parquet`, directory이면 하위 `data.parquet`, 직접 파일이면 해당 `data.parquet`를 선택한다.
 
 새 7-column index에는 기존 Self DB 식별자 `ver`가 없다. 서버는 mapping으로 검증한
-분임조별 ERD 경로 테이블에서 동일 `file_path` row의 `ver`만 보조 참조한다. 클릭이력·SKIP·HIT는
+분임조별 ERD 경로 테이블에서 동일 `file_path` row의 `ver`만 보조 참조한다. 자설비 클릭이력·SKIP·HIT는
+최신 index/최종 chart row의 확정 필드로 DB record를 구성하며,
 최신 index row의 `file_path`를 그대로 사용한다.
 참조 row가 없는 chart도 index `file_path`가 있으면 DB capability 기준으로 DB action을 표시한다.
 

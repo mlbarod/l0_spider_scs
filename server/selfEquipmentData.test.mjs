@@ -86,13 +86,17 @@ test("SKIP 등록 후 정확히 3일이 지나면 일반 이상건수에 다시 
   assert.deepEqual(excludeRecentlySkippedRows([row], [expiredRecord], NOW), [row])
 })
 
-test("path_xian row에 desc와 ver가 없어도 file_path 기준으로 활성 SKIP을 제외한다", () => {
+test("path_xian row는 file_path 재파싱 없이 chart row 식별값으로 활성 SKIP을 제외한다", () => {
   const row = createRow({
     desc: "R1",
     ver: "",
+    latest_date: "2026-08-27 13:00:00",
   })
 
-  assert.deepEqual(excludeRecentlySkippedRows([row], [createPassRecord()], NOW), [])
+  assert.deepEqual(excludeRecentlySkippedRows([row], [createPassRecord({
+    desc: "R1",
+    ver: "",
+  })], NOW), [])
 })
 
 test("eqp_ch ALL에서 Sensor ALL과 ch_step ALL을 선택하면 모든 센서 차트를 반환한다", () => {

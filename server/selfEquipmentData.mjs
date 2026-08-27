@@ -138,7 +138,7 @@ function normalizeScopeMatchValue(value) {
 
 function buildSkipComparisonKey(row) {
   let pathValues = null
-  if (row.file_path) {
+  if (!row.latest_date && row.file_path) {
     try {
       pathValues = parsePassHistoryPath(row.file_path)
     } catch {

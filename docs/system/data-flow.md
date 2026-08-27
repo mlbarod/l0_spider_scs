@@ -162,7 +162,7 @@ flowchart LR
 | `DF-ABN-02` | common anomaly APIs | path·scatter·image handler | `DS-ABN-02`, `pass_history` | path→data/image, EQP match, point group | `Confirmed` | `commonAnomalyData.mjs` |
 | `DF-ABN-03` | common-commonality APIs | latest path·directory index·filter payload | `DS-ABN-03` | folder segment를 image row로 변환 | `Confirmed` | common-commonality modules |
 | `DF-COMMON-01` | clicked history POST | `buildClickedCategoryHistoryRecord`, Python helper | index drawing `file_path`, 선택값, 접속 IP, `clicked_category_history` | 선택값이 `ALL` 하나면 literal `ALL`; 그 외 category 문자열 정규화; IP를 `knox_id`에 INSERT | 코드 `Confirmed`; 운영 `Unknown` | clicked history Node/Python |
-| `DF-COMMON-02` | hit history POST | `buildHitHistoryRecord`, Python helper | App image/chart path, 접속 IP, `hit_history` | 날짜·SDWT 추출, slash→`#`, IP 포함 6-column INSERT | 코드 `Confirmed`; 운영 `Unknown` | `hitHistory.mjs`; `hit_history.py` |
+| `DF-COMMON-02` | hit history POST | `buildHitHistoryRecord`, Python helper | Self chart row 또는 다른 App image/chart path, 접속 IP, `hit_history` | Self는 row의 날짜·SDWT 사용, 다른 App은 path 추출, slash→`#`, IP 포함 6-column INSERT | 코드 `Confirmed`; 운영 `Unknown` | `hitHistory.mjs`; `hit_history.py` |
 | `DF-MAIL-01` | registration APIs | Node validation→Python action | `DS-DB-REF`, `DS-DB-REG` | group·list serialize·transaction | `Confirmed` | registration Node/Python |
 | `DF-MAIL-02` | 실행 진입점 없음 | Dashboard producer와 template만 확인 | `lineDashboard`, 등록 DB 후보 | 최종 결합·render·send 미확인 | `Partial` | Dashboard module·template |
 

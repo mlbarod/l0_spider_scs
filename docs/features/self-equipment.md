@@ -138,6 +138,10 @@ Self Equipment는 Line·SDWT·Grade와 종속 조건을 좁혀 ERD 이상감지 
 자설비 클릭이력은 최신 index 조회 응답의 `filters.sdwt`·`filters.priorities`·`filters.sensor`로
 6컬럼을 구성한다. `file_path`는 선택 결과 존재 확인과 요청 추적에만 남기며, 6컬럼 구성에서는
 legacy 경로 형식이나 운영 mount root에 의존하지 않는다.
+자설비 SKIP은 같은 최종 chart row의 `latest_date`, `sdwt`, `desc/recipe_id`, `ver`, `priority`,
+`sensor`, `step`, `eqp`를 `pass_history` record로 전달하고, 이력저장은 `latest_date`, `sdwt`,
+`file_path`를 `hit_history` 6컬럼 구성에 사용한다. 두 action 모두 자설비에서는 `file_path` 계층을
+다시 파싱하지 않으며 공통부·동일성 App은 기존 경로 계약을 유지한다.
 서버가 DB helper 호출 전에 확정한 실제 6컬럼은 성공·실패 모두 브라우저 `[history-db-final]`과 자설비 화면의
 `클릭이력 DB 전송값 (디버깅)` 표에 표시한다.
 gate 거부는 credential 값을 제외한 `[history-db-blocked]`에 기록한다.

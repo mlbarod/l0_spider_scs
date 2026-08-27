@@ -66,6 +66,9 @@ def connect(db_info):
         db=db_info["DB_NAME"],
         charset="utf8",
         port=db_info["DB_PORT"],
+        connect_timeout=10,
+        read_timeout=15,
+        write_timeout=15,
     )
 
 

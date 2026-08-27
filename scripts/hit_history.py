@@ -51,6 +51,9 @@ def connect(db_info):
         db=db_info["DB_NAME"],
         charset="utf8",
         port=db_info["DB_PORT"],
+        connect_timeout=10,
+        read_timeout=15,
+        write_timeout=15,
     )
 
 
@@ -64,16 +67,20 @@ def normalize_exec_date(value):
     return parsed.strftime("%Y-%m-%d %H:%M:%S")
 
 
-def insert_history(connection, payload):
+def build_db_record(payload):
+    return {
+        "update_date": payload["updateDate"],
+        "line_id": payload["lineId"],
+        "sdwt": payload["sdwt"],
+        "file_path": payload["filePath"],
+        "knox_id": payload["knoxId"],
+        "exec_date": normalize_exec_date(payload.get("execDate")),
+    }
+
+
+def insert_history(connection, db_record):
     columns = ("update_date", "line_id", "sdwt", "file_path", "knox_id", "exec_date")
-    values = (
-        payload["updateDate"],
-        payload["lineId"],
-        payload["sdwt"],
-        payload["filePath"],
-        payload["knoxId"],
-        normalize_exec_date(payload.get("execDate")),
-    )
+    values = tuple(db_record[column] for column in columns)
     log_db_write("hit_history", "INSERT", columns, [values])
     with connection.cursor() as cursor:
         cursor.execute(
@@ -85,19 +92,24 @@ def insert_history(connection, payload):
             values,
         )
     connection.commit()
-    return {"ok": True, "affectedRows": 1}
+    return {"ok": True, "affectedRows": 1, "debugRecord": db_record}
 
 
 def main():
+    db_record = None
     try:
         payload = read_payload()
+        db_record = build_db_record(payload)
         db_info = load_db_info()
         with connect(db_info) as connection:
-            result = insert_history(connection, payload)
+            result = insert_history(connection, db_record)
         write_json(result)
     except Exception as error:
         print(f"hit history operation failed: {error}", file=sys.stderr)
-        write_json({"ok": False, "error": "HIT 이력 DB 작업에 실패했습니다."})
+        result = {"ok": False, "error": "HIT 이력 DB 작업에 실패했습니다."}
+        if db_record is not None:
+            result["debugRecord"] = db_record
+        write_json(result)
 
 
 if __name__ == "__main__":

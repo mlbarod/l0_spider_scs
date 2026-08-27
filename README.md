@@ -157,14 +157,14 @@ POST/DELETE로 등록·해제한다.
 | `pass_history` 컬럼 | SKIP 저장값 |
 | --- | --- |
 | `line_id` | 필터에서 선택한 Line Name |
-| `ver` | ERD 경로의 `{ver}` |
-| `sdwt` | ERD 경로의 `{sdwt}` |
-| `desc` | ERD 경로의 `{step_desc}` |
-| `recipe_id` | ERD 경로의 `{ppid}` |
-| `update_date` | ERD 경로의 `{latest_date}` |
-| `priority` | ERD 경로의 `{grade}` |
-| `sensor` | ERD 경로의 `{sensor}` |
-| `step` | ERD 경로의 `{ch_step}` |
+| `ver` | 최종 chart row가 보조 참조한 `ver` |
+| `sdwt` | 최종 chart row의 `sdwt` |
+| `desc` | 최종 chart row의 호환 `desc` (`recipe_id`) |
+| `recipe_id` | 최종 chart row의 `recipe_id` |
+| `update_date` | 최종 chart row의 `latest_date` |
+| `priority` | 최종 chart row의 `priority` |
+| `sensor` | 최종 chart row의 `sensor` |
+| `step` | 최종 chart row의 `step` (`ch_step`) |
 | `eqp` | 차트의 eqp_ch (`.png` 확장자 제외) |
 | `knox_id` | 현재 접속 IP |
 | `exec_date` | SKIP 버튼을 눌러 팝업을 연 시각 |
@@ -222,14 +222,14 @@ HIT 이력은 원본 `l0_spider`와 같은 6-column 계약을 사용한다.
 | `exec_date` | `TIMESTAMP` |
 
 Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다.
-서버는 Chart drawing에 사용한 ERD 이미지 경로를 파싱하고 아래 규칙으로 저장한다.
+자설비는 최종 chart row의 날짜·SDWT를 사용하고 다른 App은 기존 결과 경로를 파싱해 아래 규칙으로 저장한다.
 `knox_id`는 요청 본문이 아니라 서버가 확인한 접속 IP를 사용한다.
 
 | `hit_history` 컬럼 | 이력저장 값 |
 | --- | --- |
-| `update_date` | Chart 경로의 `{latest_date}` |
+| `update_date` | 자설비 최종 chart row의 `latest_date` 또는 다른 App Chart 경로의 날짜 |
 | `line_id` | 화면에서 선택한 Line Name |
-| `sdwt` | Chart 경로의 `{sdwt}` |
+| `sdwt` | 자설비 최종 chart row의 `sdwt` 또는 다른 App Chart 경로의 `sdwt` |
 | `file_path` | Chart drawing 원본 파일 경로의 모든 `/`를 `#`으로 치환한 값 |
 | `knox_id` | 현재 접속 IP |
 | `exec_date` | 이력저장 버튼 클릭 시각 |
@@ -318,6 +318,8 @@ Line·SDWT·EQP·sensor·step·경로가
 mount root를 해석하지 않는다. 서버가 DB helper
 호출 전에 확정한 최종 6컬럼은 성공·실패 모두 브라우저 Console의 `[history-db-final]`과 자설비 화면
 상단의 `클릭이력 DB 전송값 (디버깅)` 표에 출력한다.
+자설비 SKIP과 이력저장도 최신 chart row의 확정 필드를 각각 `pass_history` 13컬럼과 `hit_history`
+6컬럼으로 전달하며, 자설비에서는 `file_path`의 legacy 계층이나 mount root를 다시 해석하지 않는다.
 
 새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와
 `src/config/spiderDataPaths.mjs`를 함께 업데이트한다.

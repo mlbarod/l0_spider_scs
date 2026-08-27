@@ -358,7 +358,7 @@ flowchart LR
 ```
 
 - handler는 접속 IP가 `knox_id` 컬럼에 저장된 활성 `myeqp_regist`와 최신 `path_xian` index를 결합한다.
-- team ERD 경로 table의 동일 `file_path` row에서 `ver`만 보조 참조하고, SKIP·EQP ALL SKIP·HIT·클릭이력은 index의 `file_path`를 사용한다.
+- team ERD 경로 table의 동일 `file_path` row에서 `ver`만 보조 참조한다. SKIP·EQP ALL SKIP·HIT·클릭이력은 최신 index/chart row의 확정 필드를 DB record로 전달하며, `file_path`는 원본 식별값으로 함께 전달하되 계층을 다시 파싱하지 않는다.
 - 코드는 연결됐으며 실제 운영 DB·file 결합 결과는 `Unknown`이다.
 
 ### 5.4 동일성 이상감지

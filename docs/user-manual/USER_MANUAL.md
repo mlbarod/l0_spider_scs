@@ -139,8 +139,10 @@ sensor에서 `ALL`을 선택하면 현재 RECIPE_ID·eqp_ch 범위의 모든 sen
 | 이력저장 | 현재 결과를 이력 DB에 저장 |
 
 새 `path_xian` index에는 `ver` 컬럼이 없으므로 같은 `file_path`를 가진 분임조별
-ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. 버튼과 마지막 `ch_step` 클릭이력은
-차트가 사용하는 `path_xian`의 `file_path`를 그대로 사용합니다. SKIP은 등록 시각부터 72시간 동안 일반
+ERD 경로 테이블 `df_path.parquet` row의 `ver`를 참조합니다. SKIP과 이력저장 버튼은 최종 chart row의
+날짜·SDWT·RECIPE_ID·등급·sensor·ch_step·EQP 등 확정값을 사용하며, `file_path` 계층을 다시 해석하지
+않습니다. 마지막 `ch_step` 클릭이력도 최종 조회 응답의 filter 확정값을 사용합니다. SKIP은 등록
+시각부터 72시간 동안 일반
 결과에서 제외되며, **SKIP LIST**에서 **SKIP해제**할 수 있습니다.
 
 장애 확인 시 브라우저 개발자 도구 Console에서 `[history-db-request]`를 검색하면 클릭 시 서버로 보낸

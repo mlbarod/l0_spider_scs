@@ -23,6 +23,13 @@ function normalizeText(value) {
   return String(value ?? "").trim()
 }
 
+function normalizeDbDateTime(value, now = new Date()) {
+  const date = normalizeText(value) ? new Date(value) : now
+  if (Number.isNaN(date.getTime())) throw new Error("이력저장 시각이 올바르지 않습니다.")
+  const pad = (number) => String(number).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
 const COMMON_ANOMALY_ROOT = "/appdata/abnormal_trend/pic/common"
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/
 const DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
@@ -150,6 +157,8 @@ async function readJsonBody(req) {
 
 function runHitHistoryHelper(payload) {
   return new Promise((resolvePromise, reject) => {
+    const debugRecord = buildHitHistoryDbRecord(payload)
+    const helperPayload = { ...payload, execDate: debugRecord.exec_date }
     const child = spawn("python3", ["-B", helperPath], {
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -157,20 +166,24 @@ function runHitHistoryHelper(payload) {
     attachHistoryDbWriteLogger(child)
     let stdout = ""
     let timedOut = false
+    const rejectWithDebugRecord = (error) => {
+      error.debugRecord = error.debugRecord ?? debugRecord
+      reject(error)
+    }
     const timeout = setTimeout(() => {
       timedOut = true
       child.kill("SIGTERM")
-    }, 10_000)
+    }, 30_000)
 
     child.stdout.on("data", (chunk) => { stdout += chunk })
     child.on("error", (error) => {
       clearTimeout(timeout)
-      reject(error)
+      rejectWithDebugRecord(error)
     })
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        reject(new Error("HIT 이력 저장 시간이 초과되었습니다."))
+        rejectWithDebugRecord(new Error("HIT 이력 저장 시간이 초과되었습니다."))
         return
       }
 
@@ -178,22 +191,37 @@ function runHitHistoryHelper(payload) {
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        reject(new Error("HIT 이력 응답을 해석하지 못했습니다."))
+        rejectWithDebugRecord(new Error("HIT 이력 응답을 해석하지 못했습니다."))
         return
       }
       if (!result.ok) {
-        reject(new Error(result.error || "HIT 이력을 저장하지 못했습니다."))
+        const error = new Error(result.error || "HIT 이력을 저장하지 못했습니다.")
+        error.debugRecord = result.debugRecord ?? debugRecord
+        rejectWithDebugRecord(error)
         return
       }
-      resolvePromise(result)
+      resolvePromise({ ...result, debugRecord: result.debugRecord ?? debugRecord })
     })
 
-    child.stdin.end(JSON.stringify(payload))
+    child.stdin.end(JSON.stringify(helperPayload))
   })
+}
+
+export function buildHitHistoryDbRecord(record, now = new Date()) {
+  return {
+    update_date: normalizeText(record.updateDate),
+    line_id: normalizeText(record.lineId),
+    sdwt: normalizeText(record.sdwt),
+    file_path: normalizeText(record.filePath),
+    knox_id: normalizeText(record.knoxId),
+    exec_date: normalizeDbDateTime(record.execDate, now),
+  }
 }
 
 export function buildHitHistoryRecord({
   lineId,
+  updateDate = "",
+  sdwt = "",
   filePath,
   knoxId,
   execDate = "",
@@ -203,7 +231,11 @@ export function buildHitHistoryRecord({
   if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
   if (!originalFilePath) throw new Error("Chart 파일 경로가 필요합니다.")
 
-  const parsedPath = parseHitHistoryPath(originalFilePath)
+  const selectedUpdateDate = normalizeText(updateDate)
+  const selectedSdwt = normalizeText(sdwt)
+  const parsedPath = selectedUpdateDate && selectedSdwt
+    ? { updateDate: selectedUpdateDate, sdwt: selectedSdwt }
+    : parseHitHistoryPath(originalFilePath)
   return {
     updateDate: parsedPath.updateDate,
     lineId: normalizedLineId,
@@ -241,11 +273,19 @@ export async function handleHitHistoryRequest(req, res) {
     })
     const result = await runHitHistoryHelper(record)
     sendJson(res, 200, result)
-  } catch {
-    sendJson(res, 500, createSafeApiError({
+  } catch (error) {
+    const errorPayload = createSafeApiError({
       code: "HIT_HISTORY_REQUEST_FAILED",
       message: "HIT 이력 요청을 처리하지 못했습니다.",
       scope: "hit-history",
-    }))
+    })
+    const failureStage = error?.debugRecord ? "db-write" : "record-build"
+    console.error(`[hit-history-failure] requestId=${errorPayload.requestId} stage=${failureStage} reason=${JSON.stringify(error?.message ?? "unknown")}`)
+    sendJson(res, 500, {
+      ...errorPayload,
+      failureStage,
+      ...(failureStage === "record-build" ? { failureDetail: error?.message } : {}),
+      ...(error?.debugRecord ? { debugRecord: error.debugRecord } : {}),
+    })
   }
 }

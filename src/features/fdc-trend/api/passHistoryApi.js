@@ -1,9 +1,20 @@
 import { getApiErrorMessage } from "./errorMessage.js"
-import { logHistoryRequest } from "./historyRequestDebug.js"
+import { logHistoryDbFinal, logHistoryRequest } from "./historyRequestDebug.js"
 
-async function parseResponse(response) {
+async function parseResponse(response, operation = "") {
   const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(getApiErrorMessage(payload, "PASS 이력을 처리하지 못했습니다."))
+  if (operation && Array.isArray(payload.debugRecords)) {
+    payload.debugRecords.forEach((record) => {
+      logHistoryDbFinal({ table: "pass_history", operation, record })
+    })
+  }
+  if (!response.ok) {
+    const error = new Error(getApiErrorMessage(payload, "PASS 이력을 처리하지 못했습니다."))
+    error.debugRecords = payload.debugRecords
+    error.failureStage = payload.failureStage
+    error.failureDetail = payload.failureDetail
+    throw error
+  }
   return payload
 }
 
@@ -38,15 +49,15 @@ export async function fetchSkipListData({
   return parseResponse(response)
 }
 
-export async function createPassHistory({ lineId, filePath, eqp, prcGroup, comment, execDate }) {
-  const body = { lineId, filePath, eqp, prcGroup, comment, execDate }
+export async function createPassHistory(input) {
+  const body = { ...input }
   logHistoryRequest({ endpoint: "/api/pass-history", body })
   const response = await fetch("/api/pass-history", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
-  return parseResponse(response)
+  return parseResponse(response, "UPSERT")
 }
 
 export async function createPassHistoryBatch({ records, comment, execDate }) {
@@ -57,16 +68,16 @@ export async function createPassHistoryBatch({ records, comment, execDate }) {
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
-  return parseResponse(response)
+  return parseResponse(response, "UPSERT_MANY")
 }
 
-export async function deletePassHistory({ lineId, filePath, eqp, prcGroup }) {
-  const body = { lineId, filePath, eqp, prcGroup }
+export async function deletePassHistory(input) {
+  const body = { ...input }
   logHistoryRequest({ endpoint: "/api/pass-history", method: "DELETE", body })
   const response = await fetch("/api/pass-history", {
     method: "DELETE",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     body: JSON.stringify(body),
   })
-  return parseResponse(response)
+  return parseResponse(response, "DELETE")
 }

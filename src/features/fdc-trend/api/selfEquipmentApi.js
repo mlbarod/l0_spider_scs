@@ -22,6 +22,24 @@ export function getSelfEquipmentHistoryFilePaths(rows) {
   ))
 }
 
+export function getSelfEquipmentPassHistoryFields(row) {
+  const source = row?.pass_history ?? row ?? {}
+  const normalize = (value) => String(value ?? "").trim()
+  const normalizeEqp = (value) => normalize(value).replace(/\.png$/i, "")
+  const recipeId = normalize(source.recipeId ?? source.recipe_id ?? source.desc)
+  return {
+    updateDate: normalize(source.updateDate ?? source.update_date ?? row?.latest_date),
+    sdwt: normalize(source.sdwt ?? row?.sdwt),
+    desc: normalize(source.desc ?? recipeId),
+    ver: normalize(source.ver ?? row?.ver),
+    recipeId,
+    priority: normalize(source.priority ?? row?.priority),
+    sensor: normalize(source.sensor ?? row?.sensor),
+    step: normalize(source.step ?? row?.step),
+    eqp: normalizeEqp(source.eqp ?? row?.eqp),
+  }
+}
+
 export function isSelfEquipmentHistoryActionAvailable(row) {
   return Boolean(getSelfEquipmentHistoryFilePath(row))
 }
@@ -78,8 +96,12 @@ export async function fetchEqpAllSkipTargets({
   }
   const payload = await fetchSelfEquipmentData({ ...filters, pathSdwt, sdwt })
 
-  return getSelfEquipmentHistoryFilePaths(payload.rows)
-    .map((filePath) => ({ filePath }))
+  return (Array.isArray(payload.rows) ? payload.rows : [])
+    .map((row) => ({
+      filePath: getSelfEquipmentHistoryFilePath(row),
+      ...getSelfEquipmentPassHistoryFields(row),
+    }))
+    .filter((target) => target.filePath)
 }
 
 export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, latestDate, line, pathSdwt }) {

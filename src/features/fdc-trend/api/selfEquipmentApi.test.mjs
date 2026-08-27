@@ -4,6 +4,7 @@ import test from "node:test"
 import {
   buildErdDataReferencePath,
   fetchEqpAllSkipTargets,
+  getSelfEquipmentPassHistoryFields,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
   isSelfEquipmentHistoryActionAvailable,
@@ -54,6 +55,30 @@ test("클릭이력·이력저장·SKIP은 path_xian 원본 file_path를 공통 �
   ])
 })
 
+test("자설비 SKIP은 path_xian row에서 PASS 이력 필드를 구성한다", () => {
+  assert.deepEqual(getSelfEquipmentPassHistoryFields({
+    latest_date: "2026-08-27 13:00:00",
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    ver: "V1",
+    recipe_id: "RECIPE-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1.png",
+  }), {
+    updateDate: "2026-08-27 13:00:00",
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    ver: "V1",
+    recipeId: "RECIPE-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+  })
+})
+
 test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", async (t) => {
   const originalFetch = globalThis.fetch
   let requestedUrl = ""
@@ -64,7 +89,15 @@ test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", as
       json: async () => ({
         rows: [{
           file_path: "/appdata/erd/chart.png",
-          history_file_path: "",
+          latest_date: "2026-08-27 13:00:00",
+          sdwt: "SDWT-1",
+          desc: "RECIPE-1",
+          ver: "V1",
+          recipe_id: "RECIPE-1",
+          priority: "A",
+          sensor: "SENSOR-1",
+          step: "10@MAIN",
+          eqp: "EQP-1.png",
         }],
       }),
     }
@@ -87,7 +120,18 @@ test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", as
   assert.match(requestedUrl, /pathSdwt=SDWT-1/)
   assert.match(requestedUrl, /sensor=SENSOR-1/)
   assert.match(requestedUrl, /chStep=ALL/)
-  assert.deepEqual(targets, [{ filePath: "/appdata/erd/chart.png" }])
+  assert.deepEqual(targets, [{
+    filePath: "/appdata/erd/chart.png",
+    updateDate: "2026-08-27 13:00:00",
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    ver: "V1",
+    recipeId: "RECIPE-1",
+    priority: "A",
+    sensor: "SENSOR-1",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+  }])
 })
 
 test("EQP ALL SKIP 대상 조회는 sensor ALL을 허용하지 않는다", async (t) => {

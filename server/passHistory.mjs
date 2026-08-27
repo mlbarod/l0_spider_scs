@@ -36,6 +36,31 @@ function normalizeDbDate(value) {
   return !match[2] || match[2] === "00:00:00" ? match[1] : `${match[1]} ${match[2]}`
 }
 
+function normalizeDbDateTime(value, now = new Date()) {
+  const date = normalizeText(value) ? new Date(value) : now
+  if (Number.isNaN(date.getTime())) throw new Error("PASS 이력 실행 시각이 올바르지 않습니다.")
+  const pad = (number) => String(number).padStart(2, "0")
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+export function buildPassHistoryDbRecord(record, now = new Date()) {
+  return {
+    line_id: normalizeText(record.lineId),
+    ver: normalizeText(record.ver),
+    sdwt: normalizeText(record.sdwt),
+    desc: normalizeText(record.desc),
+    recipe_id: normalizeText(record.recipeId),
+    update_date: normalizeText(record.updateDate),
+    priority: normalizeText(record.priority),
+    sensor: normalizeText(record.sensor),
+    step: normalizeText(record.step),
+    eqp: normalizeEqp(record.eqp),
+    knox_id: normalizeText(record.knoxId),
+    exec_date: normalizeDbDateTime(record.execDate, now),
+    comment: String(record.comment ?? ""),
+  }
+}
+
 function parseDatabaseDate(value) {
   if (value instanceof Date) return value.getTime()
   const text = normalizeText(value)
@@ -381,6 +406,23 @@ async function readJsonBody(req) {
 
 function runPassHistoryHelper(action, payload) {
   return new Promise((resolvePromise, reject) => {
+    const sourceRecords = action === "insert-many"
+      ? payload.records
+      : action === "insert" || action === "delete"
+      ? [payload]
+      : []
+    const debugRecords = sourceRecords.map((record) => buildPassHistoryDbRecord(record))
+    const helperPayload = action === "insert-many"
+      ? {
+        ...payload,
+        records: payload.records.map((record, index) => ({
+          ...record,
+          execDate: debugRecords[index].exec_date,
+        })),
+      }
+      : action === "insert" || action === "delete"
+      ? { ...payload, execDate: debugRecords[0].exec_date }
+      : payload
     const child = spawn("python3", ["-B", helperPath, action], {
       env: process.env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -388,20 +430,24 @@ function runPassHistoryHelper(action, payload) {
     attachHistoryDbWriteLogger(child)
     let stdout = ""
     let timedOut = false
+    const rejectWithDebugRecords = (error) => {
+      error.debugRecords = error.debugRecords ?? debugRecords
+      reject(error)
+    }
     const timeout = setTimeout(() => {
       timedOut = true
       child.kill("SIGTERM")
-    }, 10_000)
+    }, 30_000)
 
     child.stdout.on("data", (chunk) => { stdout += chunk })
     child.on("error", (error) => {
       clearTimeout(timeout)
-      reject(error)
+      rejectWithDebugRecords(error)
     })
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        reject(new Error("PASS 이력 처리 시간이 초과되었습니다."))
+        rejectWithDebugRecords(new Error("PASS 이력 처리 시간이 초과되었습니다."))
         return
       }
 
@@ -409,17 +455,20 @@ function runPassHistoryHelper(action, payload) {
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        reject(new Error("PASS 이력 응답을 해석하지 못했습니다."))
+        rejectWithDebugRecords(new Error("PASS 이력 응답을 해석하지 못했습니다."))
         return
       }
       if (!result.ok) {
-        reject(new Error(result.error || "PASS 이력을 처리하지 못했습니다."))
+        rejectWithDebugRecords(new Error(result.error || "PASS 이력을 처리하지 못했습니다."))
         return
       }
-      resolvePromise(result)
+      resolvePromise({
+        ...result,
+        ...(debugRecords.length ? { debugRecords: result.debugRecords ?? debugRecords } : {}),
+      })
     })
 
-    child.stdin.end(JSON.stringify(payload))
+    child.stdin.end(JSON.stringify(helperPayload))
   })
 }
 
@@ -432,20 +481,52 @@ export async function listPassHistoryRecords({ lineId, sdwt = "", desc = "" }) {
   return result.records ?? []
 }
 
-function buildRecord({
+export function buildPassHistoryRecord({
   lineId,
   filePath,
   eqp = "",
   prcGroup = "",
+  updateDate = "",
+  sdwt = "",
+  desc = "",
+  ver = "",
+  recipeId = "",
+  priority = "",
+  sensor = "",
+  step = "",
   knoxId,
   comment = "",
   execDate = "",
 }) {
   const normalizedLineId = normalizeText(lineId)
   if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
+  if (!normalizeText(filePath)) throw new Error("Chart Drawing 경로가 필요합니다.")
 
+  const selectedValues = {
+    updateDate: normalizeText(updateDate),
+    sdwt: normalizeText(sdwt),
+    desc: normalizeText(desc),
+    ver: normalizeText(ver),
+    recipeId: normalizeText(recipeId),
+    priority: normalizeText(priority),
+    sensor: normalizeText(sensor),
+    step: normalizeText(step),
+    eqp: normalizeEqp(eqp),
+  }
+  const hasSelfSelection = [
+    selectedValues.updateDate,
+    selectedValues.sdwt,
+    selectedValues.desc,
+    selectedValues.recipeId,
+    selectedValues.priority,
+    selectedValues.sensor,
+    selectedValues.step,
+    selectedValues.eqp,
+  ].every(Boolean)
   const normalizedPath = normalizeText(filePath).replaceAll("/pic_server2/", "/pic/")
-  const pathValues = resolve(normalizedPath).startsWith(`${COMMON_FILE_ROOT}/`)
+  const pathValues = hasSelfSelection
+    ? selectedValues
+    : resolve(normalizedPath).startsWith(`${COMMON_FILE_ROOT}/`)
     ? parseCommonPassHistoryPath(normalizedPath, { eqp, prcGroup })
     : parsePassHistoryPath(normalizedPath)
 
@@ -515,7 +596,7 @@ export async function handlePassHistoryRequest(req, res, url) {
           sendJson(res, 400, { ok: false, error: "일괄 SKIP 대상은 1건 이상 500건 이하여야 합니다." })
           return
         }
-        const records = body.records.map((item) => buildRecord({
+        const records = body.records.map((item) => buildPassHistoryRecord({
           ...item,
           comment: body.comment,
           execDate: body.execDate,
@@ -530,7 +611,7 @@ export async function handlePassHistoryRequest(req, res, url) {
         sendJson(res, 200, result)
         return
       }
-      const record = buildRecord({ ...body, knoxId: currentUser.knoxId })
+      const record = buildPassHistoryRecord({ ...body, knoxId: currentUser.knoxId })
       logHistoryDbAttempt({
         table: "pass_history",
         operation: req.method === "POST" ? "UPSERT" : "DELETE",
@@ -542,11 +623,20 @@ export async function handlePassHistoryRequest(req, res, url) {
     }
 
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
-  } catch {
-    sendJson(res, 500, createSafeApiError({
+  } catch (error) {
+    const errorPayload = createSafeApiError({
       code: "PASS_HISTORY_REQUEST_FAILED",
       message: "PASS 이력 요청을 처리하지 못했습니다.",
       scope: "pass-history",
-    }))
+    })
+    const debugRecords = Array.isArray(error?.debugRecords) ? error.debugRecords : []
+    const failureStage = debugRecords.length ? "db-write" : "record-build"
+    console.error(`[pass-history-failure] requestId=${errorPayload.requestId} stage=${failureStage} reason=${JSON.stringify(error?.message ?? "unknown")}`)
+    sendJson(res, 500, {
+      ...errorPayload,
+      failureStage,
+      ...(failureStage === "record-build" ? { failureDetail: error?.message } : {}),
+      ...(debugRecords.length ? { debugRecords } : {}),
+    })
   }
 }

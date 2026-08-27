@@ -4,12 +4,76 @@ import test from "node:test"
 import {
   COMMON_PASS_HISTORY_VERSION,
   PASS_HISTORY_ACTIVE_DURATION_MS,
+  buildPassHistoryDbRecord,
+  buildPassHistoryRecord,
   buildCommonPassHistoryFilterPayload,
   buildPassHistoryFilterPayload,
   parseCommonPassHistoryPath,
 } from "./passHistory.mjs"
 
 const NOW = Date.parse("2026-07-17T15:00:00+09:00")
+
+test("자설비 SKIP은 chart row 필드로 PASS record를 만들고 file_path 형식에 의존하지 않는다", () => {
+  assert.deepEqual(buildPassHistoryRecord({
+    lineId: "P1L",
+    filePath: "/mounted/runtime/path_xian/result",
+    updateDate: "2026-08-27 13:00:00",
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    ver: "V1",
+    recipeId: "RECIPE-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1.png",
+    knoxId: "10.0.0.1",
+    execDate: "2026-08-27T13:05:00+09:00",
+    comment: "점검",
+  }), {
+    lineId: "P1L",
+    updateDate: "2026-08-27 13:00:00",
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    ver: "V1",
+    recipeId: "RECIPE-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+    knoxId: "10.0.0.1",
+    execDate: "2026-08-27T13:05:00+09:00",
+    comment: "점검",
+  })
+  assert.deepEqual(buildPassHistoryDbRecord({
+    lineId: "P1L",
+    updateDate: "2026-08-27 13:00:00",
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    ver: "V1",
+    recipeId: "RECIPE-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+    knoxId: "10.0.0.1",
+    execDate: "2026-08-27T13:05:00+09:00",
+    comment: "점검",
+  }), {
+    line_id: "P1L",
+    ver: "V1",
+    sdwt: "SDWT-1",
+    desc: "RECIPE-1",
+    recipe_id: "RECIPE-1",
+    update_date: "2026-08-27 13:00:00",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+    knox_id: "10.0.0.1",
+    exec_date: "2026-08-27 13:05:00",
+    comment: "점검",
+  })
+})
 
 test("공통부 data.parquet 경로를 pass_history 값으로 변환한다", () => {
   const values = parseCommonPassHistoryPath(
