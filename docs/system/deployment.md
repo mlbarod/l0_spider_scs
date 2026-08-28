@@ -75,7 +75,7 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 team path root | `/appdata/abnormal_trend/pic/path_xian` | 다른 mount 경로를 사용할 때만 명시하고 `{line}/{pathSdwt}/df_path.parquet` read-only 권한 확인 |
 | `VITE_SITE_URL` | Vite 시작·build | 빈 값 | client-visible 설정에 secret 금지 |
 | `MAPPING_CONFIG_PATH` | API 요청 | `/appdata/l0_spider_scs/mapping_config.json` | 실제 file 접근 사전 확인; 기본 경로와 다를 때만 override |
-| `COMMONALITY_PATH_TABLE_ROOT` | API 요청 | `/appdata/abnormal_trend/pic/path_erd_commonality_xian` | 다른 mount일 때만 지정하고 오늘 `{YYYY-MM-DD}` Parquet read 권한 확인 |
+| `COMMONALITY_PATH_TABLE_ROOT` | API 요청 | `/appdata/abnormal_trend/pic/path_erd_commonality_xian` | 다른 mount일 때만 지정하고 접속일의 `{YYYY-MM-DD hh:mm:ss}` Parquet read 권한 확인 |
 | `COMMONALITY_ROOT_PATH` | API 요청 | 코드 기본 이미지 root | 기존 HIT 경로 해석·공통부 동일성 sibling 결정 영향 검토 |
 | `COMMON_COMMONALITY_ROOT_PATH` | 프로세스 시작 | 기존 commonality/dashboard root의 형제 `path_common_commonality` 또는 코드 기본 root | 별도 mount면 명시적으로 설정하고 프로세스를 재시작 |
 | `SPIDER_DASHBOARD_PATH_ROOT` | API 요청 | 코드 기본 root | Dashboard detail·stats 범위 확인 |

@@ -117,7 +117,7 @@ flowchart LR
 | `DS-DASH-02` | Parquet | `stats/{latest_date}_spider_step_stats.parquets` | Node | 읽기 | `Unknown` | `DF-DASH-01`, `DF-MAIL-02` | `Confirmed` | `buildDashboardStatsPath` |
 | `DS-SELF-01` | Parquet | `path_xian/{line}/{sdwt}/df_path.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-01`, `DF-SELF-03` | 코드 `Confirmed`; 운영 file `Unknown` | `selfEquipmentData.mjs` — `readTeamErdRows` |
 | `DS-SELF-02` | Parquet | path row `file_path`: `{eqp}.png`의 sibling 또는 directory 하위 `data.parquet`; 같은 directory의 `{eqp}.parquet` | Node | 읽기 | `Unknown` | `DF-SELF-02` | 코드 `Confirmed`; 운영 file `Unknown` | `resolveErdDataFilePath`, scatter handler |
-| `DS-ABN-01` | Parquet·PNG | `path_erd_commonality_xian/{오늘 YYYY-MM-DD}`의 `path` + `/img.png` | Node | Parquet 읽기·stream | `Unknown` | `DF-ABN-01` | `Confirmed` | `commonalityData.mjs` — `readCommonalityPathRows` |
+| `DS-ABN-01` | Parquet·PNG | `path_erd_commonality_xian/{접속일 YYYY-MM-DD hh:mm:ss}`의 `file_path`; `/pic_server2/`→`/pic/` 후 `/img.png` | Node | Parquet 읽기·stream | `Unknown` | `DF-ABN-01` | `Confirmed` | `commonalityData.mjs` — `readCommonalityPathRows` |
 | `DS-ABN-02` | Parquet·PNG | `path_common/{line}/{sdwt}/df_path.parquet` → `common/.../data.parquet`, PNG | Node | 읽기·stream | `Unknown` | `DF-ABN-02` | `Confirmed` | `commonAnomalyData.mjs` |
 | `DS-ABN-03` | directory·PNG | `path_common_commonality/{latest_date}/{sdwt}/{eqp_model}/{grade}/{sensor}@{ch_step}/img.png` | Node | directory 읽기·stream | `Unknown` | `DF-ABN-03` | `Confirmed` | `commonCommonalityData.mjs` |
 | `DS-DB-REF` | DB | `erdtsum_info` | Python | 읽기 | DB 관리 주체 `Unknown` | `DF-MAIL-01` MY EQP 기준 | `Confirmed` | `scripts/my_eqp_reference.py` |
@@ -177,7 +177,7 @@ flowchart LR
 | `eqpCh` | 사용자 또는 URL | `eqpCh`; legacy `eqp_ch`도 읽음 | 일반 Self row filter; MY EQP는 표기 정규화 | 없으면 미선택 | `Confirmed` | API·URL utility |
 | `sensor` | 사용자 선택 | `sensor` query; `ALL` 허용 | row·axis filter; click history는 선택 `ALL`을 그대로 저장 | 없으면 후속 row 없음 | `Confirmed` | Self/commonality handlers |
 | `chStep` / `ch_step` | 사용자 선택 | API query는 `chStep` | row `step`, 자설비 axis `${sensor}*${chStep}` | sensor `ALL`이면 `ALL`만 정상 분기 | 코드 `Confirmed` | Self payload |
-| `latest_date` | 서버의 filename 선택·오늘 날짜 생성 또는 Self team row의 `file_path` | 자설비 chart API에는 `latestDate`로 전달 | dashboard 날짜 file, 오늘 commonality path table, Self scoped row 검증 | 유효 날짜 없으면 오류 | 코드 `Confirmed`; 운영 file `Unknown` | dashboard/latest/self modules |
+| `latest_date` | 서버의 filename 선택·접속 날짜 생성 또는 Self team row의 `file_path` | 자설비 chart API에는 `latestDate`로 전달 | dashboard 날짜 file, 접속일 최신 commonality path table, Self scoped row 검증 | 유효 날짜 없으면 오류 | 코드 `Confirmed`; 운영 file `Unknown` | dashboard/latest/self modules |
 | `step_desc` | Parquet row·directory | UI label·`stepDesc` query | detail row filter·directory segment | 선택 전 결과 row 없음 | `Confirmed` | data handlers |
 | `step_seq` | commonality path table | `stepSeq` query·UI STEP; legacy `stepDesc` 허용 | image row metadata·filter | path table에 의존 | `Confirmed` | `readCommonalityPathRows` |
 | `ppid` | file path·Parquet row | chart grouping·표시 | ERD/commonality path와 grouping | 원천 값에 의존 | `Confirmed` | path config·pages |
@@ -257,8 +257,10 @@ version을 추정하지 않는다. 실제 운영 DB·file 결합은 `Unknown`이
 ### Flow ID: `DF-ABN-01` — 동일성 이미지
 
 `CommonalityAnomalyPage`가 mapping으로 Line·SDWT를 만들고 `GET /api/commonality-data`를 반복 호출한다.
-서버는 오늘 날짜를 `YYYY-MM-DD`로 생성하고 `path_erd_commonality_xian/{YYYY-MM-DD}`를 읽는다.
-`sdwt_code`, `step_seq`, `recipe_id`, `priority`, `sensor`, `ch_step`, `path`를 기존 화면 row로 변환한 뒤
+서버는 접속 날짜를 `YYYY-MM-DD`로 생성하고 그 날짜를 포함하는 유효한
+`path_erd_commonality_xian/{YYYY-MM-DD hh:mm:ss}` 파일 중 최신 시각을 읽는다.
+`sdwt_code`, `step_seq`, `recipe_id`, `priority`, `sensor`, `ch_step`, `file_path`를 기존 화면 row로 변환하고
+`file_path`의 `/pic_server2/`를 `/pic/`로 바꾼 뒤 `/img.png`를 붙인다. 이후
 선택 STEP·sensor·ch_step으로 image row를 반환하고 화면은 한 페이지 최대 18개만 `GET /api/commonality-image`로 표시한다.
 sensor `ALL`이면 모든 sensor row와 `chStep=ALL`만 허용하는 종속 조건이 서버와 UI에 함께 적용된다.
 
@@ -323,7 +325,7 @@ sensor `ALL`이면 선택 EQP_MODEL의 모든 sensor row와 `chStep=ALL`만 허�
 | `DF-SELF-01` | team `path_xian` rows | normalizer·mapping scope·payload builder | text·path identity 정규화, priority·종속 filter, active SKIP·sensor 제외 | filter option·chart row | `Confirmed` | self module |
 | `DF-SELF-02` | Parquet rows | scatter/identity builder | 날짜·숫자 정규화, EQP group·sampling | chart point model | `Confirmed` | self module |
 | `DF-SELF-03` | DB registration+path rows | My EQP handler | SDWT mapping, EQP 표기 정규화, PASS 제외 | MY EQP filter·chart | 코드 `Confirmed`; 운영 `Unknown` | My EQP handler |
-| `DF-ABN-01` | 오늘 날짜 path table row | `readCommonalityPathRows` | source 컬럼 정규화, `path + /img.png` | image row | `Confirmed` | commonality module |
+| `DF-ABN-01` | 접속일 최신 path table row | `readCommonalityPathRows` | source 컬럼 정규화, `file_path` root 치환 후 `/img.png` | image row | `Confirmed` | commonality module |
 | `DF-ABN-02` | path row | common payload builder | selected filter, path→data·image 변환 | image/chart row | `Confirmed` | common module |
 | `DF-ABN-03` | directory tree | `collectCommonCommonalityRows` | path segment와 `sensor@chStep` 분해 | image row | `Confirmed` | common-commonality module |
 | `DF-COMMON-01` | drawing paths·선택 row metadata | history record builder | Self·동일성은 선택 SDWT·Grade·sensor 우선, 기존 path parser 호환; sensor `ALL` 보존 | DB record | `Confirmed` | clicked history module |
@@ -371,7 +373,7 @@ sensor `ALL`이면 선택 EQP_MODEL의 모든 sensor row와 `chStep=ALL`만 허�
 |---|---|---|---|---|---|
 | Dashboard 최신 | server | 유효 날짜·시각 file 중 기간별 최신 | `DF-DASH-01` | `Confirmed` | dashboard module |
 | Dashboard D-1 | server | 최신 시각의 전일 동일 `hh:mm` | `DF-DASH-01/MAIL-02` | `Confirmed` | `selectPreviousDashboardFileAtSameTime` |
-| 동일성 최신 | server | 서버의 오늘 날짜 `YYYY-MM-DD` 생성 | `DF-ABN-01` | `Confirmed` | latest commonality module |
+| 동일성 최신 | server | 서버 접속일 `YYYY-MM-DD` 생성 후 해당 날짜의 유효 파일 중 최신 `hh:mm:ss` 선택 | `DF-ABN-01` | `Confirmed` | latest commonality module |
 | 공통부 동일성 최신 | server | 유효 `YYYY-MM-DD` directory 이름 내림차순 첫 값 | `DF-ABN-03` | `Confirmed` | latest common-commonality module |
 | active SKIP | Node/Python | `exec_date` 기준 72시간 | Self·공통부 | 코드 `Confirmed`; 운영 timezone `Unknown` | pass history modules |
 | active MY EQP | DB query | `exec_date`+`periode`와 DB `NOW()` | registration page·`DF-SELF-03` | 코드 `Confirmed`; 운영 timezone `Unknown` | registration helper |

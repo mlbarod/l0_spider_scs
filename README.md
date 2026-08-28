@@ -376,9 +376,10 @@ SDWT 필터 마지막의 `SKIP LIST`를 선택하면 선택 Line에서 `ver = NA
 
 ### 동일성 최신날짜
 
-서버의 오늘 날짜를 `YYYY-MM-DD` 형식으로 생성해
-`/appdata/abnormal_trend/pic/path_erd_commonality_xian/{YYYY-MM-DD}` 경로 테이블을
-`동일성 최신날짜` 데이터로 사용한다. 다른 날짜 파일을 탐색해 최신값을 선택하지 않는다.
+서버 접속 날짜를 `YYYY-MM-DD` 형식으로 생성한 뒤
+`/appdata/abnormal_trend/pic/path_erd_commonality_xian`에서 그 날짜로 시작하는 유효한
+`YYYY-MM-DD hh:mm:ss` 파일을 찾는다. 같은 날짜 파일이 여러 개면 시각이 가장 늦은 파일을
+`동일성 최신날짜` 데이터로 사용한다.
 
 공용 함수 `getLatestCommonalityPath`는 다음 구조를 반환하며
 `GET /api/latest-commonality-path`에서도 같은 구조를 제공한다.
@@ -386,12 +387,12 @@ SDWT 필터 마지막의 `SKIP LIST`를 선택하면 선택 Line에서 `ver = NA
 ```json
 {
   "name": "동일성 최신날짜",
-  "path": "/appdata/abnormal_trend/pic/path_erd_commonality_xian/2026-08-28",
+  "path": "/appdata/abnormal_trend/pic/path_erd_commonality_xian/2026-08-28 15:20:30",
   "date": "2026-08-28"
 }
 ```
 
-오늘 날짜의 경로 테이블 파일이 없으면 API는 `404`와 명확한 오류 메시지를 반환한다.
+접속 날짜를 포함하는 유효한 경로 테이블 파일이 없으면 API는 `404`와 명확한 오류 메시지를 반환한다.
 경로 테이블 root를 예외적으로 변경해야 할 때만 `COMMONALITY_PATH_TABLE_ROOT`를 사용한다.
 결과 이미지 root override인 `COMMONALITY_ROOT_PATH`는 기존 이력 경로 해석 계약을 유지한다.
 공통부 동일성 root가 같은 mount의 형제 경로가 아니면 `COMMON_COMMONALITY_ROOT_PATH`로 직접 지정한다.
@@ -402,17 +403,17 @@ SDWT 필터 마지막의 `SKIP LIST`를 선택하면 선택 Line에서 `ver = NA
 SDWT는 자설비 이상감지와 동일하게 `mapping_config.json`의 `line_mapping`,
 `sdwt_mapping`을 사용한다. 필터 순서는 Line Name → SDWT → STEP(`step_seq`, API `stepSeq`) →
 Sensor → `ch_step`이다. 서버는 경로 테이블의 `sdwt_code`, `step_seq`, `recipe_id`,
-`priority`, `sensor`, `ch_step`, `path` 컬럼을 읽는다. 화면 계약에는 각각 SDWT, STEP,
-PPID, grade, Sensor, ch_step으로 변환하고 그래프 경로는 `path + /img.png`로 만든다.
-`file_path` 컬럼도 이전 생산 파일과의 호환을 위해 `path` 대신 허용한다.
+`priority`, `sensor`, `ch_step`, `file_path` 컬럼을 읽는다. 화면 계약에는 각각 SDWT, STEP,
+PPID, grade, Sensor, ch_step으로 변환한다. 그래프 경로는 `file_path`의 `/pic_server2/`를
+`/pic/`로 바꾼 뒤 `/img.png`를 붙여 만든다. `path` 컬럼도 이전 파일 호환용으로 허용한다.
 
 경로 테이블은 파일 `mtimeMs`와 크기를 기준으로 bounded cache하며 같은 파일의 동시 읽기를
 공유한다. 이미지 API는 오늘 경로 테이블에 등록된 `img.png` 경로만 허용한 후 실제 파일을
 stream한다.
 
 ```text
-/appdata/abnormal_trend/pic/path_erd_commonality_xian/{YYYY-MM-DD}
-  path 컬럼 + /img.png
+/appdata/abnormal_trend/pic/path_erd_commonality_xian/{YYYY-MM-DD hh:mm:ss}
+  file_path의 /pic_server2/ → /pic/ + /img.png
 ```
 
 Sensor의 `ALL`을 선택하면 ch_step에는 `ALL`만 표시하며, 이를 선택하면

@@ -57,12 +57,13 @@ export function normalizeCommonalityPathRows(rows, latestPath) {
     const priority = normalizeText(row.priority)
     const sensor = normalizeText(row.sensor)
     const chStep = normalizeText(row.ch_step)
-    const sourcePath = normalizeText(row.path || row.file_path)
+    const sourcePath = normalizeText(row.file_path || row.path)
     if (!sdwt || !stepSeq || !recipeId || !priority || !sensor || !chStep || !sourcePath) {
       return []
     }
-    if (!isAbsolute(sourcePath)) return []
-    const filePath = join(resolve(sourcePath), "img.png")
+    const normalizedSourcePath = sourcePath.replaceAll("/pic_server2/", "/pic/")
+    if (!isAbsolute(normalizedSourcePath)) return []
+    const filePath = join(resolve(normalizedSourcePath), "img.png")
     return [{
       id: `${index}-${filePath}`,
       latestDate: latestPath.date,

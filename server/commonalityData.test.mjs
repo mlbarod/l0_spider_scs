@@ -9,7 +9,7 @@ import {
 
 const latest = {
   name: "동일성 최신날짜",
-  path: "/appdata/abnormal_trend/pic/path_erd_commonality_xian/2026-08-28",
+  path: "/appdata/abnormal_trend/pic/path_erd_commonality_xian/2026-08-28 15:20:30",
   date: "2026-08-28",
 }
 
@@ -21,7 +21,7 @@ function createSourceRow(overrides = {}) {
     priority: "A",
     sensor: "PRESSURE_SENSOR",
     ch_step: "10@001",
-    path: "/appdata/abnormal_trend/pic/erd_commonality/2026-08-28/SDWT-1/A/100/RECIPE-1",
+    file_path: "/appdata/abnormal_trend/pic_server2/erd_commonality/2026-08-28/SDWT-1/A/100/RECIPE-1",
     ...overrides,
   }
 }
@@ -35,10 +35,10 @@ test("동일성 경로 테이블 행을 기존 화면 응답 구조로 변환한
       priority: "B",
       sensor: "TEMP",
       ch_step: 20,
-      path: "",
-      file_path: "/mounted/erd-commonality/SDWT-1/B/200/RECIPE-2",
+      file_path: "",
+      path: "/mounted/erd-commonality/SDWT-1/B/200/RECIPE-2",
     }),
-    createSourceRow({ path: "relative/path" }),
+    createSourceRow({ file_path: "relative/path" }),
     createSourceRow({ sensor: "" }),
   ], latest)
 

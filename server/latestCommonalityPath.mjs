@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises"
+import { readdir } from "node:fs/promises"
 import { join, resolve } from "node:path"
 
 import {
@@ -13,6 +13,8 @@ export const commonalityPathTableRootPath = process.env.COMMONALITY_PATH_TABLE_R
   ?? SPIDER_DATA_PATH_TEMPLATES.commonalityPathTableRoot
 export const latestCommonalityPathName = SPIDER_DATA_PATH_NAMES.latestCommonality
 
+const DATE_TIME_FILE_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+
 export function getCommonalityLatestDate(now = new Date()) {
   if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
     throw new Error("동일성 기준 날짜가 올바르지 않습니다.")
@@ -21,18 +23,53 @@ export function getCommonalityLatestDate(now = new Date()) {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
+function isValidCommonalityPathTableName(fileName, systemDate) {
+  const match = normalizeText(fileName).match(DATE_TIME_FILE_PATTERN)
+  if (!match || !fileName.startsWith(`${systemDate} `)) return false
+  const [, year, month, day, hour, minute, second] = match
+  const date = new Date(Date.UTC(
+    Number(year),
+    Number(month) - 1,
+    Number(day),
+    Number(hour),
+    Number(minute),
+    Number(second),
+  ))
+  return date.getUTCFullYear() === Number(year)
+    && date.getUTCMonth() === Number(month) - 1
+    && date.getUTCDate() === Number(day)
+    && date.getUTCHours() === Number(hour)
+    && date.getUTCMinutes() === Number(minute)
+    && date.getUTCSeconds() === Number(second)
+}
+
+function normalizeText(value) {
+  return String(value ?? "").trim()
+}
+
 export async function getLatestCommonalityPath(
   rootPath = commonalityPathTableRootPath,
   now = new Date(),
 ) {
   const normalizedRootPath = resolve(rootPath)
-  const latestDate = getCommonalityLatestDate(now)
-  const path = join(normalizedRootPath, latestDate)
+  const systemDate = getCommonalityLatestDate(now)
+  let entries
   try {
-    if (!(await stat(path)).isFile()) throw new Error("not a file")
+    entries = await readdir(normalizedRootPath, { withFileTypes: true })
   } catch {
     const error = new Error(
-      `동일성 오늘 날짜 경로 테이블을 찾지 못했습니다: ${path}`,
+      `동일성 경로 테이블 root를 읽지 못했습니다: ${normalizedRootPath}`,
+    )
+    error.code = "COMMONALITY_PATH_TABLE_NOT_FOUND"
+    throw error
+  }
+  const latestDateTime = entries
+    .filter((entry) => entry.isFile() && isValidCommonalityPathTableName(entry.name, systemDate))
+    .map((entry) => entry.name)
+    .sort((left, right) => right.localeCompare(left))[0]
+  if (!latestDateTime) {
+    const error = new Error(
+      `동일성 접속일 경로 테이블을 찾지 못했습니다: ${normalizedRootPath}에 ${systemDate}를 포함하는 YYYY-MM-DD hh:mm:ss 파일이 없습니다.`,
     )
     error.code = "COMMONALITY_PATH_TABLE_NOT_FOUND"
     throw error
@@ -40,8 +77,8 @@ export async function getLatestCommonalityPath(
 
   return {
     name: latestCommonalityPathName,
-    path,
-    date: latestDate,
+    path: join(normalizedRootPath, latestDateTime),
+    date: systemDate,
   }
 }
 
