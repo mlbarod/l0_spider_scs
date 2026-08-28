@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
-import { relative, resolve, sep } from "node:path"
+import { existsSync, readdirSync } from "node:fs"
+import { dirname, join, relative, resolve, sep } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 
 import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
@@ -118,7 +119,17 @@ function passRecordIdentity(record) {
   ].map(normalizeText).join("\u0000")
 }
 
-export function buildPassHistoryErdImagePath(record) {
+function isExistingErdChartPath(filePath, pathExists) {
+  return pathExists(filePath) || pathExists(join(dirname(filePath), "data.parquet"))
+}
+
+export function buildPassHistoryErdImagePath(record, {
+  fileRoot = ERD_FILE_ROOT,
+  pathExists = existsSync,
+  readDirectories = (directoryPath) => readdirSync(directoryPath, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name),
+} = {}) {
   const segments = [
     normalizeDbDate(record.update_date),
     record.sdwt,
@@ -134,7 +145,43 @@ export function buildPassHistoryErdImagePath(record) {
     throw new Error("PASS 이력에서 ERD 차트 경로를 복원하지 못했습니다.")
   }
   if (!segments[3]) return ""
-  return `${ERD_FILE_ROOT}/${segments.join("/")}`
+  if (segments.some((value) => value.includes("/") || value.includes("\\") || value.includes(".."))) {
+    throw new Error("PASS 이력에서 ERD 차트 경로를 복원하지 못했습니다.")
+  }
+
+  const canonicalPath = join(fileRoot, ...segments)
+  if (isExistingErdChartPath(canonicalPath, pathExists)) return canonicalPath
+
+  // 과거 자설비 목록은 desc 대신 recipe_id를 저장했다. 해당 이력은 72시간 동안
+  // 유효하므로, 두 값이 같은 legacy record만 실제 desc directory에서 좁게 복원한다.
+  if (segments[2] !== segments[4]) return canonicalPath
+
+  const baseDirectory = join(fileRoot, segments[0], segments[1])
+  let descDirectories = []
+  try {
+    descDirectories = readDirectories(baseDirectory)
+  } catch {
+    return canonicalPath
+  }
+
+  const suffix = segments.slice(3)
+  const candidates = descDirectories
+    .filter((desc) => (
+      desc
+      && !desc.includes("/")
+      && !desc.includes("\\")
+      && !desc.includes("..")
+    ))
+    .map((desc) => join(baseDirectory, desc, ...suffix))
+  const imageMatches = candidates.filter((candidatePath) => pathExists(candidatePath))
+  if (imageMatches.length === 1) return imageMatches[0]
+  if (imageMatches.length > 1) return canonicalPath
+
+  const dataMatches = candidates.filter((candidatePath) => (
+    pathExists(join(dirname(candidatePath), "data.parquet"))
+  ))
+
+  return dataMatches.length === 1 ? dataMatches[0] : canonicalPath
 }
 
 function buildCommonDataPath(record) {

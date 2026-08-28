@@ -6,6 +6,7 @@ import {
   PASS_HISTORY_ACTIVE_DURATION_MS,
   SELF_SKIP_LIST_PATH_SDWT,
   buildPassHistoryDbRecord,
+  buildPassHistoryErdImagePath,
   buildPassHistoryRecord,
   buildCommonPassHistoryFilterPayload,
   buildPassHistoryFilterPayload,
@@ -166,6 +167,59 @@ test("SKIP LIST는 eqp_ch ALL과 sensor ALL 조합에서 ch_step ALL과 전체 �
   assert.equal(payload.rows.length, 2)
   assert.ok(payload.rows.every((row) => row.path_sdwt === SELF_SKIP_LIST_PATH_SDWT))
   assert.ok(payload.rows.every((row) => row.latest_date === "2026-07-17"))
+})
+
+test("과거 desc=recipe_id SKIP 이력은 실제 ERD desc 경로가 하나일 때 복원한다", () => {
+  const existingPaths = new Set([
+    "/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@MAIN/data.parquet",
+  ])
+  const path = buildPassHistoryErdImagePath({
+    update_date: "2026-07-17",
+    sdwt: "SDWT-1",
+    desc: "PPID-1",
+    ver: "V1",
+    recipe_id: "PPID-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+  }, {
+    fileRoot: "/erd",
+    pathExists: (candidatePath) => existingPaths.has(candidatePath),
+    readDirectories: () => ["ETCH", "CVD"],
+  })
+
+  assert.equal(
+    path,
+    "/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@MAIN/EQP-1.png",
+  )
+})
+
+test("과거 SKIP 이력의 실제 desc 경로가 여러 개면 임의 경로를 선택하지 않는다", () => {
+  const existingPaths = new Set([
+    "/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@MAIN/data.parquet",
+    "/erd/2026-07-17/SDWT-1/CVD/V1/PPID-1/A/TEMP/10@MAIN/data.parquet",
+  ])
+  const path = buildPassHistoryErdImagePath({
+    update_date: "2026-07-17",
+    sdwt: "SDWT-1",
+    desc: "PPID-1",
+    ver: "V1",
+    recipe_id: "PPID-1",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+  }, {
+    fileRoot: "/erd",
+    pathExists: (candidatePath) => existingPaths.has(candidatePath),
+    readDirectories: () => ["ETCH", "CVD"],
+  })
+
+  assert.equal(
+    path,
+    "/erd/2026-07-17/SDWT-1/PPID-1/V1/PPID-1/A/TEMP/10@MAIN/EQP-1.png",
+  )
 })
 
 test("과거 빈 ver SKIP도 필터 행으로 반환해 SKIP해제할 수 있다", () => {

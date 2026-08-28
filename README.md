@@ -208,6 +208,10 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 /appdata/abnormal_trend/pic/erd/{update_date}/{sdwt}/{desc}/{ver}/{recipe_id}/{priority}/{sensor}/{step}/{eqp}.png
 ```
 
+과거 자설비 목록에서 `desc` 대신 `recipe_id`가 저장된 활성 SKIP 이력은 위 기본 경로가 없고
+나머지 식별값과 일치하는 실제 `desc` 경로가 하나일 때만 해당 경로로 복원한다. 후보가 여러 개면
+임의의 차트를 표시하지 않는다.
+
 ### `hit_history`
 
 HIT 이력은 원본 `l0_spider`와 같은 6-column 계약을 사용한다.
