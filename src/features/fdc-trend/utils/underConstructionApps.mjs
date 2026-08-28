@@ -1,4 +1,8 @@
 const UNDER_CONSTRUCTION_APPS = Object.freeze({
+  "common-anomaly": Object.freeze({
+    title: "공통부 이상감지",
+    category: "Common",
+  }),
   "common-commonality": Object.freeze({
     title: "공통부 동일성 이상감지",
     category: "Common Matching",
@@ -6,6 +10,10 @@ const UNDER_CONSTRUCTION_APPS = Object.freeze({
   "fdc-hard-limit": Object.freeze({
     title: "FDC Hard Limit추천",
     category: "Limit",
+  }),
+  "my-eqp-registration": Object.freeze({
+    title: "MY EQP 등록",
+    category: "Registration",
   }),
   "defect-spider": Object.freeze({
     title: "Defect SPIDER",

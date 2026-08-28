@@ -33,9 +33,9 @@ const spiderApps = [
     title: "공통부 이상감지",
     subtitle: "공통 설비와 공정 구간의 이상 징후를 통합 관점으로 봅니다.",
     category: "Common",
-    href: "/common-anomaly",
+    href: getUnderConstructionPath("common-anomaly"),
     active: true,
-    status: "운영중",
+    status: "개발예정",
   },
   {
     icon: GitCompareArrows,
@@ -62,12 +62,12 @@ const spiderApps = [
   },
   {
     icon: Mail,
-    title: "Mailing 등록",
-    subtitle: "이상감지 Mailing Report 수신 조건을 등록합니다.",
+    title: "MY EQP 등록",
+    subtitle: "사용자별 MY EQP 대상 설비를 등록합니다.",
     category: "Registration",
-    href: "/registration",
+    href: getUnderConstructionPath("my-eqp-registration"),
     active: true,
-    status: "운영중",
+    status: "개발예정",
   },
   {
     icon: BookOpen,

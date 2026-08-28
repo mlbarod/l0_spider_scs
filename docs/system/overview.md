@@ -55,9 +55,9 @@ React SPA가 화면을 제공하고 Node 서버가 API, 파일 검증·집계와
 | Line 대시보드 | 최신 KPI, Line별 건수와 기간 추이 | `/`, `GET /api/dashboard-data` | [dashboard.md](../features/dashboard.md) — `Active Baseline` |
 | Self Equipment | 일반 Scatter·동일성·변경점, SKIP·HIT·클릭 이력 | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) — 코드 `Confirmed`, 운영 DB `Unknown` |
 | 동일성 이상감지 | STEP·sensor 조건별 분석 이미지 | `/matching-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
-| 공통부 이상감지 | 공통부 이미지와 설비 비교 차트 | `/common-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
+| 공통부 이상감지 | Under Construction 안내 | `/under-construction/common-anomaly`, `/common-anomaly` | `개발예정` |
 | 공통부 동일성 이상감지 | EQP_MODEL·sensor 조건별 공통부 분석 이미지 | `/common-commonality-anomaly` | [abnormal-data.md](../features/abnormal-data.md) — `Baseline` |
-| Mailing 등록 | 수신 조건 관리 | `/registration`, `/recipients` | [mailing.md](../features/mailing.md) — summary 계약 존재, 실제 발송 `Blocked` |
+| MY EQP 등록 | Under Construction 안내 | `/under-construction/my-eqp-registration`, `/registration`, `/recipients` | `개발예정` |
 | STEP 딥링크 | URL 조건을 자설비 필터에 적용 | `/self-equipment?...` | [step-deeplink.md](../features/step-deeplink.md) — ALL 흐름 확인, HMAC `Blocked` |
 | Mailing Report | 대시보드 요약, 수신인별 표와 상세 링크 | `public/mailing-report.html` | 실제 발송 흐름은 `Unknown` |
 | 사용자 메뉴얼 | 화면별 사용 절차와 이미지 | `/manual` | `docs/user-manual/USER_MANUAL.md` |

@@ -225,10 +225,10 @@ flowchart TD
     HOME["/ · /fdc_trend<br/>L0SpiderHomePage"]
     SELF["/self-equipment<br/>FdcTrendPage"]
     MATCH["/matching-anomaly<br/>CommonalityAnomalyPage"]
-    COMMON["/common-anomaly<br/>CommonAnomalyPage"]
+    COMMON["/common-anomaly<br/>SpiderComingSoonPage"]
     COMMON_MATCH["/common-commonality-anomaly<br/>CommonalityAnomalyPage variant"]
-    REG["/registration<br/>RegistrationHubPage"]
-    ALIAS["/my-eqp · /recipients<br/>RegistrationHubPage alias"]
+    REG["/registration<br/>SpiderComingSoonPage"]
+    ALIAS["/recipients<br/>SpiderComingSoonPage alias"]
     MANUAL["/manual<br/>UserManualPage"]
     INTERNAL["/defect-spider · /l1-spider · /l3-spider<br/>SpiderFeaturePage"]
     PLANNED["/under-construction/:appId<br/>SpiderComingSoonPage"]
@@ -251,10 +251,10 @@ flowchart TD
 | `/` | `L0SpiderHomePage.jsx` | 앱 메뉴, 최신 수행시각, 라인별 대시보드 | 운영 파일 API 사용 |
 | `/self-equipment` | `FdcTrendPage.jsx` | 일반 자설비·MY EQP·SKIP LIST, Scatter/동일성·변경점, SKIP/HIT/클릭이력 | `path_xian`·data/history Parquet + DB |
 | `/matching-anomaly` | `CommonalityAnomalyPage.jsx` | 동일성 디렉터리 기반 필터와 `img.png` 카드 | 운영 파일 |
-| `/common-anomaly` | `CommonAnomalyPage.jsx` | 공통부 이미지, 동일성 차트, SKIP LIST | 운영 파일 + DB |
+| `/common-anomaly` | `SpiderComingSoonPage.jsx` | 공통부 이상감지 개발 예정 안내 | 빌드 리소스 |
 | `/common-commonality-anomaly` | `CommonalityAnomalyPage.jsx` | 공통부 동일성 EQP_MODEL 필터와 `img.png` 카드 | 운영 파일 |
-| `/registration` | `RegistrationHubPage.jsx` | Mailing 등록과 My EQP 등록 통합 화면 | DB |
-| `/my-eqp`, `/recipients` | `RegistrationHubPage.jsx` | `/registration`과 같은 화면의 호환 alias | DB |
+| `/registration` | `SpiderComingSoonPage.jsx` | MY EQP 등록 개발 예정 안내 | 빌드 리소스 |
+| `/recipients` | `SpiderComingSoonPage.jsx` | `/registration`과 같은 개발 예정 안내 | 빌드 리소스 |
 | `/manual` | `UserManualPage.jsx` | `docs/user-manual/USER_MANUAL.md`를 HTML로 렌더링 | 빌드 리소스 |
 | `/defect-spider`, `/l1-spider`, `/l3-spider` | `SpiderFeaturePage.jsx` | 직접 URL 접근 시 mock 기반 공통 화면 | mock/prototype |
 | `/under-construction/:appId` | `SpiderComingSoonPage.jsx` | 개발 예정 App의 개발 대기 안내 | 빌드 리소스 |
@@ -262,7 +262,7 @@ flowchart TD
 추가 사항:
 
 - `/fdc_trend/self-equipment`처럼 모든 내부 경로는 `/fdc_trend` prefix로도 접근할 수 있습니다.
-- 메인 화면에서 `개발 예정` 상태인 공통부 동일성·Hard Limit·Defect·L1·L3 카드는 외부 서비스 URL을 보유하지 않으며 `/under-construction/:appId` 안내 화면으로 이동합니다.
+- 메인 화면에서 `개발예정` 상태인 공통부 이상감지·MY EQP 등록 카드와 기존 개발 예정 카드는 `/under-construction/:appId` 안내 화면으로 이동합니다.
 - Hard Limit 추천 카드는 5열 기준 두 번째 줄 첫 칸에 배치됩니다.
 - `SpiderFeaturePage.jsx`가 지원하는 `hardSpec`, `yieldSpec`, `recipients` 타입 중 일부는 현재 route에 직접 연결되어 있지 않은 prototype 코드입니다.
 

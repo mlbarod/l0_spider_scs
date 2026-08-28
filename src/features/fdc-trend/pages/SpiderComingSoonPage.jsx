@@ -11,9 +11,9 @@ const FALLBACK_APP = Object.freeze({
   category: "Development",
 })
 
-export function SpiderComingSoonPage() {
-  const { appId } = useParams()
-  const app = getUnderConstructionApp(appId) ?? FALLBACK_APP
+export function SpiderComingSoonPage({ appId: configuredAppId = "" }) {
+  const { appId: routeAppId } = useParams()
+  const app = getUnderConstructionApp(configuredAppId || routeAppId) ?? FALLBACK_APP
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-background">

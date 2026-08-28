@@ -1,10 +1,8 @@
 // 파일 경로: src/features/fdc-trend/routes.jsx
 import { FdcTrendShell } from "./components/FdcTrendShell"
 import { CommonalityAnomalyPage } from "./pages/CommonalityAnomalyPage"
-import { CommonAnomalyPage } from "./pages/CommonAnomalyPage"
 import { FdcTrendPage } from "./pages/FdcTrendPage"
 import { L0SpiderHomePage } from "./pages/L0SpiderHomePage"
-import { MailingRegistrationPage } from "./pages/MailingRegistrationPage"
 import { SpiderComingSoonPage } from "./pages/SpiderComingSoonPage"
 import { SpiderFeaturePage } from "./pages/SpiderFeaturePage"
 import { UserManualPage } from "./pages/UserManualPage"
@@ -20,7 +18,7 @@ const fdcTrendChildren = [
   },
   {
     path: "registration",
-    element: <MailingRegistrationPage />,
+    element: <SpiderComingSoonPage appId="my-eqp-registration" />,
   },
   {
     path: "matching-anomaly",
@@ -28,7 +26,7 @@ const fdcTrendChildren = [
   },
   {
     path: "common-anomaly",
-    element: <CommonAnomalyPage />,
+    element: <SpiderComingSoonPage appId="common-anomaly" />,
   },
   {
     path: "common-commonality-anomaly",
@@ -44,7 +42,7 @@ const fdcTrendChildren = [
   },
   {
     path: "recipients",
-    element: <MailingRegistrationPage />,
+    element: <SpiderComingSoonPage appId="my-eqp-registration" />,
   },
   {
     path: "defect-spider",

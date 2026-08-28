@@ -28,8 +28,8 @@ The app opens directly at `/`.
 DB 연결정보가 확정되기 전에는 설정하지 않는다. history 기능은 이 전역 변수를
 설정하지 않아도 credential 기반 좁은 allowlist로 동작한다.
 
-SCS에는 My EQP 메뉴, 등록 화면, 조회 API와 메일 Report가 없다. `/registration`과
-호환 route `/recipients`는 Mailing 등록 화면만 제공하며 `/my-eqp` route는 제공하지 않는다.
+SCS의 `공통부 이상감지`와 `MY EQP 등록`은 메인에서 `개발예정`으로 표시되며,
+`/common-anomaly`, `/registration`, `/recipients` route는 Under Construction 화면을 제공한다.
 
 기본 개발 실행은 다음과 같다.
 
