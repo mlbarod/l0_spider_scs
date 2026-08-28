@@ -35,7 +35,6 @@ import {
   handleErdFileRequest,
   handleErdScatterDataRequest,
   handleSelfEquipmentDataRequest,
-  resolveSelfEquipmentSkipListRecords,
 } from "./server/selfEquipmentData.mjs"
 
 const rootDir = fileURLToPath(new URL(".", import.meta.url))
@@ -229,9 +228,7 @@ const server = createServer((req, res) => {
   }
 
   if (url.pathname === "/api/pass-history") {
-    handlePassHistoryRequest(req, res, url, {
-      resolveSelfSkipListRecords: resolveSelfEquipmentSkipListRecords,
-    }).catch((error) => {
+    handlePassHistoryRequest(req, res, url).catch((error) => {
       sendJson(res, 500, { ok: false, error: error.message })
     })
     return

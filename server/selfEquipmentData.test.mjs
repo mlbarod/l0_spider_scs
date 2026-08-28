@@ -5,17 +5,15 @@ import {
   SKIP_EXCLUSION_DURATION_MS,
   TEAM_ERD_COLUMNS,
   authorizeSelfEquipmentDataPath,
-  authorizeSelfEquipmentSkipListDataPath,
   buildSelfEquipmentPayload,
   excludeRecentlySkippedRows,
   getSelfEquipmentLatestDateFromFilePath,
   handleErdScatterDataRequest,
+  isDirectSkipListErdPathAllowed,
   isSelfEquipmentDataPathAllowed,
-  isSelfEquipmentSkipListDataPathAllowed,
   normalizeSelfEquipmentFilePath,
   normalizeTeamErdRow,
   readOptionalPassHistoryRecords,
-  resolveSelfEquipmentSkipListRecords,
   resolveErdScatterProjection,
   resolveErdDataFilePath,
   resolveErdHistoryFilePath,
@@ -495,117 +493,6 @@ test("Self chart authorization은 선택한 분임조별 path_xian row만 허용
   }, dependencies), false)
 })
 
-test("SKIP LIST chart authorization은 활성 PASS row의 경로와 식별값만 허용한다", async () => {
-  const record = {
-    line_id: "P1L",
-    ver: "V1",
-    sdwt: "SDWT-1",
-    desc: "ETCH",
-    recipe_id: "R1",
-    update_date: "2026-07-16",
-    priority: "A",
-    sensor: "TEMP",
-    step: "10@MAIN",
-    eqp: "EQP-1",
-    exec_date: "2026-07-16T02:00:00.000Z",
-  }
-  const request = {
-    dataDirectoryPath: "/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/EQP-1.png",
-    eqp: "EQP-1",
-    latestDate: "2026-07-16",
-    line: "P1L",
-    sensor: "TEMP",
-    step: "10@MAIN",
-    ver: "V1",
-  }
-
-  assert.equal(isSelfEquipmentSkipListDataPathAllowed([record], request, NOW), true)
-  assert.equal(isSelfEquipmentSkipListDataPathAllowed([record], { ...request, ver: "V2" }, NOW), false)
-  assert.equal(isSelfEquipmentSkipListDataPathAllowed([record], {
-    ...request,
-    dataDirectoryPath: request.dataDirectoryPath.replace("/EQP-1.png", "/EQP-2.png"),
-  }, NOW), false)
-  assert.equal(isSelfEquipmentSkipListDataPathAllowed([
-    { ...record, exec_date: "2026-07-12T02:00:00.000Z" },
-  ], request, NOW), false)
-  assert.equal(isSelfEquipmentSkipListDataPathAllowed([
-    { ...record, ver: "NA" },
-  ], { ...request, ver: "NA" }, NOW), false)
-  assert.equal(await authorizeSelfEquipmentSkipListDataPath(request, {
-    readRecords: async ({ lineId }) => {
-      assert.equal(lineId, "P1L")
-      return [record]
-    },
-    resolveRecords: async (records) => records,
-    nowMs: NOW,
-  }), true)
-})
-
-test("SKIP LIST는 현재 path_xian 행에서 원본 chart file_path를 다시 연결한다", async () => {
-  const record = {
-    line_id: "P1L",
-    ver: "V1",
-    sdwt: "SDWT-1",
-    desc: "R1",
-    recipe_id: "R1",
-    update_date: "2026-07-16",
-    priority: "A",
-    sensor: "TEMP",
-    step: "10@MAIN",
-    eqp: "EQP-1",
-  }
-  const originalFilePath = "/mounted/runtime/2026-07-16/chart-result/EQP-1.png"
-  const resolved = await resolveSelfEquipmentSkipListRecords([record], {
-    readMapping: async () => ({
-      line_mapping: { "RAW-1": "P1L" },
-      sdwt_mapping: { "RAW-1": "SDWT-1" },
-    }),
-    readRows: async ({ line, pathSdwt }) => {
-      assert.equal(line, "P1L")
-      assert.equal(pathSdwt, "RAW-1")
-      return {
-        rows: [createRow({
-          desc: "ETCH",
-          recipe_id: "R1",
-          file_path: originalFilePath,
-        })],
-      }
-    },
-  })
-
-  assert.equal(resolved[0].chart_file_path, originalFilePath)
-  assert.equal(resolved[0].chart_latest_date, "2026-07-16")
-})
-
-test("SKIP LIST path_xian 후보가 여러 경로면 임의 chart file_path를 선택하지 않는다", async () => {
-  const record = {
-    line_id: "P1L",
-    ver: "V1",
-    sdwt: "SDWT-1",
-    desc: "R1",
-    recipe_id: "R1",
-    update_date: "2026-07-16",
-    priority: "A",
-    sensor: "TEMP",
-    step: "10@MAIN",
-    eqp: "EQP-1",
-  }
-  const resolved = await resolveSelfEquipmentSkipListRecords([record], {
-    readMapping: async () => ({
-      line_mapping: { "RAW-1": "P1L" },
-      sdwt_mapping: { "RAW-1": "SDWT-1" },
-    }),
-    readRows: async () => ({
-      rows: [
-        createRow({ desc: "ETCH", recipe_id: "R1", file_path: "/first/2026-07-16/EQP-1.png" }),
-        createRow({ desc: "CVD", recipe_id: "R1", file_path: "/second/2026-07-16/EQP-1.png" }),
-      ],
-    }),
-  })
-
-  assert.equal(resolved[0].chart_file_path, undefined)
-})
-
 test("chart handler는 다른 App 경로를 Parquet read 전에 403으로 거부한다", async () => {
   let authorizationRequest = null
   const response = {
@@ -635,38 +522,65 @@ test("chart handler는 다른 App 경로를 Parquet read 전에 403으로 거부
   assert.equal(authorizationRequest.ver, "V1")
 })
 
-test("SKIP LIST chart handler는 sentinel pathSdwt로 PASS 이력 권한 분기를 사용한다", async () => {
+test("SKIP LIST Scatter와 동일성 chart는 전달된 ERD file_path를 그대로 읽는다", async () => {
   let normalAuthorizationCalled = false
-  let skipAuthorizationRequest = null
-  const response = {
-    statusCode: null,
-    body: "",
-    writeHead(statusCode) {
-      this.statusCode = statusCode
-    },
-    end(body = "") {
-      this.body = body
-    },
+  const readRequests = []
+  const imagePath = "/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/EQP-1.png"
+
+  for (const mode of ["scatter", "identity"]) {
+    const response = {
+      statusCode: null,
+      body: "",
+      writeHead(statusCode) {
+        this.statusCode = statusCode
+      },
+      end(body = "") {
+        this.body = body
+      },
+    }
+    const url = new URL(
+      `http://localhost/api/erd-scatter-data?path=${encodeURIComponent(imagePath)}&eqp=EQP-1&sensor=TEMP&chStep=10%40MAIN&mode=${mode}&pathSdwt=__SKIP_LIST__`,
+    )
+
+    await handleErdScatterDataRequest({ method: "GET" }, response, url, {
+      authorizeDataPath: async () => {
+        normalAuthorizationCalled = true
+        return false
+      },
+      readScatterData: async (filePath, options) => {
+        readRequests.push({ filePath, options })
+        return {
+          axisColumn: "TEMP_10@MAIN",
+          equipmentColumn: "eqp",
+          rows: [{
+            act_time: "2026-07-16 01:00:00",
+            eqp: "EQP-1",
+            eqp_cb: "EQP-1",
+            "TEMP_10@MAIN": 1,
+          }],
+        }
+      },
+      readHistoryData: async () => [],
+    })
+
+    assert.equal(response.statusCode, 200)
   }
-  const url = new URL(
-    "http://localhost/api/erd-scatter-data?path=/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10%40MAIN/EQP-1.png&eqp=EQP-1&sensor=TEMP&chStep=10%40MAIN&ver=V1&latestDate=2026-07-16&line=P1L&pathSdwt=__SKIP_LIST__",
-  )
 
-  await handleErdScatterDataRequest({ method: "GET" }, response, url, {
-    authorizeDataPath: async () => {
-      normalAuthorizationCalled = true
-      return true
-    },
-    authorizeSkipListDataPath: async (request) => {
-      skipAuthorizationRequest = request
-      return false
-    },
-  })
-
-  assert.equal(response.statusCode, 403)
   assert.equal(normalAuthorizationCalled, false)
-  assert.equal(skipAuthorizationRequest.ver, "V1")
-  assert.equal(skipAuthorizationRequest.step, "10@MAIN")
+  assert.deepEqual(readRequests.map((request) => request.filePath), [
+    "/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+    "/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+  ])
+  assert.deepEqual(readRequests.map((request) => request.options.identity), [undefined, true])
+})
+
+test("SKIP LIST 직접 읽기는 ERD root 밖의 경로를 거부한다", () => {
+  assert.equal(isDirectSkipListErdPathAllowed(
+    "/appdata/abnormal_trend/pic/erd/2026-07-16/chart.png",
+  ), true)
+  assert.equal(isDirectSkipListErdPathAllowed(
+    "/appdata/abnormal_trend/pic/common/2026-07-16/chart.png",
+  ), false)
 })
 
 test("RECIPE_ID 필터는 분임조별 table의 recipe_id를 사용하고 desc·ver를 보존한다", () => {

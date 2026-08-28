@@ -202,15 +202,11 @@ SKIP 상태인 차트는 상단에 `이상감지 SKIP 건` 배지와 하단에 `
 
 SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일반 SDWT 조회에서는 SKIP 등록 시각(`exec_date`)부터 72시간 동안 `latest_date`를 제외한 ERD 경로의 모든 식별값(`line_id`, `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`)이 같은 행을 동일 이상건으로 처리한다. 과거 빈 `ver` 행은 나머지 식별값을 같은 방식으로 비교해 기존 SKIP 효력을 유지한다. 해당 행은 차트 목록뿐 아니라 STEP, `eqp_ch`, `sensor`, `ch_step`의 일반 이상건수 집계에서도 제외한다. 정확히 72시간이 지나면 일반 이상건과 SKIP 상태로부터 해제되고 `SKIP LIST`에서도 제거된다. 이 만료 처리는 조회 결과에서만 제외하는 UI 동작이며 `pass_history` 행은 삭제하지 않는다. 만료된 동일 식별 건을 다시 SKIP하면 기존 DB 행의 `knox_id`, `exec_date`, `comment`를 갱신하여 새로운 72시간 SKIP 기간을 시작한다.
 
-`SKIP LIST`를 선택하면 ERD 원본 목록 대신 선택 Line의 `pass_history`를 조회한다. 이후 Sensor Grade → STEP(`desc`) → `eqp_ch`(`eqp`) → `sensor` → `ch_step`(`step`) 필터와 차트 목록은 모두 해당 테이블의 구분값으로 생성한다. 차트는 이력 식별값과 일치하는 현재 분임조별 `path_xian` 행이 하나이면 해당 행의 원본 `file_path`를 사용한다. 원본 행을 찾지 못한 경우에만 다음 규칙으로 경로를 복원하며, SKIP 해제 시 목록을 다시 조회하여 해제된 차트를 즉시 제거한다.
+`SKIP LIST`를 선택하면 ERD 원본 목록 대신 선택 Line의 `pass_history`를 조회한다. 이후 Sensor Grade → STEP(`desc`) → `eqp_ch`(`eqp`) → `sensor` → `ch_step`(`step`) 필터와 차트 목록은 모두 해당 테이블의 구분값으로 생성한다. 차트 행의 `file_path`는 다음 규칙으로 만들고, Scatter와 동일성 차트는 이 경로를 그대로 사용해 같은 디렉터리의 `data.parquet`을 읽는다. SKIP 해제 시 목록을 다시 조회하여 해제된 차트를 즉시 제거한다.
 
 ```text
 /appdata/abnormal_trend/pic/erd/{update_date}/{sdwt}/{desc}/{ver}/{recipe_id}/{priority}/{sensor}/{step}/{eqp}.png
 ```
-
-과거 자설비 목록에서 `desc` 대신 `recipe_id`가 저장된 활성 SKIP 이력도 나머지 식별값과 일치하는
-`path_xian` 원본 행이 하나일 때 연결한다. 원본 행과 복원 경로 후보가 여러 개면 임의의 차트를
-표시하지 않는다.
 
 ### `hit_history`
 
@@ -311,9 +307,9 @@ DB 응답의 `affectedRows`가
 호환하며, 단일설비 EQP 식별은 `eqp_cb` 또는 `eqp`, 동일성 series는 `eqp_cb`를 사용한다.
 hover 보조 컬럼은 존재하는 항목만 projection한다. 일반 조회는 chart 요청의
 Line·SDWT·EQP·sensor·step·`ver`·경로가 선택한 분임조별 row와 모두 일치할 때만 후속
-Parquet를 읽는다. SKIP LIST는 `pathSdwt=__SKIP_LIST__`로 구분하고 현재 활성 `pass_history`의
-Line·경로·EQP·sensor·step·`ver`와 다시 일치할 때만 같은 파일을 읽는다. Scatter·3일 동일성·
-동일성 팝업은 공통 request builder로 이 필드를 전달한다. 단일설비 `data.parquet`에 선택적 `ver`가 있으면 같은 row를 우선 사용하고,
+Parquet를 읽는다. SKIP LIST는 `pathSdwt=__SKIP_LIST__`로 구분하고 전달된 ERD `file_path`의
+같은 디렉터리 `data.parquet`을 직접 읽는다. Scatter·3일 동일성·동일성 팝업은 같은 경로를
+공통 request builder로 전달한다. 단일설비 `data.parquet`에 선택적 `ver`가 있으면 같은 row를 우선 사용하고,
 파일 내부 `ver`가 단일 값이면 선택 경로로 이미 version이 한정된 것으로 처리한다. `ver` 컬럼이
 없어도 선택한 `file_path`가 version 범위를 한정한 것으로 보고 drawing을 유지한다.
 여러 `ver`가 섞였는데 요청값이 없으면 point를 반환하지 않는다. DB 이력에는

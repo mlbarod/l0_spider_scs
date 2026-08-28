@@ -32,7 +32,6 @@ import {
   handleErdFileRequest,
   handleErdScatterDataRequest,
   handleSelfEquipmentDataRequest,
-  resolveSelfEquipmentSkipListRecords,
 } from "./server/selfEquipmentData.mjs"
 
 const STAGING_HOST = "stg.plane.samsungds.net"
@@ -118,9 +117,7 @@ function mappingConfigApi() {
         }
 
         if (url.pathname === "/api/pass-history") {
-          handlePassHistoryRequest(req, res, url, {
-            resolveSelfSkipListRecords: resolveSelfEquipmentSkipListRecords,
-          })
+          handlePassHistoryRequest(req, res, url)
           return
         }
 

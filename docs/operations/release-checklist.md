@@ -141,7 +141,7 @@ lint·필수 test·build 실패는 원인과 승인된 예외가 없으면 relea
 - [ ] 실제 file을 수정·순회하지 않고 코드 path contract와 변경 diff를 검토했다.
 - [ ] Dashboard detail·stats·mapping 경로와 latest 선택 규칙을 유지했다.
 - [ ] 일반 Self가 team `path_xian/{line}/{sdwt}/df_path.parquet`를 직접 읽고 row의 `ver`를 chart·SKIP에 그대로 전달하며, 단일설비 data의 선택적 `ver` 없음 path-scope·exact 우선·단일값 file-scope fallback·다중값 mismatch 차단을 확인했다.
-- [ ] SKIP LIST chart가 `pathSdwt=__SKIP_LIST__`로 활성 PASS row를 재검증하고 Scatter·3일 동일성·동일성 팝업에 공통 권한 필드를 전달하는지 확인했다.
+- [ ] SKIP LIST chart가 `pathSdwt=__SKIP_LIST__`로 전달된 ERD `file_path`의 같은 디렉터리 `data.parquet`을 Scatter·3일 동일성·동일성 팝업에서 공통으로 읽는지 확인했다.
 - [ ] 동일성 `erd_commonality`, 공통부 동일성 `path_common_commonality`와 공통부 `path_common`·common data/image 관계를 확인했다.
 - [ ] `latest_date`, `line`, `sdwt`, `grade`, `step_seq`, `step_desc`, `eqp_model`, `ppid`, `sensor`, `ch_step`, `eqp`, `ver` 전파 영향을 검토했다.
 - [ ] Parquet column·type·nullable·dynamic axis 변경을 producer와 consumer가 함께 승인했다.

@@ -19,10 +19,7 @@ import { assertKnownMappingLineSdwt, readLineMapping } from "./mappingConfig.mjs
 import { createSafeApiError } from "./safeApiError.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
 import {
-  COMMON_PASS_HISTORY_VERSION,
   SELF_SKIP_LIST_PATH_SDWT,
-  buildPassHistoryErdImagePath,
-  isActivePassHistoryRecord,
   listPassHistoryRecords,
   parsePassHistoryPath,
 } from "./passHistory.mjs"
@@ -52,16 +49,12 @@ const ALL_CH_STEPS = "ALL"
 const PARQUET_CACHE_MAX_ENTRIES = 16
 const ERD_SCATTER_CACHE_MAX_ENTRIES = 1
 const ERD_HISTORY_CACHE_MAX_ENTRIES = 1
-const SKIP_LIST_AUTH_CACHE_MAX_ENTRIES = 16
-const SKIP_LIST_AUTH_CACHE_TTL_MS = 5 * 1000
 export const SKIP_EXCLUSION_DURATION_MS = 3 * 24 * 60 * 60 * 1000
 const parquetCache = new Map()
 const erdScatterCache = new Map()
 const erdScatterPending = new Map()
 const erdHistoryCache = new Map()
 const erdHistoryPending = new Map()
-const skipListAuthorizationCache = new Map()
-const skipListAuthorizationPending = new Map()
 
 const imageMimeTypes = {
   ".png": "image/png",
@@ -91,6 +84,11 @@ function normalizeTextValue(value) {
 
 export function normalizeSelfEquipmentFilePath(filePath) {
   return normalizeTextValue(filePath).replaceAll("/pic_server2/", "/pic/")
+}
+
+export function isDirectSkipListErdPathAllowed(filePath) {
+  const resolvedPath = resolve(normalizeSelfEquipmentFilePath(filePath))
+  return resolvedPath.startsWith(`${ERD_FILE_ROOT}/`)
 }
 
 export function getSelfEquipmentLatestDateFromFilePath(filePath) {
@@ -294,154 +292,6 @@ export async function authorizeSelfEquipmentDataPath({
       step,
       ver,
     })
-  } catch {
-    return false
-  }
-}
-
-function normalizeSkipRecordDate(value) {
-  const text = value instanceof Date
-    ? value.toISOString().replace("T", " ").replace("Z", "")
-    : normalizeTextValue(value)
-  const match = text.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}:\d{2}))?/)
-  if (!match) return text
-  return !match[2] || match[2] === "00:00:00" ? match[1] : `${match[1]} ${match[2]}`
-}
-
-function isSkipRecordTeamRowMatch(record, row) {
-  const recordDesc = normalizeTextValue(record.desc)
-  const recordRecipeId = normalizeTextValue(record.recipe_id)
-  const descMatches = recordDesc === normalizeTextValue(row.desc)
-    || (recordDesc === recordRecipeId && Boolean(recordRecipeId))
-
-  return descMatches
-    && normalizeTextValue(record.line_id) === normalizeTextValue(row.line_rev)
-    && normalizeTextValue(record.sdwt) === normalizeTextValue(row.sdwt)
-    && normalizeTextValue(record.ver) === normalizeTextValue(row.ver)
-    && recordRecipeId === normalizeTextValue(row.recipe_id)
-    && normalizeTextValue(record.priority) === normalizeTextValue(row.priority)
-    && normalizeTextValue(record.sensor) === normalizeTextValue(row.sensor)
-    && normalizeTextValue(record.step) === normalizeTextValue(row.step)
-    && normalizeSkipEqp(record.eqp) === normalizeSkipEqp(row.eqp)
-    && normalizeSkipRecordDate(record.update_date) === normalizeSkipRecordDate(row.latest_date)
-}
-
-export async function resolveSelfEquipmentSkipListRecords(records, {
-  readMapping = readLineMapping,
-  readRows = readTeamErdRows,
-} = {}) {
-  const sourceRecords = Array.isArray(records) ? records : []
-  const selfRecords = sourceRecords.filter((record) => (
-    normalizeTextValue(record.ver)
-    && normalizeTextValue(record.ver) !== COMMON_PASS_HISTORY_VERSION
-  ))
-  if (!selfRecords.length) return sourceRecords
-
-  let mapping
-  try {
-    mapping = await readMapping()
-  } catch {
-    return sourceRecords
-  }
-
-  const recordScopes = new Set(selfRecords.map((record) => (
-    `${normalizeTextValue(record.line_id)}\u0000${normalizeTextValue(record.sdwt)}`
-  )))
-  const teamScopes = Object.entries(mapping.line_mapping ?? {}).flatMap(([pathSdwt, line]) => {
-    const displaySdwt = normalizeTextValue(mapping.sdwt_mapping?.[pathSdwt] ?? pathSdwt)
-    return recordScopes.has(`${normalizeTextValue(line)}\u0000${displaySdwt}`)
-      ? [{ line: normalizeTextValue(line), pathSdwt }]
-      : []
-  })
-  if (!teamScopes.length) return sourceRecords
-
-  const teamSources = await Promise.allSettled(teamScopes.map(async ({ line, pathSdwt }) => {
-    const source = await readRows({ line, pathSdwt })
-    return scopeSelfEquipmentRows(source.rows, { line, pathSdwt, mapping })
-  }))
-  const teamRows = teamSources.flatMap((result) => (
-    result.status === "fulfilled" ? result.value : []
-  ))
-  if (!teamRows.length) return sourceRecords
-
-  return sourceRecords.map((record) => {
-    const matches = teamRows.filter((row) => isSkipRecordTeamRowMatch(record, row))
-    const paths = Array.from(new Set(matches.map((row) => row.file_path).filter(Boolean)))
-    if (paths.length !== 1) return record
-    const matchedRow = matches.find((row) => row.file_path === paths[0])
-    return {
-      ...record,
-      chart_file_path: paths[0],
-      chart_latest_date: matchedRow?.latest_date ?? "",
-    }
-  })
-}
-
-export function isSelfEquipmentSkipListDataPathAllowed(records, {
-  dataDirectoryPath,
-  eqp,
-  latestDate,
-  line,
-  sensor,
-  step,
-  ver,
-}, nowMs = Date.now()) {
-  const normalizedPath = normalizeSelfEquipmentFilePath(dataDirectoryPath)
-  const normalizedEqp = normalizeSkipEqp(eqp)
-
-  return records.some((record) => {
-    if (!isActivePassHistoryRecord(record, nowMs)) return false
-    if (normalizeTextValue(record.ver) === COMMON_PASS_HISTORY_VERSION) return false
-    if (normalizeTextValue(record.line_id) !== line) return false
-    if (normalizeTextValue(record.sensor) !== sensor) return false
-    if (normalizeTextValue(record.step) !== step) return false
-    if (normalizeTextValue(record.ver) !== ver) return false
-    if (normalizeSkipEqp(record.eqp) !== normalizedEqp) return false
-
-    let recordPath = ""
-    try {
-      recordPath = normalizeSelfEquipmentFilePath(
-        record.chart_file_path || buildPassHistoryErdImagePath(record),
-      )
-    } catch {
-      return false
-    }
-    if (!recordPath || recordPath !== normalizedPath) return false
-    return !latestDate || getSelfEquipmentLatestDateFromFilePath(recordPath) === latestDate
-  })
-}
-
-async function readCachedSkipListAuthorizationRecords(line) {
-  const cached = getLruEntry(skipListAuthorizationCache, line)
-  if (cached?.expiresAt > Date.now()) return cached.records
-  if (skipListAuthorizationPending.has(line)) return skipListAuthorizationPending.get(line)
-
-  const readPromise = listPassHistoryRecords({ lineId: line }).then((records) => {
-    setLruEntry(
-      skipListAuthorizationCache,
-      line,
-      { records, expiresAt: Date.now() + SKIP_LIST_AUTH_CACHE_TTL_MS },
-      SKIP_LIST_AUTH_CACHE_MAX_ENTRIES,
-    )
-    return records
-  })
-  skipListAuthorizationPending.set(line, readPromise)
-  try {
-    return await readPromise
-  } finally {
-    skipListAuthorizationPending.delete(line)
-  }
-}
-
-export async function authorizeSelfEquipmentSkipListDataPath(request, {
-  readRecords = ({ lineId }) => readCachedSkipListAuthorizationRecords(lineId),
-  resolveRecords = resolveSelfEquipmentSkipListRecords,
-  nowMs = Date.now(),
-} = {}) {
-  try {
-    const records = await readRecords({ lineId: request.line })
-    const resolvedRecords = await resolveRecords(records)
-    return isSelfEquipmentSkipListDataPathAllowed(resolvedRecords, request, nowMs)
   } catch {
     return false
   }
@@ -1014,7 +864,8 @@ export function buildErdIdentityPayload(rows, {
 
 export async function handleErdScatterDataRequest(req, res, url, {
   authorizeDataPath = authorizeSelfEquipmentDataPath,
-  authorizeSkipListDataPath = authorizeSelfEquipmentSkipListDataPath,
+  readScatterData = readErdScatterRows,
+  readHistoryData = readErdHistoryRows,
 } = {}) {
   if (req.method !== "GET") {
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
@@ -1037,6 +888,7 @@ export async function handleErdScatterDataRequest(req, res, url, {
     const requestedLine = url.searchParams.get("line")?.trim() ?? ""
     const requestedPathSdwt = url.searchParams.get("pathSdwt")?.trim() ?? ""
     const requestedDays = url.searchParams.get("days")?.trim() ?? ""
+    const isSkipList = requestedPathSdwt === SELF_SKIP_LIST_PATH_SDWT
     const {
       filePath,
       latestDate: pathLatestDate,
@@ -1047,23 +899,22 @@ export async function handleErdScatterDataRequest(req, res, url, {
       sendJson(res, 400, { ok: false, error: "latestDate 형식이 올바르지 않습니다." })
       return
     }
-    if (!requestedLine || !requestedPathSdwt || !requestedSensor || !requestedChStep || !requestedVer) {
+    if (!isSkipList && (!requestedLine || !requestedPathSdwt || !requestedSensor || !requestedChStep || !requestedVer)) {
       sendJson(res, 400, { ok: false, error: "line, pathSdwt, sensor, chStep과 ver 조건이 필요합니다." })
       return
     }
-    const authorizationRequest = {
-      dataDirectoryPath: imagePath,
-      eqp,
-      latestDate: requestedLatestDate,
-      line: requestedLine,
-      pathSdwt: requestedPathSdwt,
-      sensor: requestedSensor,
-      step: requestedChStep,
-      ver: requestedVer,
-    }
-    const authorized = requestedPathSdwt === SELF_SKIP_LIST_PATH_SDWT
-      ? await authorizeSkipListDataPath(authorizationRequest)
-      : await authorizeDataPath(authorizationRequest)
+    const authorized = isSkipList
+      ? isDirectSkipListErdPathAllowed(imagePath)
+      : await authorizeDataPath({
+          dataDirectoryPath: imagePath,
+          eqp,
+          latestDate: requestedLatestDate,
+          line: requestedLine,
+          pathSdwt: requestedPathSdwt,
+          sensor: requestedSensor,
+          step: requestedChStep,
+          ver: requestedVer,
+        })
     if (!authorized) {
       sendJson(res, 403, { ok: false, error: "허용되지 않은 자설비 데이터 경로입니다." })
       return
@@ -1080,10 +931,10 @@ export async function handleErdScatterDataRequest(req, res, url, {
         sendJson(res, 400, { ok: false, error: "동일성 차트 조회 기간은 0~30일 정수여야 합니다." })
         return
       }
-      const source = await readErdScatterRows(filePath, { sensor, chStep, identity: true })
+      const source = await readScatterData(filePath, { sensor, chStep, identity: true })
       sendJson(res, 200, buildErdIdentityPayload(source.rows, {
         eqp,
-        ver: requestedVer,
+        ver: isSkipList ? "" : requestedVer,
         axisColumn: source.axisColumn,
         equipmentColumn: source.equipmentColumn,
         filePath,
@@ -1091,18 +942,18 @@ export async function handleErdScatterDataRequest(req, res, url, {
       }))
       return
     }
-    const source = await readErdScatterRows(filePath, { sensor, chStep })
+    const source = await readScatterData(filePath, { sensor, chStep })
     const historyPath = resolveErdHistoryFilePath(filePath, eqp)
     let historyRows = []
     let historyError = ""
     try {
-      historyRows = await readErdHistoryRows(historyPath)
+      historyRows = await readHistoryData(historyPath)
     } catch {
       historyError = "변경점 이력을 불러오지 못했습니다."
     }
     sendJson(res, 200, buildErdScatterPayload(source.rows, {
       eqp,
-      ver: requestedVer,
+      ver: isSkipList ? "" : requestedVer,
       axisColumn: source.axisColumn,
       equipmentColumn: source.equipmentColumn,
       filePath,

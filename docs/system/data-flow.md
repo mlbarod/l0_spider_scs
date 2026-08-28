@@ -234,9 +234,9 @@ chart row의 `file_path`가 `GET /api/erd-scatter-data`의 `path`가 된다.
 `file_path`가 `{eqp}.png`이면 같은 directory의 `data.parquet`, directory이면 하위
 `data.parquet`, 이미 `data.parquet`이면 해당 파일을 선택한다.
 요청 Line·path SDWT·EQP·latest date·sensor·ch_step·ver가 선택한 scoped team row와
-일치하는지 재검증한다. SKIP LIST는 `pathSdwt=__SKIP_LIST__`로 구분하고 현재 활성
-`pass_history`의 Line·경로·EQP·sensor·step·ver와 일치하는지 별도로 재검증한다. Scatter·3일
-동일성·동일성 팝업은 같은 row-to-request 변환을 사용한다. 선택한 `data.parquet` schema의 `ver`는 선택적으로 projection한다.
+일치하는지 재검증한다. SKIP LIST는 `pathSdwt=__SKIP_LIST__`로 구분하고 row의 ERD
+`file_path`와 같은 디렉터리의 `data.parquet`을 직접 읽는다. Scatter·3일 동일성·동일성 팝업은
+같은 row-to-request 변환을 사용한다. 선택한 `data.parquet` schema의 `ver`는 선택적으로 projection한다.
 컬럼이 없으면 선택한 `file_path`에 version 범위가 한정된 것으로 처리한다. 컬럼이 있으면 요청과
 정확히 같은 `ver`를 우선 사용하고, 파일 내부 `ver`가 단일 값이면 version 경로로 이미 한정된
 파일로 처리하며, 여러 `ver`가 섞인 mismatch는 point를 반환하지 않는다. 선택된 row에 대해
