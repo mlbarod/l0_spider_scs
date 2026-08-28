@@ -1,17 +1,33 @@
 import { createReadStream } from "node:fs"
-import { readdir, stat } from "node:fs/promises"
-import { join, relative, resolve, sep } from "node:path"
+import { stat } from "node:fs/promises"
+import { isAbsolute, join, resolve } from "node:path"
+
+import {
+  asyncBufferFromFile,
+  parquetMetadataAsync,
+  parquetReadObjects,
+  parquetSchema,
+} from "hyparquet"
+import { compressors } from "hyparquet-compressors"
 
 import { getLatestCommonalityPath } from "./latestCommonalityPath.mjs"
+import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
 
-const INDEX_CACHE_TTL_MS = 5 * 60 * 1000
-const DIRECTORY_READ_CONCURRENCY = 64
+export const COMMONALITY_PATH_COLUMNS = Object.freeze([
+  "sdwt_code",
+  "step_seq",
+  "recipe_id",
+  "priority",
+  "sensor",
+  "ch_step",
+])
+const PATH_TABLE_CACHE_MAX_ENTRIES = 1
 const ALL_SENSORS = "ALL"
 const ALL_CH_STEPS = "ALL"
-const commonalityIndexCache = new Map()
-const commonalityIndexPending = new Map()
+const pathTableCache = new Map()
+const pathTablePending = new Map()
 
 function sendJson(res, statusCode, payload) {
   res.writeHead(statusCode, {
@@ -25,46 +41,6 @@ function normalizeText(value) {
   return String(value ?? "").trim()
 }
 
-function assertPathSegment(name, value) {
-  if (!value || value.includes("/") || value.includes("\\") || value.includes("..")) {
-    throw new Error(`${name} 값이 올바르지 않습니다.`)
-  }
-}
-
-async function mapWithConcurrency(items, limit, mapper) {
-  if (!items.length) return []
-
-  const results = new Array(items.length)
-  let nextIndex = 0
-  async function worker() {
-    while (nextIndex < items.length) {
-      const index = nextIndex
-      nextIndex += 1
-      results[index] = await mapper(items[index], index)
-    }
-  }
-
-  await Promise.all(
-    Array.from({ length: Math.min(limit, items.length) }, () => worker()),
-  )
-  return results
-}
-
-async function readChildDirectories(nodes, propertyName, predicate = () => true) {
-  const childGroups = await mapWithConcurrency(
-    nodes,
-    DIRECTORY_READ_CONCURRENCY,
-    async (node) => (await readdir(node.path, { withFileTypes: true }))
-      .filter((entry) => entry.isDirectory() && predicate(entry, node))
-      .map((entry) => ({
-        ...node,
-        [propertyName]: entry.name,
-        path: join(node.path, entry.name),
-      })),
-  )
-  return childGroups.flat()
-}
-
 async function isRegularFile(filePath) {
   try {
     return (await stat(filePath)).isFile()
@@ -73,98 +49,99 @@ async function isRegularFile(filePath) {
   }
 }
 
-function splitSensorChStep(folderName) {
-  const delimiterIndex = folderName.lastIndexOf("_")
-  if (delimiterIndex <= 0 || delimiterIndex === folderName.length - 1) return null
-  return {
-    sensor: folderName.slice(0, delimiterIndex),
-    chStep: folderName.slice(delimiterIndex + 1),
-  }
-}
-
-export async function collectCommonalityRows(sdwtPath, latestPath, sdwt) {
-  let nodes = [{ path: sdwtPath }]
-  nodes = await readChildDirectories(nodes, "grade")
-  nodes = await readChildDirectories(nodes, "stepSeq")
-  nodes = await readChildDirectories(nodes, "stepDesc")
-  nodes = await readChildDirectories(nodes, "ppid")
-  nodes = await readChildDirectories(
-    nodes,
-    "duplicatePpid",
-    (entry, node) => entry.name === node.ppid,
-  )
-  nodes = await readChildDirectories(nodes, "sensorChStep")
-
-  return nodes.flatMap((node) => {
-    const parsed = splitSensorChStep(node.sensorChStep)
-    if (!parsed) return []
-    const filePath = join(node.path, "img.png")
+export function normalizeCommonalityPathRows(rows, latestPath) {
+  return rows.flatMap((row, index) => {
+    const sdwt = normalizeText(row.sdwt_code)
+    const stepSeq = normalizeText(row.step_seq)
+    const recipeId = normalizeText(row.recipe_id)
+    const priority = normalizeText(row.priority)
+    const sensor = normalizeText(row.sensor)
+    const chStep = normalizeText(row.ch_step)
+    const sourcePath = normalizeText(row.path || row.file_path)
+    if (!sdwt || !stepSeq || !recipeId || !priority || !sensor || !chStep || !sourcePath) {
+      return []
+    }
+    if (!isAbsolute(sourcePath)) return []
+    const filePath = join(resolve(sourcePath), "img.png")
     return [{
-      id: relative(latestPath.path, filePath).split(sep).join("/"),
+      id: `${index}-${filePath}`,
       latestDate: latestPath.date,
       sdwt,
-      grade: node.grade,
-      stepSeq: node.stepSeq,
-      stepDesc: node.stepDesc,
-      ppid: node.ppid,
-      duplicatePpid: node.duplicatePpid,
-      sensor: parsed.sensor,
-      chStep: parsed.chStep,
+      grade: priority,
+      stepSeq,
+      stepDesc: stepSeq,
+      ppid: recipeId,
+      duplicatePpid: recipeId,
+      sensor,
+      chStep,
       filePath,
     }]
   })
 }
 
-async function resolveSdwtPath(latestPath, pathSdwt, displaySdwt) {
-  const candidates = Array.from(new Set([pathSdwt, displaySdwt].map(normalizeText).filter(Boolean)))
-  for (const candidate of candidates) {
-    assertPathSegment("SDWT", candidate)
-    const candidatePath = join(latestPath.path, candidate)
-    try {
-      if ((await stat(candidatePath)).isDirectory()) {
-        return { sdwtPath: candidatePath, folderSdwt: candidate }
-      }
-    } catch {
-      // 다음 SDWT 후보를 확인한다.
-    }
+export async function readCommonalityPathRows(latestPath) {
+  const fileStat = await stat(latestPath.path)
+  const cached = getLruEntry(pathTableCache, latestPath.path)
+  if (cached?.mtimeMs === fileStat.mtimeMs && cached?.size === fileStat.size) {
+    return cached.rows
   }
+  if (pathTablePending.has(latestPath.path)) return pathTablePending.get(latestPath.path)
 
-  const error = new Error(
-    `선택한 SDWT의 동일성 이상감지 폴더를 찾지 못했습니다: ${candidates.join(" 또는 ")}`,
-  )
-  error.code = "COMMONALITY_SDWT_DIRECTORY_NOT_FOUND"
-  throw error
+  const pending = (async () => {
+    const file = await asyncBufferFromFile(latestPath.path)
+    const metadata = await parquetMetadataAsync(file)
+    const schemaColumns = new Set(
+      parquetSchema(metadata).children.map((column) => column.element.name),
+    )
+    const pathColumns = ["path", "file_path"].filter((column) => schemaColumns.has(column))
+    const missingColumns = COMMONALITY_PATH_COLUMNS.filter((column) => !schemaColumns.has(column))
+    if (!pathColumns.length) missingColumns.push("path 또는 file_path")
+    if (missingColumns.length) {
+      const error = new Error(`동일성 경로 테이블 필수 컬럼이 없습니다: ${missingColumns.join(", ")}`)
+      error.code = "COMMONALITY_PATH_TABLE_SCHEMA_INVALID"
+      throw error
+    }
+    const sourceRows = await parquetReadObjects({
+      file,
+      metadata,
+      columns: [...COMMONALITY_PATH_COLUMNS, ...pathColumns],
+      compressors,
+    })
+    const normalizedRows = normalizeCommonalityPathRows(sourceRows, latestPath)
+    setLruEntry(
+      pathTableCache,
+      latestPath.path,
+      { mtimeMs: fileStat.mtimeMs, size: fileStat.size, rows: normalizedRows },
+      PATH_TABLE_CACHE_MAX_ENTRIES,
+    )
+    return normalizedRows
+  })()
+  pathTablePending.set(latestPath.path, pending)
+  try {
+    return await pending
+  } finally {
+    pathTablePending.delete(latestPath.path)
+  }
+}
+
+export function scopeCommonalityRows(rows, { pathSdwt, sdwt }) {
+  const candidates = new Set([pathSdwt, sdwt].map(normalizeText).filter(Boolean))
+  const scopedRows = rows.filter((row) => candidates.has(row.sdwt))
+  if (!scopedRows.length) {
+    const error = new Error(
+      `선택한 SDWT의 동일성 이상감지 행을 찾지 못했습니다: ${Array.from(candidates).join(" 또는 ")}`,
+    )
+    error.code = "COMMONALITY_SDWT_NOT_FOUND"
+    throw error
+  }
+  return { folderSdwt: scopedRows[0].sdwt, rows: scopedRows }
 }
 
 async function getCommonalityIndex({ pathSdwt, sdwt }) {
   const latestPath = await getLatestCommonalityPath()
-  const { sdwtPath, folderSdwt } = await resolveSdwtPath(latestPath, pathSdwt, sdwt)
-  const cacheKey = `${latestPath.path}\u0000${sdwtPath}`
-  const cached = commonalityIndexCache.get(cacheKey)
-  if (cached?.expiresAt > Date.now()) {
-    return { latestPath, folderSdwt, rows: cached.rows }
-  }
-
-  if (commonalityIndexPending.has(cacheKey)) {
-    const rows = await commonalityIndexPending.get(cacheKey)
-    return { latestPath, folderSdwt, rows }
-  }
-
-  const indexPromise = collectCommonalityRows(sdwtPath, latestPath, folderSdwt)
-  commonalityIndexPending.set(cacheKey, indexPromise)
-  try {
-    const rows = await indexPromise
-    commonalityIndexCache.forEach((entry, key) => {
-      if (entry.expiresAt <= Date.now()) commonalityIndexCache.delete(key)
-    })
-    commonalityIndexCache.set(cacheKey, {
-      rows,
-      expiresAt: Date.now() + INDEX_CACHE_TTL_MS,
-    })
-    return { latestPath, folderSdwt, rows }
-  } finally {
-    commonalityIndexPending.delete(cacheKey)
-  }
+  const rows = await readCommonalityPathRows(latestPath)
+  const scoped = scopeCommonalityRows(rows, { pathSdwt, sdwt })
+  return { latestPath, ...scoped }
 }
 
 function sortValues(values) {
@@ -266,8 +243,8 @@ export async function handleCommonalityDataRequest(req, res, url) {
       },
     })
   } catch (error) {
-    const statusCode = error.code === "COMMONALITY_DATE_DIRECTORY_NOT_FOUND"
-      || error.code === "COMMONALITY_SDWT_DIRECTORY_NOT_FOUND"
+    const statusCode = error.code === "COMMONALITY_PATH_TABLE_NOT_FOUND"
+      || error.code === "COMMONALITY_SDWT_NOT_FOUND"
       ? 404
       : 500
     sendJson(res, statusCode, createSafeApiError({
@@ -290,7 +267,8 @@ export async function handleCommonalityImageRequest(req, res, url) {
   try {
     const latestPath = await getLatestCommonalityPath()
     const resolvedPath = resolve(requestedPath)
-    if (!resolvedPath.startsWith(`${latestPath.path}${sep}`) || !resolvedPath.endsWith(`${sep}img.png`)) {
+    const rows = await readCommonalityPathRows(latestPath)
+    if (!rows.some((row) => row.filePath === resolvedPath)) {
       sendJson(res, 403, { ok: false, error: "허용되지 않은 동일성 이미지 경로입니다." })
       return
     }

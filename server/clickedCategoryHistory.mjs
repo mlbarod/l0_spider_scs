@@ -130,12 +130,12 @@ export function buildClickedCategoryHistoryRecord({
   if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
   if (!paths.length) throw new Error("Chart Drawing 경로가 필요합니다.")
 
-  const useSelfSelection = normalizedApp === "self"
+  const useExplicitSelection = (normalizedApp === "self" || normalizedApp === "commonality")
     && normalizedSelectedSdwt
     && Array.isArray(grades)
     && grades.length
     && normalizedSelectedSensor
-  const pathValues = useSelfSelection
+  const pathValues = useExplicitSelection
     ? [{
       sdwt: normalizedSelectedSdwt,
       grade: "",
@@ -143,17 +143,20 @@ export function buildClickedCategoryHistoryRecord({
     }]
     : paths.map((filePath) => parseDrawingPath(normalizedApp, filePath))
   const suffix = normalizedApp === "commonality" ? "(g)" : normalizedApp === "common" ? "(c)" : ""
-  const requestedGrades = normalizedApp === "self" && Array.isArray(grades) && grades.length
+  const requestedGrades = (
+    normalizedApp === "self"
+    || (normalizedApp === "commonality" && useExplicitSelection)
+  ) && Array.isArray(grades) && grades.length
     ? grades
     : pathValues.map((values) => values.grade)
   const sensor = isAllSensorSelection
     ? ALL_VALUES
-    : formatCategory(useSelfSelection
+    : formatCategory(useExplicitSelection
       ? [normalizedSelectedSensor]
       : pathValues.map((values) => values.sensor))
   return {
     lineId: `${normalizedLineId}${suffix}`,
-    sdwt: formatCategory(useSelfSelection
+    sdwt: formatCategory(useExplicitSelection
       ? [normalizedSelectedSdwt]
       : pathValues.map((values) => values.sdwt)),
     grade: formatCategory(requestedGrades, normalizedApp === "self"),

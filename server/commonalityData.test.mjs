@@ -1,156 +1,123 @@
 import assert from "node:assert/strict"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import test from "node:test"
 
 import {
   buildCommonalityFilterPayload,
-  collectCommonalityRows,
+  normalizeCommonalityPathRows,
+  scopeCommonalityRows,
 } from "./commonalityData.mjs"
 
-async function createImage(rootPath, {
-  grade,
-  stepSeq,
-  stepDesc,
-  ppid,
-  duplicatePpid = ppid,
-  sensorChStep,
-  fileName = "img.png",
-}) {
-  const directoryPath = join(
-    rootPath,
-    grade,
-    stepSeq,
-    stepDesc,
-    ppid,
-    duplicatePpid,
-    sensorChStep,
-  )
-  await mkdir(directoryPath, { recursive: true })
-  await writeFile(join(directoryPath, fileName), "png")
+const latest = {
+  name: "동일성 최신날짜",
+  path: "/appdata/abnormal_trend/pic/path_erd_commonality_xian/2026-08-28",
+  date: "2026-08-28",
 }
 
-test("고정 경로 구조의 img.png를 찾아 sensor와 ch_step 필터 데이터를 생성한다", async (context) => {
-  const latestRoot = await mkdtemp(join(tmpdir(), "commonality-data-"))
-  context.after(() => rm(latestRoot, { recursive: true, force: true }))
-  const sdwtPath = join(latestRoot, "SDWT-1")
-  await Promise.all([
-    createImage(sdwtPath, {
-      grade: "A",
-      stepSeq: "100",
-      stepDesc: "MAIN ETCH",
-      ppid: "PPID-1",
-      sensorChStep: "PRESSURE_SENSOR_10@001",
-    }),
-    createImage(sdwtPath, {
-      grade: "B",
-      stepSeq: "200",
-      stepDesc: "MAIN ETCH",
-      ppid: "PPID-2",
-      sensorChStep: "PRESSURE_SENSOR_20@001",
-    }),
-    createImage(sdwtPath, {
-      grade: "D",
-      stepSeq: "300",
-      stepDesc: "IGNORED",
-      ppid: "PPID-3",
-      duplicatePpid: "OTHER-PPID",
-      sensorChStep: "TEMP_30@001",
-    }),
-    createImage(sdwtPath, {
-      grade: "M",
-      stepSeq: "400",
-      stepDesc: "NO IMAGE",
-      ppid: "PPID-4",
-      sensorChStep: "TEMP_40@001",
-      fileName: "temporary.png",
-    }),
-  ])
-  const latest = { name: "동일성 최신날짜", path: latestRoot, date: "2026-07-16 12:00:00" }
-  const rows = await collectCommonalityRows(sdwtPath, latest, "SDWT-1")
+function createSourceRow(overrides = {}) {
+  return {
+    sdwt_code: "SDWT-1",
+    step_seq: "100",
+    recipe_id: "RECIPE-1",
+    priority: "A",
+    sensor: "PRESSURE_SENSOR",
+    ch_step: "10@001",
+    path: "/appdata/abnormal_trend/pic/erd_commonality/2026-08-28/SDWT-1/A/100/RECIPE-1",
+    ...overrides,
+  }
+}
 
-  assert.equal(rows.length, 3)
+test("동일성 경로 테이블 행을 기존 화면 응답 구조로 변환한다", () => {
+  const rows = normalizeCommonalityPathRows([
+    createSourceRow(),
+    createSourceRow({
+      step_seq: 200,
+      recipe_id: "RECIPE-2",
+      priority: "B",
+      sensor: "TEMP",
+      ch_step: 20,
+      path: "",
+      file_path: "/mounted/erd-commonality/SDWT-1/B/200/RECIPE-2",
+    }),
+    createSourceRow({ path: "relative/path" }),
+    createSourceRow({ sensor: "" }),
+  ], latest)
+
+  assert.equal(rows.length, 2)
+  assert.deepEqual(rows[0], {
+    id: "0-/appdata/abnormal_trend/pic/erd_commonality/2026-08-28/SDWT-1/A/100/RECIPE-1/img.png",
+    latestDate: "2026-08-28",
+    sdwt: "SDWT-1",
+    grade: "A",
+    stepSeq: "100",
+    stepDesc: "100",
+    ppid: "RECIPE-1",
+    duplicatePpid: "RECIPE-1",
+    sensor: "PRESSURE_SENSOR",
+    chStep: "10@001",
+    filePath: "/appdata/abnormal_trend/pic/erd_commonality/2026-08-28/SDWT-1/A/100/RECIPE-1/img.png",
+  })
+  assert.equal(rows[1].stepDesc, "200")
+  assert.equal(rows[1].filePath, "/mounted/erd-commonality/SDWT-1/B/200/RECIPE-2/img.png")
+})
+
+test("sdwt_code는 mapping key와 표시 SDWT를 모두 허용해 범위를 제한한다", () => {
+  const rows = normalizeCommonalityPathRows([
+    createSourceRow(),
+    createSourceRow({ sdwt_code: "표시-SDWT-2", recipe_id: "RECIPE-2" }),
+  ], latest)
+
   assert.deepEqual(
-    Array.from(new Set(rows.map((row) => row.sensor))).sort(),
-    ["PRESSURE_SENSOR", "TEMP"],
+    scopeCommonalityRows(rows, { pathSdwt: "RAW-SDWT-2", sdwt: "표시-SDWT-2" }),
+    { folderSdwt: "표시-SDWT-2", rows: [rows[1]] },
   )
-  const stepOptionsPayload = buildCommonalityFilterPayload(
-    { latestPath: latest, folderSdwt: "SDWT-1", rows },
-    {
-      line: "P1L",
-      pathSdwt: "SDWT-1",
-      sdwt: "SDWT-1",
-      stepDesc: "",
-      sensor: "",
-      chStep: "",
-    },
+  assert.throws(
+    () => scopeCommonalityRows(rows, { pathSdwt: "UNKNOWN", sdwt: "알 수 없음" }),
+    { code: "COMMONALITY_SDWT_NOT_FOUND" },
   )
-  assert.deepEqual(stepOptionsPayload.stepDescs, ["MAIN ETCH", "NO IMAGE"])
+})
+
+test("step_seq, sensor와 ch_step으로 종속 필터 데이터를 생성한다", () => {
+  const rows = normalizeCommonalityPathRows([
+    createSourceRow(),
+    createSourceRow({ recipe_id: "RECIPE-2", ch_step: "20@001" }),
+    createSourceRow({ step_seq: "200", sensor: "TEMP", ch_step: "30@001" }),
+  ], latest)
+  const index = { latestPath: latest, folderSdwt: "SDWT-1", rows }
+
+  const stepOptionsPayload = buildCommonalityFilterPayload(index, {
+    line: "P1L",
+    pathSdwt: "SDWT-1",
+    sdwt: "SDWT-1",
+    stepDesc: "",
+    sensor: "",
+    chStep: "",
+  })
+  assert.deepEqual(stepOptionsPayload.stepDescs, ["100", "200"])
   assert.deepEqual(stepOptionsPayload.sensors, [])
-  assert.deepEqual(stepOptionsPayload.chSteps, [])
   assert.equal(stepOptionsPayload.rows.length, 0)
 
-  const payload = buildCommonalityFilterPayload(
-    { latestPath: latest, folderSdwt: "SDWT-1", rows },
-    {
-      line: "P1L",
-      pathSdwt: "SDWT-1",
-      sdwt: "SDWT-1",
-      stepDesc: "MAIN ETCH",
-      sensor: "PRESSURE_SENSOR",
-      chStep: "20@001",
-    },
-  )
-  assert.equal(payload.filters.stepDesc, "MAIN ETCH")
+  const payload = buildCommonalityFilterPayload(index, {
+    line: "P1L",
+    pathSdwt: "SDWT-1",
+    sdwt: "SDWT-1",
+    stepDesc: "100",
+    sensor: "PRESSURE_SENSOR",
+    chStep: "20@001",
+  })
   assert.deepEqual(payload.sensors, ["PRESSURE_SENSOR"])
   assert.deepEqual(payload.chSteps, ["10@001", "20@001"])
   assert.equal(payload.rows.length, 1)
-  assert.equal(payload.rows[0].stepDesc, "MAIN ETCH")
+  assert.equal(payload.rows[0].ppid, "RECIPE-2")
 
-  const allPayload = buildCommonalityFilterPayload(
-    { latestPath: latest, folderSdwt: "SDWT-1", rows },
-    {
-      line: "P1L",
-      pathSdwt: "SDWT-1",
-      sdwt: "SDWT-1",
-      stepDesc: "MAIN ETCH",
-      sensor: "PRESSURE_SENSOR",
-      chStep: "ALL",
-    },
-  )
-  assert.equal(allPayload.filters.chStep, "ALL")
-  assert.equal(allPayload.rows.length, 2)
-
-  const allSensorsPayload = buildCommonalityFilterPayload(
-    { latestPath: latest, folderSdwt: "SDWT-1", rows },
-    {
-      line: "P1L",
-      pathSdwt: "SDWT-1",
-      sdwt: "SDWT-1",
-      stepDesc: "MAIN ETCH",
-      sensor: "ALL",
-      chStep: "ALL",
-    },
-  )
+  const allSensorsPayload = buildCommonalityFilterPayload(index, {
+    line: "P1L",
+    pathSdwt: "SDWT-1",
+    sdwt: "SDWT-1",
+    stepDesc: "100",
+    sensor: "ALL",
+    chStep: "ALL",
+  })
   assert.equal(allSensorsPayload.filters.sensor, "ALL")
   assert.deepEqual(allSensorsPayload.chSteps, ["ALL"])
-  assert.equal(allSensorsPayload.filters.chStep, "ALL")
   assert.equal(allSensorsPayload.rows.length, 2)
-  assert.ok(allSensorsPayload.rows.every((row) => row.stepDesc === "MAIN ETCH"))
-
-  const invalidAllSensorsChStepPayload = buildCommonalityFilterPayload(
-    { latestPath: latest, folderSdwt: "SDWT-1", rows },
-    {
-      line: "P1L",
-      pathSdwt: "SDWT-1",
-      sdwt: "SDWT-1",
-      stepDesc: "MAIN ETCH",
-      sensor: "ALL",
-      chStep: "10@001",
-    },
-  )
-  assert.deepEqual(invalidAllSensorsChStepPayload.chSteps, ["ALL"])
-  assert.equal(invalidAllSensorsChStepPayload.filters.chStep, "")
-  assert.equal(invalidAllSensorsChStepPayload.rows.length, 0)
 })

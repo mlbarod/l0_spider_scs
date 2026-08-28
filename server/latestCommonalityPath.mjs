@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises"
+import { stat } from "node:fs/promises"
 import { join, resolve } from "node:path"
 
 import {
@@ -9,50 +9,38 @@ import { createSafeApiError } from "./safeApiError.mjs"
 
 export const commonalityRootPath = process.env.COMMONALITY_ROOT_PATH
   ?? SPIDER_DATA_PATH_TEMPLATES.commonalityRoot
+export const commonalityPathTableRootPath = process.env.COMMONALITY_PATH_TABLE_ROOT
+  ?? SPIDER_DATA_PATH_TEMPLATES.commonalityPathTableRoot
 export const latestCommonalityPathName = SPIDER_DATA_PATH_NAMES.latestCommonality
 
-const DATE_DIRECTORY_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
-
-function isValidDateDirectoryName(name) {
-  const match = String(name ?? "").match(DATE_DIRECTORY_PATTERN)
-  if (!match) return false
-
-  const [, year, month, day, hour, minute, second] = match
-  const date = new Date(Date.UTC(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    Number(second),
-  ))
-  return date.getUTCFullYear() === Number(year)
-    && date.getUTCMonth() === Number(month) - 1
-    && date.getUTCDate() === Number(day)
-    && date.getUTCHours() === Number(hour)
-    && date.getUTCMinutes() === Number(minute)
-    && date.getUTCSeconds() === Number(second)
+export function getCommonalityLatestDate(now = new Date()) {
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
+    throw new Error("동일성 기준 날짜가 올바르지 않습니다.")
+  }
+  const pad = (value) => String(value).padStart(2, "0")
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
-export async function getLatestCommonalityPath(rootPath = commonalityRootPath) {
+export async function getLatestCommonalityPath(
+  rootPath = commonalityPathTableRootPath,
+  now = new Date(),
+) {
   const normalizedRootPath = resolve(rootPath)
-  const entries = await readdir(normalizedRootPath, { withFileTypes: true })
-  const latestDate = entries
-    .filter((entry) => entry.isDirectory() && isValidDateDirectoryName(entry.name))
-    .map((entry) => entry.name)
-    .sort((left, right) => right.localeCompare(left))[0]
-
-  if (!latestDate) {
+  const latestDate = getCommonalityLatestDate(now)
+  const path = join(normalizedRootPath, latestDate)
+  try {
+    if (!(await stat(path)).isFile()) throw new Error("not a file")
+  } catch {
     const error = new Error(
-      `동일성 최신날짜를 찾지 못했습니다: ${normalizedRootPath} 바로 아래에 YYYY-MM-DD hh:mm:ss 형식의 디렉터리가 없습니다.`,
+      `동일성 오늘 날짜 경로 테이블을 찾지 못했습니다: ${path}`,
     )
-    error.code = "COMMONALITY_DATE_DIRECTORY_NOT_FOUND"
+    error.code = "COMMONALITY_PATH_TABLE_NOT_FOUND"
     throw error
   }
 
   return {
     name: latestCommonalityPathName,
-    path: join(normalizedRootPath, latestDate),
+    path,
     date: latestDate,
   }
 }
@@ -75,7 +63,7 @@ export async function handleLatestCommonalityPathRequest(req, res) {
     })
     res.end(req.method === "HEAD" ? undefined : JSON.stringify(payload))
   } catch (error) {
-    const notFound = error.code === "COMMONALITY_DATE_DIRECTORY_NOT_FOUND"
+    const notFound = error.code === "COMMONALITY_PATH_TABLE_NOT_FOUND"
     const statusCode = notFound ? 404 : 500
     res.writeHead(statusCode, {
       "Content-Type": "application/json; charset=utf-8",

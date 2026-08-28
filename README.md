@@ -375,10 +375,9 @@ SDWT 필터 마지막의 `SKIP LIST`를 선택하면 선택 Line에서 `ver = NA
 
 ### 동일성 최신날짜
 
-`/appdata/abnormal_trend/pic/erd_commonality` 바로 아래의 디렉터리 중 폴더명이
-유효한 `YYYY-MM-DD hh:mm:ss` 형식인 항목만 대상으로 하며, 폴더명 날짜와 시간이 가장 큰 디렉터리를
-`동일성 최신날짜`로 사용한다. 파일, 임시 폴더, 잘못된 날짜명과 하위 단계 디렉터리는
-검색 대상에서 제외한다.
+서버의 오늘 날짜를 `YYYY-MM-DD` 형식으로 생성해
+`/appdata/abnormal_trend/pic/path_erd_commonality_xian/{YYYY-MM-DD}` 경로 테이블을
+`동일성 최신날짜` 데이터로 사용한다. 다른 날짜 파일을 탐색해 최신값을 선택하지 않는다.
 
 공용 함수 `getLatestCommonalityPath`는 다음 구조를 반환하며
 `GET /api/latest-commonality-path`에서도 같은 구조를 제공한다.
@@ -386,49 +385,45 @@ SDWT 필터 마지막의 `SKIP LIST`를 선택하면 선택 Line에서 `ver = NA
 ```json
 {
   "name": "동일성 최신날짜",
-  "path": "/appdata/abnormal_trend/pic/erd_commonality/2026-07-16 12:45:30",
-  "date": "2026-07-16 12:45:30"
+  "path": "/appdata/abnormal_trend/pic/path_erd_commonality_xian/2026-08-28",
+  "date": "2026-08-28"
 }
 ```
 
-날짜 형식의 디렉터리가 없으면 API는 `404`와 명확한 오류 메시지를 반환한다.
-운영 경로를 예외적으로 변경해야 할 때만 서버 환경변수 `COMMONALITY_ROOT_PATH`를 사용한다.
+오늘 날짜의 경로 테이블 파일이 없으면 API는 `404`와 명확한 오류 메시지를 반환한다.
+경로 테이블 root를 예외적으로 변경해야 할 때만 `COMMONALITY_PATH_TABLE_ROOT`를 사용한다.
+결과 이미지 root override인 `COMMONALITY_ROOT_PATH`는 기존 이력 경로 해석 계약을 유지한다.
 공통부 동일성 root가 같은 mount의 형제 경로가 아니면 `COMMON_COMMONALITY_ROOT_PATH`로 직접 지정한다.
 
 ### 동일성 이상감지 App
 
 `/matching-anomaly`은 실제 동일성 기준 이상감지 그래프 파일을 사용한다. Line Name과
 SDWT는 자설비 이상감지와 동일하게 `mapping_config.json`의 `line_mapping`,
-`sdwt_mapping`을 사용한다. 필터 순서는 Line Name → SDWT → STEP(`step_desc`) →
-Sensor → `ch_step`이다. STEP 목록은 선택 SDWT 아래의 모든 `grade`와 `step_seq`를
-ALL 조건으로 합친 뒤 `step_desc` 고유값으로 생성한다. 선택한 SDWT에 대해 아래 경로의
-`grade`부터 두 번째 `ppid`까지 모든 직하위 디렉터리를 순회하고,
-`{sensor}_{ch_step}` 폴더의 마지막 밑줄을 기준으로 Sensor와 ch_step 필터 값을 생성한다.
+`sdwt_mapping`을 사용한다. 필터 순서는 Line Name → SDWT → STEP(`step_seq`, API `stepDesc`) →
+Sensor → `ch_step`이다. 서버는 경로 테이블의 `sdwt_code`, `step_seq`, `recipe_id`,
+`priority`, `sensor`, `ch_step`, `path` 컬럼을 읽는다. 화면 계약에는 각각 SDWT, STEP,
+PPID, grade, Sensor, ch_step으로 변환하고 그래프 경로는 `path + /img.png`로 만든다.
+`file_path` 컬럼도 이전 생산 파일과의 호환을 위해 `path` 대신 허용한다.
 
-서버 탐색은 각 폴더를 순차 처리하거나 전체 트리를 `rglob` 방식으로 무조건 탐색하지
-않는다. 경로 깊이가 고정된 점을 이용해 필요한 단계의 디렉터리만 최대 64개씩 제한
-병렬 조회한다. `{sensor}_{ch_step}` 폴더에 도달하면 규칙에 따라 `img.png` 경로를
-즉시 생성하며, 필터 단계에서 각 이미지 파일에 별도의 `stat`/`readdir`을 하지 않는다.
-실제 파일 확인은 화면의 이미지 요청 시 수행하고, 파일이 없으면 카드에 절대경로를
-표시한다. 동일 SDWT의 동시 요청은 하나의 탐색 Promise를 공유하며, 탐색 결과는 5분간
-캐시한다. 최신날짜 폴더가 변경되면 경로가 캐시 키에 포함되므로 새 폴더를 자동으로
-다시 탐색한다.
+경로 테이블은 파일 `mtimeMs`와 크기를 기준으로 bounded cache하며 같은 파일의 동시 읽기를
+공유한다. 이미지 API는 오늘 경로 테이블에 등록된 `img.png` 경로만 허용한 후 실제 파일을
+stream한다.
 
 ```text
-{동일성 최신날짜}/{sdwt}/{grade}/{step_seq}/{step_desc}/{ppid}/{ppid}/{sensor}_{ch_step}/img.png
+/appdata/abnormal_trend/pic/path_erd_commonality_xian/{YYYY-MM-DD}
+  path 컬럼 + /img.png
 ```
 
-두 번째 `{ppid}` 폴더명이 첫 번째 `{ppid}`와 같은 경로의 `img.png`만 표시 대상으로
-사용한다. Sensor의 `ALL`을 선택하면 ch_step에는 `ALL`만 표시하며, 이를 선택하면
+Sensor의 `ALL`을 선택하면 ch_step에는 `ALL`만 표시하며, 이를 선택하면
 Line Name, SDWT와 STEP까지 선택한 범위에 속한 모든 Sensor와 ch_step 이미지를 조회한다.
 개별 Sensor를 선택한 경우에는 해당 Sensor의 ch_step과 `ALL`을 제공한다. 최종 필터
-결과는 `{step_desc}`별로 분류하여 데스크톱 기준 3열 이미지 카드로 표시한다.
+결과는 `step_seq`별로 분류하여 데스크톱 기준 3열 이미지 카드로 표시한다.
 이미지는 한 페이지당 최대 18장만 렌더링하고 이미지 영역 상단의 숫자 탭으로 페이지를
-전환한다. 이미지 로드에 실패하면 해당 카드에 요청한 절대 파일 경로를 표시한다.
+전환한다. 이미지 로드에 실패하면 해당 카드에 오류 상태를 표시한다.
 
 - 필터·이미지 목록 API: `GET /api/commonality-data`
 - 이미지 제공 API: `GET /api/commonality-image?path=...`
-- 서버 탐색 모듈: `server/commonalityData.mjs`
+- 서버 데이터 모듈: `server/commonalityData.mjs`
 - 화면: `src/features/fdc-trend/pages/CommonalityAnomalyPage.jsx`
 
 ### 공통부 동일성 이상감지 App

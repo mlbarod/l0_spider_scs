@@ -7,6 +7,8 @@ export const SPIDER_DATA_PATH_TEMPLATES = Object.freeze({
   dashboardStats: `${PIC_ROOT}/stats/{latest_date}_spider_step_stats.parquets`,
   dashboardDetail: `${PIC_ROOT}/path/{latest_date}`,
   commonalityRoot: `${PIC_ROOT}/erd_commonality`,
+  commonalityPathTableRoot: `${PIC_ROOT}/path_erd_commonality_xian`,
+  commonalityPathTable: `${PIC_ROOT}/path_erd_commonality_xian/{latest_date}`,
   commonalityImage: `${PIC_ROOT}/erd_commonality/{latest_date}/{sdwt}/{grade}/{step_seq}/{step_desc}/{ppid}/{ppid}/{sensor}_{ch_step}/img.png`,
   commonCommonalityRoot: `${PIC_ROOT}/path_common_commonality`,
   commonCommonalityImage: `${PIC_ROOT}/path_common_commonality/{latest_date}/{sdwt}/{eqp_model}/{grade}/{sensor}@{ch_step}/img.png`,
@@ -62,6 +64,12 @@ export function buildDashboardDetailPath(latestDate) {
 
 export function buildCommonalityImagePath(values) {
   return fillPathTemplate(SPIDER_DATA_PATH_TEMPLATES.commonalityImage, values)
+}
+
+export function buildCommonalityPathTablePath(latestDate) {
+  return fillPathTemplate(SPIDER_DATA_PATH_TEMPLATES.commonalityPathTable, {
+    latest_date: latestDate,
+  })
 }
 
 export function buildCommonCommonalityImagePath(values) {

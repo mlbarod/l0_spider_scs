@@ -114,6 +114,28 @@ test("동일성 Drawing 경로는 Line에 (g)를 붙이고 경로의 grade와 se
   assert.equal(record.sensor, "PRESSURE_SENSOR")
 })
 
+test("동일성 경로 테이블 metadata가 있으면 Drawing 경로 구조에 의존하지 않는다", () => {
+  const record = buildClickedCategoryHistoryRecord({
+    app: "commonality",
+    lineId: "P2L",
+    filePaths: ["/mounted/commonality/result/img.png"],
+    grades: ["A", "B"],
+    selectedSdwt: "SDWT-2",
+    selectedSensor: "ALL",
+    clickedAt: "2026-08-28T14:00:00+09:00",
+    knoxId: "user2",
+  })
+
+  assert.deepEqual(record, {
+    lineId: "P2L(g)",
+    sdwt: "SDWT-2",
+    grade: "['A', 'B']",
+    sensor: "ALL",
+    updateDate: "2026-08-28T14:00:00+09:00",
+    knoxId: "user2",
+  })
+})
+
 test("동일성 클릭이력은 서로 다른 step_desc 경로도 기존 컬럼 구조로 집계한다", () => {
   const record = buildClickedCategoryHistoryRecord({
     app: "commonality",

@@ -44,7 +44,7 @@ const PAGE_VARIANTS = Object.freeze({
     categoryQueryKey: "stepDesc",
     latestLoadingText: "동일성 경로를 탐색하는 중입니다.",
     resultTitle: "동일성 기준 이상감지 그래프",
-    resultDescription: "최종 필터 선택 결과를 step_desc 기준으로 분류합니다.",
+    resultDescription: "최종 필터 선택 결과를 step_seq 기준으로 분류합니다.",
     resultCategoryName: "STEP categories",
     emptySelectionText: "Line Name, SDWT, STEP, Sensor와 ch_step을 선택하면 동일성 그래프가 표시됩니다.",
     fetchData: fetchCommonalityData,
@@ -187,6 +187,8 @@ function CommonalityImageCard({ row, config, lineId }) {
   const handleHistorySave = () => {
     saveHitHistoryMutation.mutate({
       lineId,
+      updateDate: row.latestDate,
+      sdwt: row.sdwt,
       filePath: row.filePath,
       execDate: new Date().toISOString(),
     })
@@ -403,6 +405,8 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
         app: "commonality",
         lineId: activeLine,
         filePaths,
+        grades: (payload.rows ?? []).map((row) => row.grade),
+        selectedSdwt: payload.rows?.[0]?.sdwt ?? activeTeamLabel,
         selectedSensor,
         clickedAt,
       })

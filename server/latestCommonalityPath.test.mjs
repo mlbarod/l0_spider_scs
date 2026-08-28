@@ -1,49 +1,45 @@
 import assert from "node:assert/strict"
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
 
 import {
+  getCommonalityLatestDate,
   getLatestCommonalityPath,
   latestCommonalityPathName,
 } from "./latestCommonalityPath.mjs"
 
-test("직하위의 유효한 날짜 디렉터리 중 최신 폴더를 반환한다", async (context) => {
+test("현재 날짜를 YYYY-MM-DD 형식으로 생성한다", () => {
+  assert.equal(
+    getCommonalityLatestDate(new Date(2026, 7, 28, 15, 30, 0)),
+    "2026-08-28",
+  )
+})
+
+test("오늘 날짜 이름의 동일성 경로 테이블을 반환한다", async (context) => {
   const rootPath = await mkdtemp(join(tmpdir(), "commonality-latest-"))
   context.after(() => rm(rootPath, { recursive: true, force: true }))
+  const now = new Date(2026, 7, 28, 15, 30, 0)
+  const expectedPath = join(rootPath, "2026-08-28")
+  await writeFile(expectedPath, "parquet")
 
-  await Promise.all([
-    mkdir(join(rootPath, "2026-07-16 08:30:00")),
-    mkdir(join(rootPath, "2026-07-16 12:45:30")),
-    mkdir(join(rootPath, "2026-07-16")),
-    mkdir(join(rootPath, "2026-02-30 12:00:00")),
-    mkdir(join(rootPath, "2026-07-16 25:00:00")),
-    mkdir(join(rootPath, "temporary")),
-    writeFile(join(rootPath, "2026-07-20 12:00:00"), "일반 파일"),
-  ])
-  await mkdir(join(rootPath, "temporary", "2026-12-31 23:59:59"))
-
-  assert.deepEqual(await getLatestCommonalityPath(`${rootPath}/`), {
+  assert.deepEqual(await getLatestCommonalityPath(rootPath, now), {
     name: latestCommonalityPathName,
-    path: join(rootPath, "2026-07-16 12:45:30"),
-    date: "2026-07-16 12:45:30",
+    path: expectedPath,
+    date: "2026-08-28",
   })
 })
 
-test("유효한 날짜 디렉터리가 없으면 명확한 오류를 반환한다", async (context) => {
+test("오늘 날짜 경로 테이블이 없으면 명확한 오류를 반환한다", async (context) => {
   const rootPath = await mkdtemp(join(tmpdir(), "commonality-empty-"))
   context.after(() => rm(rootPath, { recursive: true, force: true }))
 
-  await mkdir(join(rootPath, "2026-02-30 12:00:00"))
-  await mkdir(join(rootPath, "2026-07-16"))
-  await writeFile(join(rootPath, "2026-07-16 12:00:00"), "디렉터리가 아닌 파일")
-
   await assert.rejects(
-    getLatestCommonalityPath(rootPath),
+    getLatestCommonalityPath(rootPath, new Date(2026, 7, 28, 15, 30, 0)),
     (error) => (
-      error.code === "COMMONALITY_DATE_DIRECTORY_NOT_FOUND"
-      && error.message.includes("YYYY-MM-DD hh:mm:ss 형식의 디렉터리가 없습니다")
+      error.code === "COMMONALITY_PATH_TABLE_NOT_FOUND"
+      && error.message.includes(join(rootPath, "2026-08-28"))
     ),
   )
 })

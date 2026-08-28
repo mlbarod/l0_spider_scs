@@ -103,19 +103,20 @@ CommonalityAnomalyPage
 → fetchCommonalityData()
 → GET /api/commonality-data
 → getLatestCommonalityPath()
-→ erd_commonality/{latest_date}의 최신 유효 디렉터리
-→ collectCommonalityRows()
-→ SDWT/Grade/step_seq/step_desc/ppid/sensor_ch_step 계층
+→ 오늘 날짜의 path_erd_commonality_xian/{YYYY-MM-DD} Parquet
+→ readCommonalityPathRows()
+→ sdwt_code/step_seq/recipe_id/priority/sensor/ch_step/path 컬럼
 → GET /api/commonality-image
-→ img.png stream
+→ path + /img.png stream
 → STEP별 이미지 카드
 ```
 
 화면은 mapping으로 Line별 SDWT 후보를 만든 뒤 `stepDesc`, `sensor`, `chStep`을 API에 보낸다.
 CORE-04 이후 mapping API가 성공하고 최소 runtime 계약을 통과하기 전에는 동일성·공통부·Self의 종속 조회를 시작하지 않는다. 빈 `line_mapping`, 잘못된 dictionary type과 API 실패는 일반 empty가 아니라 기준정보 오류로 표시하며 사용자가 다시 조회할 수 있다.
 서버 경로에는 Line segment가 없으며 Line은 화면에서 SDWT 후보를 제한하고 응답 filter에 유지된다.
-서버는 `stepDesc → sensor → chStep` 종속 option을 만들고 최종 row의 `filePath`를 image endpoint에 전달한다.
-화면은 한 페이지에 최대 18개 row를 렌더링하며 `stepDesc`로 그룹화한다.
+서버는 `step_seq → sensor → ch_step` 종속 option을 기존 `stepDesc → sensor → chStep` API 형태로 만들고
+최종 row의 `filePath`를 image endpoint에 전달한다. `recipe_id`는 PPID, `priority`는 grade로 표시한다.
+화면은 한 페이지에 최대 18개 row를 렌더링하며 STEP(`step_seq`)으로 그룹화한다.
 
 ### 3.4 공통부 이상감지
 
@@ -195,7 +196,7 @@ root는 `COMMON_COMMONALITY_ROOT_PATH`를 우선하고, 없으면 `COMMONALITY_R
 | `ABN-P05` | team row `file_path` | ERD data/image 위치 identity | 선택한 scoped row 원문 | 코드 `Confirmed`; 운영 값 `Unknown` |
 | `ABN-P06` | 선택한 `data.parquet` sibling `{eqp}.parquet` | 변경점 이력 | 선택 EQP 이름으로 조립 | 코드 `Confirmed`; 운영 file `Unknown` |
 | `ABN-P07` | `/appdata/abnormal_trend/pic/backup/...` | Self 데이터에서 거부되는 경로 | resolver에서 거부 | `Confirmed` |
-| `ABN-P08` | `/appdata/abnormal_trend/pic/erd_commonality/{latest_date}/{sdwt}/{grade}/{step_seq}/{step_desc}/{ppid}/{ppid}/{sensor}_{ch_step}/img.png` | 동일성 이미지 | 최신 directory 계층 탐색 | `Confirmed` |
+| `ABN-P08` | `/appdata/abnormal_trend/pic/path_erd_commonality_xian/{오늘 YYYY-MM-DD}`의 `path + /img.png` | 동일성 이미지 | 오늘 path table row로 허용 | `Confirmed` |
 | `ABN-P09` | `/appdata/abnormal_trend/pic/path_common/{line}/{sdwt}/df_path.parquet` | 공통부 index | Line·path SDWT로 조립 | `Confirmed` |
 | `ABN-P10` | `/appdata/abnormal_trend/pic/common/{latest_date}/{sdwt}/{step_desc}/{grade}/{sensor}/{ch_step}/data.parquet` | 공통부 point 원천 | index PNG/data path를 sibling data로 변환 | `Confirmed` |
 | `ABN-P11` | 같은 common directory의 `{eqp_cb}.png` | 공통부 결과 image | data path와 EQP로 조립 | `Confirmed` |
@@ -269,7 +270,7 @@ L0 Spider의 확인된 책임은 파일 결과를 선택·검증·읽기·집계
 | Dashboard | 유효 시각 filename의 날짜별 마지막 값 | file list root mtime, Parquet 1개, aggregate 32개; mtime·size 검사 | main 60초, trend 5분 stale | overwrite 시 mtime·size 기준 갱신 |
 | Self team path | 선택한 `path_xian/{line}/{sdwt}/df_path.parquet` | LRU 최대 16개; mtime·size 검사 | 기본 stale 60초 | team file 변경은 다음 API 요청에서 반영 |
 | ERD chart | team row `file_path`에서 해석한 data; row의 날짜와 `ver`를 전달 | scatter 1개, history 1개; mtime·size 검사 | chart query key에 path·latest date·ver 포함, `staleTime: Infinity` | 같은 path·date·ver file overwrite는 자동 refetch되지 않음 |
-| 동일성 | 최신 유효 `YYYY-MM-DD hh:mm:ss` directory | directory index 5분 TTL, latest path 포함 key | 기본 stale 60초 | 동일 latest directory 내부 변경은 최대 TTL 영향 가능 |
+| 동일성 | 서버의 오늘 `YYYY-MM-DD` path table | path table 1개, mtime·size 검사 | 기본 stale 60초 | 같은 file의 mtime·size 변경은 다음 API 요청에서 반영 |
 | 공통부 동일성 | 최신 유효 `YYYY-MM-DD` directory | directory index 5분 TTL, latest path 포함 key | 기본 stale 60초 | 동일 latest directory 내부 변경은 최대 TTL 영향 가능 |
 | 공통부 index·chart | index row `file_path`가 가리키는 결과 | path 1개, scatter 1개; mtime·size 검사 | 기본 stale 60초, 일부 history 30초 | file 교체는 server mtime·size로 판정 |
 | sensor 제외 설정 | 기본 또는 override JSON의 App별 `contains` | 마지막 정상값; mtime·size 검사 | 기존 query cache는 다음 refetch 전 유지 가능 | 다음 API 요청부터 새 규칙 적용 |

@@ -154,7 +154,8 @@ node server.mjs
 | `BUILD_ON_START` | 활성 | 정적 모드 시작 시 클라이언트 빌드, `0`이면 기존 `dist` 사용 |
 | `DB_INFO_PATH` | `/appdata/l0_spider_scs/db_info.pkl` | Python helper의 DB 접속정보 |
 | `MAPPING_CONFIG_PATH` | `/appdata/l0_spider_scs/mapping_config.json` | Line/SDWT 매핑 파일 override |
-| `COMMONALITY_ROOT_PATH` | `/appdata/abnormal_trend/pic/erd_commonality` | 동일성 데이터 루트 override |
+| `COMMONALITY_ROOT_PATH` | `/appdata/abnormal_trend/pic/erd_commonality` | 동일성 결과 이미지·이력 root override |
+| `COMMONALITY_PATH_TABLE_ROOT` | `/appdata/abnormal_trend/pic/path_erd_commonality_xian` | 동일성 오늘 날짜 경로 테이블 root override |
 | `COMMON_COMMONALITY_ROOT_PATH` | 기존 데이터 root의 형제 `path_common_commonality` | 공통부 동일성 데이터 루트 override |
 | `SPIDER_DASHBOARD_PATH_ROOT` | `/appdata/abnormal_trend/pic/path` | 대시보드 일시별 상세파일 루트 override |
 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | `/appdata/abnormal_trend/pic/path_xian` | 자설비 index 루트 override |
@@ -370,7 +371,7 @@ flowchart LR
     DATAAPI["GET /api/commonality-data"]
     NODE["commonalityData.mjs"]
     LATEST["latestCommonalityPath.mjs"]
-    ROOT["erd_commonality/{latest date time}"]
+    ROOT["path_erd_commonality_xian/{today YYYY-MM-DD}"]
     IMGAPI["GET /api/commonality-image"]
 
     PAGE --> MAPAPI
@@ -378,10 +379,9 @@ flowchart LR
     PAGE --> IMGAPI --> NODE --> ROOT
 ```
 
-- 최신 `YYYY-MM-DD hh:mm:ss` 디렉터리를 찾습니다.
-- 선택 SDWT 아래의 고정 깊이 디렉터리를 제한 병렬 탐색합니다.
-- `grade/step_seq/step_desc/ppid/ppid/sensor_chStep/img.png` 구조를 index로 만듭니다.
-- 두 `ppid` 디렉터리 이름이 같은 경로만 유효합니다.
+- 서버의 오늘 날짜를 `YYYY-MM-DD`로 생성해 해당 경로 테이블을 읽습니다.
+- `sdwt_code`, `step_seq`, `recipe_id`, `priority`, `sensor`, `ch_step`, `path`를 화면 row로 변환합니다.
+- 이미지 경로는 테이블의 `path + /img.png`로 만듭니다.
 - 필터 순서는 Line → SDWT → STEP → Sensor → `ch_step`입니다.
 - Sensor는 `ALL`을 포함하며, Sensor가 `ALL`이면 `ch_step`은 `ALL`만 제공합니다.
 - 최종 이미지는 `/api/commonality-image`가 검증 후 stream합니다.
@@ -479,8 +479,8 @@ flowchart LR
 | `/api/pass-history` | DELETE | Self·공통부 | `passHistory.mjs` | `pass_history` DELETE |
 | `/api/hit-history` | POST | 이상감지 결과 카드 | `hitHistory.mjs` | `hit_history` INSERT |
 | `/api/clicked-category-history` | POST | 이상감지 화면 | `clickedCategoryHistory.mjs` | `clicked_category_history` INSERT |
-| `/api/latest-commonality-path` | GET, HEAD | 직접 API 모듈은 있으나 화면은 서버 내부 탐색 사용 | `latestCommonalityPath.mjs` | 최신 동일성 디렉터리 |
-| `/api/commonality-data` | GET | `commonalityApi.js` / 동일성 이상감지 | `commonalityData.mjs` | 동일성 디렉터리 index |
+| `/api/latest-commonality-path` | GET, HEAD | 직접 API 모듈은 있으나 화면은 서버 내부 탐색 사용 | `latestCommonalityPath.mjs` | 오늘 동일성 경로 테이블 |
+| `/api/commonality-data` | GET | `commonalityApi.js` / 동일성 이상감지 | `commonalityData.mjs` | 동일성 경로 테이블 index |
 | `/api/commonality-image` | GET, HEAD | 동일성 이미지 URL builder | `commonalityData.mjs` | `img.png` stream |
 | `/api/common-commonality-data` | GET | `commonCommonalityApi.js` / 공통부 동일성 | `commonCommonalityData.mjs` | 공통부 동일성 디렉터리 index |
 | `/api/common-commonality-image` | GET, HEAD | 공통부 동일성 이미지 URL builder | `commonCommonalityData.mjs` | `img.png` stream |
@@ -510,7 +510,8 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 | `pic/backup/...` | 과거 백업 영역 | `selfEquipmentData.mjs` | 현재 Self Scatter resolver에서 exact root와 하위를 거부 |
 | `pic/common/{date}/{sdwt}/{desc}/{grade}/{sensor}/{ch_step}/data.parquet` | 공통부 Scatter 원본 | `commonAnomalyData.mjs` | 공통부 동일성 차트 |
 | 위 common 디렉터리의 `{eqp}.png` | 공통부 카드 이미지 | `commonAnomalyData.mjs` | 공통부 이미지 카드 |
-| `pic/erd_commonality/{date time}/.../img.png` | 동일성 결과 이미지 | `commonalityData.mjs` | 동일성 이미지 카드 |
+| `pic/path_erd_commonality_xian/{YYYY-MM-DD}` | `sdwt_code`, `step_seq`, `recipe_id`, `priority`, `sensor`, `ch_step`, `path` | `commonalityData.mjs` | 동일성 필터·이미지 허용 목록 |
+| 위 path table의 `path + /img.png` | 동일성 결과 이미지 | `commonalityData.mjs` | 동일성 이미지 카드 |
 | `pic/path/{date time}` | 대시보드 상세 `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` | `dashboardData.mjs` | 라인/기간/Grade 집계 |
 | `pic/stats/{date time}_spider_step_stats.parquets` | `exec_date`, `line_id`, `recipe_id`, `priority`, `ng`, `total` | `dashboardData.mjs`, `dashboardStats.mjs` | 최신 KPI와 Line별 집계 |
 | `pic/stats/{date time}_spider_step_stats_except_v.parquets` | V 제외 통계 템플릿 | 현재 운영 handler 직접 사용 없음 | prototype/reference |

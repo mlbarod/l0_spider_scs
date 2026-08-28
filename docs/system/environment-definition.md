@@ -109,7 +109,8 @@
 | 서버 | `SCS_DB_CONNECTIONS_ENABLED` | 읽기 가능한 credential 기반 사용자·세 이력 API allowlist override | 활성 후보 | 전체 gate 비활성 mode에서 allowlist 차단 시 `0` | API 요청 | `server/dataConnections.mjs`, server·Vite 진입점 | 아니오 | credential 누락·읽기 불가 또는 비-`1`이면 해당 API 503 | 코드 `Confirmed`; 운영값 `Unknown` |
 | Vite | `VITE_SITE_URL` | 허용 host와 HMR 조건 | 빈 값 | 선택 | Vite 시작/build | `vite.config.mjs:29-30,129-140` | 아니오 | 조건부 설정 미적용 | `Confirmed` |
 | 데이터 | `MAPPING_CONFIG_PATH` | mapping 설정 파일 override | `/appdata/l0_spider_scs/mapping_config.json` | 선택 | API 요청 | `server/mappingConfig.mjs:5-7` | 경로 주의 | SCS 코드 기본 경로 사용 | `Confirmed` |
-| 데이터 | `COMMONALITY_ROOT_PATH` | commonality root override | 코드 경로 template | 선택 | API 요청 | `server/latestCommonalityPath.mjs:9-11` | 경로 주의 | 코드 root 사용 | `Confirmed` |
+| 데이터 | `COMMONALITY_PATH_TABLE_ROOT` | 동일성 오늘 날짜 경로 테이블 root override | `/appdata/abnormal_trend/pic/path_erd_commonality_xian` | 선택 | API 요청 | `server/latestCommonalityPath.mjs` | 경로 주의 | root 아래 `{YYYY-MM-DD}` 파일 사용 | `Confirmed` |
+| 데이터 | `COMMONALITY_ROOT_PATH` | 동일성 결과 이미지 이력 root override | 코드 경로 template | 선택 | API 요청 | `server/latestCommonalityPath.mjs`, history modules | 경로 주의 | 코드 root 사용 | `Confirmed` |
 | 데이터 | `COMMON_COMMONALITY_ROOT_PATH` | 공통부 동일성 root override | 기존 commonality/dashboard root의 형제 `path_common_commonality`, 이후 코드 template | 선택 | 프로세스 시작 | `server/latestCommonCommonalityPath.mjs` | 경로 주의 | 기존 데이터 mount의 형제 경로 사용 | `Confirmed` |
 | 데이터 | `SPIDER_DASHBOARD_PATH_ROOT` | dashboard 통계 root override | dashboard template의 상위 경로 | 선택 | API 요청 | `server/dashboardData.mjs:20-22` | 경로 주의 | 코드 root 사용 | `Confirmed` |
 | 데이터 | `SENSOR_EXCLUSION_CONFIG_PATH` | 기본 sensor 제외 JSON 경로 override | `config/sensor-exclusions.json` | 선택 | 경로는 프로세스 시작; 내용은 API 요청 | `server/sensorExclusionConfig.mjs` | 경로 주의 | 기본 파일 사용 | `Confirmed` |
@@ -162,7 +163,7 @@
 | dashboard 통계 | `SPIDER_DASHBOARD_PATH_ROOT` 또는 코드 template | directory·Parquet 읽기 | API 오류 또는 빈 구조는 함수별 상이 | `Confirmed` |
 | mapping 설정 | `MAPPING_CONFIG_PATH` 또는 코드 template | UTF-8 JSON 읽기 | 읽기·파싱 실패 시 API `500` | `Confirmed` |
 | sensor 제외 설정 | 기본 `config/sensor-exclusions.json`; `SENSOR_EXCLUSION_CONFIG_PATH`는 선택적 override | UTF-8 JSON 읽기·mtime/size cache | 최초 읽기 실패 시 오류 log와 빈 규칙; 정상 로드 후 잘못된 변경은 마지막 정상값 유지 | `Confirmed` |
-| commonality image | `COMMONALITY_ROOT_PATH` 또는 코드 template | directory·PNG 읽기 | 최신 날짜 없음 `404`, 기타 오류 `500` | `Confirmed` |
+| commonality data·image | `COMMONALITY_PATH_TABLE_ROOT` 또는 코드 template의 오늘 파일에 등록된 `path` | Parquet·PNG 읽기 | 오늘 path table 없음 `404`, 기타 오류 `500` | `Confirmed` |
 | common-commonality data·image | `COMMON_COMMONALITY_ROOT_PATH`, 기존 데이터 root의 형제 경로 또는 코드 template | directory·PNG 읽기 | data API의 최신 날짜·SDWT 없음 `404`; image API의 경로 탐색 오류 `500` | `Confirmed` |
 | self equipment | 코드에 정의된 ERD·backup·common root | Parquet·PNG 읽기 | endpoint별 오류 또는 빈 응답 | `Confirmed` |
 | DB credential | `DB_INFO_PATH` 또는 코드 기본 경로 | pickle 읽기 | helper 오류 | `Confirmed` |
@@ -227,7 +228,7 @@
 
 ## 15. 시간, 날짜, locale과 encoding
 
-- dashboard와 latest commonality의 날짜 filename 처리는 `Date.UTC`와 ISO 날짜를 사용한다.
+- dashboard 날짜 filename 검증은 UTC 계산을 사용하고, commonality는 서버 local date로 오늘 `YYYY-MM-DD`를 생성한다.
 - 사용자 클릭 시각은 여러 화면에서 `new Date().toISOString()`으로 생성되어 UTC 형식이다.
 - zone 없는 날짜·시각 문자열을 `Date.parse` 또는 `Date`로 처리하는 위치는 runtime timezone 영향을 받을 수 있어 `Risk`이다.
 - 저장소에서 `TZ` 설정이나 서버·DB timezone 일치 규칙은 확인되지 않았다.
