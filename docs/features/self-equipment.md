@@ -243,7 +243,7 @@ sequenceDiagram
 | team ERD path | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | 일반 Self 대상 row와 DB 이력용 `ver` | mapping으로 검증된 Line·SDWT; row의 `ver` 직접 사용 | file 예외→API `500`; 빈 `ver` SKIP은 `500 PASS_HISTORY_REQUEST_FAILED` | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD data | row `file_path`가 `.png`이면 sibling `data.parquet`; directory이면 하위 파일; `data.parquet` 직접 입력 호환 | scatter·identity | index row, sensor, chStep | `/pic_server2/`→`/pic/`; 예외→chart API `500` | 코드 `Confirmed`; 운영 file `Unknown` |
 | ERD history | 선택한 `data.parquet` directory의 `{eqp}.parquet` | 변경점 이력 | 선택 EQP | 실패를 `historyError`로 분리 | 코드 `Confirmed`; 운영 file `Unknown` |
-| ERD image | `/appdata/abnormal_trend/pic/erd/...` | image stream endpoint | 요청 `path` | 금지 `403`, 없음 `404` | endpoint `Confirmed` |
+| ERD image | `/appdata/abnormal_trend/pic/erd_xian/...` | image stream endpoint | 요청 `path` | 금지 `403`, 없음 `404` | endpoint `Confirmed` |
 | Self scoped path | 분임조별 row의 정규화된 `file_path` | Self 전용 gate의 chart 접근 경계 | Line·path SDWT·EQP·latest date·sensor·step·ver | 불일치 `403` | 코드 `Confirmed`; 운영 row `Unknown` |
 
 경로 template 근거는 `src/config/spiderDataPaths.mjs:1-17,70-72`, 접근 근거는 `server/selfEquipmentData.mjs:137-163,449-468`이다.

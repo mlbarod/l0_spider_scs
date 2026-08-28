@@ -15,8 +15,8 @@ test("자설비 Drawing 경로와 선택 grade 목록을 클릭이력으로 변�
     app: "self",
     lineId: "P1L",
     filePaths: [
-      "/appdata/abnormal_trend/pic/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@001/EQP-1.png",
-      "/appdata/abnormal_trend/pic/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/B/TEMP/10@001/EQP-2.png",
+      "/appdata/abnormal_trend/pic/erd_xian/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@001/EQP-1.png",
+      "/appdata/abnormal_trend/pic/erd_xian/2026-07-17/SDWT-1/ETCH/V1/PPID-1/B/TEMP/10@001/EQP-2.png",
     ],
     grades: ["A", "B", "D"],
     clickedAt,
@@ -38,8 +38,8 @@ test("자설비 sensor ALL 클릭이력은 실제 sensor 목록 대신 ALL을 �
     app: "self",
     lineId: "P1L",
     filePaths: [
-      "/appdata/abnormal_trend/pic/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/PRESSURE_SENSOR/10@001/EQP-1.png",
-      "/appdata/abnormal_trend/pic/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/B/TEMP/20@001/EQP-2.png",
+      "/appdata/abnormal_trend/pic/erd_xian/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/PRESSURE_SENSOR/10@001/EQP-1.png",
+      "/appdata/abnormal_trend/pic/erd_xian/2026-07-17/SDWT-1/ETCH/V1/PPID-1/B/TEMP/20@001/EQP-2.png",
     ],
     grades: ["A", "B"],
     selectedSensor: "ALL",
@@ -85,7 +85,7 @@ test("자설비에서 ALL로 선택한 grade와 sensor는 목록이 아닌 ALL �
     app: "self",
     lineId: "P1L",
     filePaths: [
-      "/appdata/abnormal_trend/pic/erd/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@001/EQP-1.png",
+      "/appdata/abnormal_trend/pic/erd_xian/2026-07-17/SDWT-1/ETCH/V1/PPID-1/A/TEMP/10@001/EQP-1.png",
     ],
     grades: ["ALL"],
     selectedSensor: "ALL",

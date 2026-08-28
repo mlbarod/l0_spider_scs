@@ -205,7 +205,7 @@ SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일
 `SKIP LIST`를 선택하면 ERD 원본 목록 대신 선택 Line의 `pass_history`를 조회한다. 이후 Sensor Grade → STEP(`desc`) → `eqp_ch`(`eqp`) → `sensor` → `ch_step`(`step`) 필터와 차트 목록은 모두 해당 테이블의 구분값으로 생성한다. 차트 행의 `file_path`는 다음 규칙으로 만들고, Scatter와 동일성 차트는 이 경로를 그대로 사용해 같은 디렉터리의 `data.parquet`을 읽는다. SKIP 해제 시 목록을 다시 조회하여 해제된 차트를 즉시 제거한다.
 
 ```text
-/appdata/abnormal_trend/pic/erd/{update_date}/{sdwt}/{desc}/{ver}/{recipe_id}/{priority}/{sensor}/{step}/{eqp}.png
+/appdata/abnormal_trend/pic/erd_xian/{update_date}/{sdwt}/{desc}/{ver}/{recipe_id}/{priority}/{sensor}/{step}/{eqp}.png
 ```
 
 ### `hit_history`
@@ -234,8 +234,8 @@ Chart의 `이력저장` 버튼은 `POST /api/hit-history`를 호출한다.
 | `knox_id` | 현재 접속 IP |
 | `exec_date` | 이력저장 버튼 클릭 시각 |
 
-예를 들어 `/appdata/abnormal_trend/pic/erd/.../EQP-1.png`는
-`#appdata#abnormal_trend#pic#erd#...#EQP-1.png`로 저장한다. 버튼 클릭마다
+예를 들어 `/appdata/abnormal_trend/pic/erd_xian/.../EQP-1.png`는
+`#appdata#abnormal_trend#pic#erd_xian#...#EQP-1.png`로 저장한다. 버튼 클릭마다
 `hit_history`에 새 행을 INSERT한다.
 
 ### `clicked_category_history`

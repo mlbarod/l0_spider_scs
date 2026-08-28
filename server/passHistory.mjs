@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from "node:url"
 import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 
-const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
+const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd_xian"
 const COMMON_FILE_ROOT = "/appdata/abnormal_trend/pic/common"
 export const COMMON_PASS_HISTORY_VERSION = "NA"
 export const PASS_HISTORY_ACTIVE_DURATION_MS = 3 * 24 * 60 * 60 * 1000

@@ -79,7 +79,7 @@ test("자설비 SKIP은 chart row 필드로 PASS record를 만들고 file_path �
 test("자설비 SKIP은 file_path의 ver를 추정하지 않고 요청 row의 ver 컬럼을 요구한다", () => {
   assert.throws(() => buildPassHistoryRecord({
     lineId: "P1L",
-    filePath: "/appdata/abnormal_trend/pic_server2/erd/2026-08-27/SDWT-1/RECIPE-1/PATH-V9/PPID-1/A/TEMP/10@MAIN/EQP-1.png",
+    filePath: "/appdata/abnormal_trend/pic_server2/erd_xian/2026-08-27/SDWT-1/RECIPE-1/PATH-V9/PPID-1/A/TEMP/10@MAIN/EQP-1.png",
     updateDate: "2026-08-27",
     sdwt: "SDWT-1",
     desc: "RECIPE-1",
@@ -166,6 +166,9 @@ test("SKIP LIST는 eqp_ch ALL과 sensor ALL 조합에서 ch_step ALL과 전체 �
   assert.equal(payload.rows.length, 2)
   assert.ok(payload.rows.every((row) => row.path_sdwt === SELF_SKIP_LIST_PATH_SDWT))
   assert.ok(payload.rows.every((row) => row.latest_date === "2026-07-17"))
+  assert.ok(payload.rows.every((row) => (
+    row.file_path.startsWith("/appdata/abnormal_trend/pic/erd_xian/")
+  )))
 })
 
 test("과거 빈 ver SKIP도 필터 행으로 반환해 SKIP해제할 수 있다", () => {

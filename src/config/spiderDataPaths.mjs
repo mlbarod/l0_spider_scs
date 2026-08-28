@@ -1,7 +1,7 @@
 const PIC_ROOT = "/appdata/abnormal_trend/pic"
 
 export const SPIDER_DATA_PATH_TEMPLATES = Object.freeze({
-  erdData: `${PIC_ROOT}/erd/{latest_date}/{sdwt}/{step_desc}/{ver}/{ppid}/{grade}/{sensor}/{ch_step}/data.parquet`,
+  erdData: `${PIC_ROOT}/erd_xian/{latest_date}/{sdwt}/{step_desc}/{ver}/{ppid}/{grade}/{sensor}/{ch_step}/data.parquet`,
   stats: `${PIC_ROOT}/stats/{latest_date}_spider_step_stats.parquets`,
   statsExceptV: `${PIC_ROOT}/stats/{latest_date}_spider_step_stats_except_v.parquets`,
   dashboardStats: `${PIC_ROOT}/stats/{latest_date}_spider_step_stats.parquets`,

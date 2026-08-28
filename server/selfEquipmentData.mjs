@@ -38,7 +38,7 @@ export const TEAM_ERD_COLUMNS = Object.freeze([
 ])
 
 const PIC_FILE_ROOT = "/appdata/abnormal_trend/pic"
-const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd"
+const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd_xian"
 const ERD_BACKUP_ROOT = "/appdata/abnormal_trend/pic/backup"
 const SELF_EQUIPMENT_PATH_ROOT = process.env.SCS_SELF_EQUIPMENT_PATH_ROOT
   ?? SPIDER_DATA_PATH_TEMPLATES.selfEquipmentIndexRoot

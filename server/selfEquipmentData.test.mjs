@@ -525,7 +525,7 @@ test("chart handler는 다른 App 경로를 Parquet read 전에 403으로 거부
 test("SKIP LIST Scatter와 동일성 chart는 전달된 ERD file_path를 그대로 읽는다", async () => {
   let normalAuthorizationCalled = false
   const readRequests = []
-  const imagePath = "/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/EQP-1.png"
+  const imagePath = "/appdata/abnormal_trend/pic/erd_xian/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/EQP-1.png"
 
   for (const mode of ["scatter", "identity"]) {
     const response = {
@@ -568,18 +568,18 @@ test("SKIP LIST Scatter와 동일성 chart는 전달된 ERD file_path를 그대�
 
   assert.equal(normalAuthorizationCalled, false)
   assert.deepEqual(readRequests.map((request) => request.filePath), [
-    "/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
-    "/appdata/abnormal_trend/pic/erd/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+    "/appdata/abnormal_trend/pic/erd_xian/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
+    "/appdata/abnormal_trend/pic/erd_xian/2026-07-16/SDWT-1/ETCH/V1/R1/A/TEMP/10@MAIN/data.parquet",
   ])
   assert.deepEqual(readRequests.map((request) => request.options.identity), [undefined, true])
 })
 
 test("SKIP LIST 직접 읽기는 ERD root 밖의 경로를 거부한다", () => {
   assert.equal(isDirectSkipListErdPathAllowed(
-    "/appdata/abnormal_trend/pic/erd/2026-07-16/chart.png",
+    "/appdata/abnormal_trend/pic/erd_xian/2026-07-16/chart.png",
   ), true)
   assert.equal(isDirectSkipListErdPathAllowed(
-    "/appdata/abnormal_trend/pic/common/2026-07-16/chart.png",
+    "/appdata/abnormal_trend/pic/erd/2026-07-16/chart.png",
   ), false)
 })
 
