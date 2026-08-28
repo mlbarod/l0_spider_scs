@@ -12,14 +12,21 @@ const DASHBOARD_READ_METHODS = new Map([
   ["/api/dashboard-latest-date", new Set(["GET", "HEAD"])],
 ])
 const SELF_EQUIPMENT_READ_METHODS = new Map([
-  ["/api/mapping-config", new Set(["GET", "HEAD"])],
   ["/api/self-equipment-data", new Set(["GET"])],
   ["/api/erd-scatter-data", new Set(["GET"])],
+])
+const MAPPING_READ_METHODS = new Map([
+  ["/api/mapping-config", new Set(["GET", "HEAD"])],
 ])
 const COMMONALITY_READ_METHODS = new Map([
   ["/api/latest-commonality-path", new Set(["GET", "HEAD"])],
   ["/api/commonality-data", new Set(["GET"])],
   ["/api/commonality-image", new Set(["GET", "HEAD"])],
+])
+const COMMON_ANOMALY_READ_METHODS = new Map([
+  ["/api/common-anomaly-data", new Set(["GET"])],
+  ["/api/common-anomaly-scatter-data", new Set(["GET"])],
+  ["/api/common-anomaly-image", new Set(["GET", "HEAD"])],
 ])
 const DB_METHODS = new Map([
   ["/api/current-user", new Set(["GET"])],
@@ -32,6 +39,7 @@ export const DATA_CONNECTIONS_ENABLED_ENV = "SCS_DATA_CONNECTIONS_ENABLED"
 export const DASHBOARD_DATA_ENABLED_ENV = "SCS_DASHBOARD_DATA_ENABLED"
 export const SELF_EQUIPMENT_DATA_ENABLED_ENV = "SCS_SELF_EQUIPMENT_DATA_ENABLED"
 export const COMMONALITY_DATA_ENABLED_ENV = "SCS_COMMONALITY_DATA_ENABLED"
+export const COMMON_ANOMALY_DATA_ENABLED_ENV = "SCS_COMMON_ANOMALY_DATA_ENABLED"
 export const DB_CONNECTIONS_ENABLED_ENV = "SCS_DB_CONNECTIONS_ENABLED"
 
 export function areDataConnectionsEnabled(environment = process.env) {
@@ -53,6 +61,10 @@ export function areSelfEquipmentDataConnectionsEnabled(environment = process.env
 
 export function areCommonalityDataConnectionsEnabled(environment = process.env) {
   return isDefaultEnabled(environment, COMMONALITY_DATA_ENABLED_ENV)
+}
+
+export function areCommonAnomalyDataConnectionsEnabled(environment = process.env) {
+  return isDefaultEnabled(environment, COMMON_ANOMALY_DATA_ENABLED_ENV)
 }
 
 export function resolveDbInfoPath(environment = process.env) {
@@ -115,10 +127,21 @@ export function blockDisabledDataRequest(
     && isExactPath
     && SELF_EQUIPMENT_READ_METHODS.get(normalizedPathname)?.has(req.method)
   )
+  const isAllowedMappingRead = (
+    (areSelfEquipmentDataConnectionsEnabled(environment)
+      || areCommonAnomalyDataConnectionsEnabled(environment))
+    && isExactPath
+    && MAPPING_READ_METHODS.get(normalizedPathname)?.has(req.method)
+  )
   const isAllowedCommonalityRead = (
     areCommonalityDataConnectionsEnabled(environment)
     && isExactPath
     && COMMONALITY_READ_METHODS.get(normalizedPathname)?.has(req.method)
+  )
+  const isAllowedCommonAnomalyRead = (
+    areCommonAnomalyDataConnectionsEnabled(environment)
+    && isExactPath
+    && COMMON_ANOMALY_READ_METHODS.get(normalizedPathname)?.has(req.method)
   )
   const dbConnectionsEnabled = areDbConnectionsEnabled(environment, canReadDbInfo)
   const isKnownDbRequest = isExactPath && DB_METHODS.get(normalizedPathname)?.has(req.method)
@@ -131,7 +154,9 @@ export function blockDisabledDataRequest(
     || areDataConnectionsEnabled(environment)
     || isAllowedDashboardRead
     || isAllowedSelfEquipmentRead
+    || isAllowedMappingRead
     || isAllowedCommonalityRead
+    || isAllowedCommonAnomalyRead
     || isAllowedDbRequest
   ) return false
 

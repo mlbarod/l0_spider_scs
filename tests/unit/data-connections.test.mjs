@@ -7,6 +7,7 @@ import test from "node:test"
 
 import {
   areDashboardDataConnectionsEnabled,
+  areCommonAnomalyDataConnectionsEnabled,
   areCommonalityDataConnectionsEnabled,
   areDataConnectionsEnabled,
   areDbConnectionsEnabled,
@@ -58,6 +59,13 @@ test("동일성 read는 기본 활성화되고 명시적인 비-1 값으로 차�
   assert.equal(areCommonalityDataConnectionsEnabled({ SCS_COMMONALITY_DATA_ENABLED: "0" }), false)
   assert.equal(areCommonalityDataConnectionsEnabled({ SCS_COMMONALITY_DATA_ENABLED: "true" }), false)
   assert.equal(areCommonalityDataConnectionsEnabled({ SCS_COMMONALITY_DATA_ENABLED: "1" }), true)
+})
+
+test("공통부 이상감지 read는 기본 활성화되고 명시적인 비-1 값으로 차단할 수 있다", () => {
+  assert.equal(areCommonAnomalyDataConnectionsEnabled({}), true)
+  assert.equal(areCommonAnomalyDataConnectionsEnabled({ SCS_COMMON_ANOMALY_DATA_ENABLED: "0" }), false)
+  assert.equal(areCommonAnomalyDataConnectionsEnabled({ SCS_COMMON_ANOMALY_DATA_ENABLED: "true" }), false)
+  assert.equal(areCommonAnomalyDataConnectionsEnabled({ SCS_COMMON_ANOMALY_DATA_ENABLED: "1" }), true)
 })
 
 test("DB 연결은 credential 파일이 읽기 가능할 때만 활성화된다", () => {
@@ -205,7 +213,7 @@ test("정적 UI 요청과 명시적으로 활성화한 API 요청은 기존 흐�
   assert.equal(enabledResponse.statusCode, null)
 })
 
-test("기본 실행은 Dashboard, 자설비와 동일성 read API를 열고 다른 App은 계속 차단한다", () => {
+test("기본 실행은 Dashboard, 자설비, 동일성과 공통부 이상감지 read API를 연다", () => {
   const environment = {}
   for (const [method, pathname] of [
     ["GET", "/api/dashboard-data"],
@@ -222,6 +230,10 @@ test("기본 실행은 Dashboard, 자설비와 동일성 read API를 열고 다�
     ["GET", "/api/commonality-data"],
     ["GET", "/api/commonality-image"],
     ["HEAD", "/api/commonality-image"],
+    ["GET", "/api/common-anomaly-data"],
+    ["GET", "/api/common-anomaly-scatter-data"],
+    ["GET", "/api/common-anomaly-image"],
+    ["HEAD", "/api/common-anomaly-image"],
   ]) {
     assert.equal(blockDisabledDataRequest(
       { method, url: pathname, headers: { host: "localhost" } },
@@ -237,6 +249,9 @@ test("기본 실행은 Dashboard, 자설비와 동일성 read API를 열고 다�
     ["GET", "/api/common-commonality-data"],
     ["HEAD", "/api/commonality-data"],
     ["POST", "/api/commonality-image"],
+    ["HEAD", "/api/common-anomaly-data"],
+    ["HEAD", "/api/common-anomaly-scatter-data"],
+    ["POST", "/api/common-anomaly-image"],
     ["GET", "/api/erd-file"],
     ["GET", "/api%2Fself-equipment-data"],
     ["HEAD", "/api/self-equipment-data"],
@@ -312,7 +327,6 @@ test("이력 API가 차단돼도 history debug 로그를 남기지 않고 안전
 
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
   for (const pathname of [
-    "/api/mapping-config",
     "/api/self-equipment-data",
     "/api/erd-scatter-data",
   ]) {
@@ -325,6 +339,26 @@ test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 �
     ), true, pathname)
     assert.equal(response.statusCode, 503, pathname)
   }
+})
+
+test("mapping read는 자설비 또는 공통부 이상감지 연결에 공유한다", () => {
+  assert.equal(blockDisabledDataRequest(
+    { method: "GET", url: "/api/mapping-config", headers: { host: "localhost" } },
+    createResponse(),
+    { SCS_SELF_EQUIPMENT_DATA_ENABLED: "0" },
+  ), false)
+
+  const response = createResponse()
+  assert.equal(blockDisabledDataRequest(
+    { method: "GET", url: "/api/mapping-config", headers: { host: "localhost" } },
+    response,
+    {
+      SCS_SELF_EQUIPMENT_DATA_ENABLED: "0",
+      SCS_COMMON_ANOMALY_DATA_ENABLED: "0",
+    },
+    () => {},
+  ), true)
+  assert.equal(response.statusCode, 503)
 })
 
 test("동일성 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
@@ -340,6 +374,24 @@ test("동일성 read API는 환경변수 0으로 명시적으로 차단할 수 �
       { method, url: pathname, headers: { host: "localhost" } },
       response,
       { SCS_COMMONALITY_DATA_ENABLED: "0" },
+      () => {},
+    ), true, pathname)
+    assert.equal(response.statusCode, 503, pathname)
+  }
+})
+
+test("공통부 이상감지 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
+  for (const [method, pathname] of [
+    ["GET", "/api/common-anomaly-data"],
+    ["GET", "/api/common-anomaly-scatter-data"],
+    ["GET", "/api/common-anomaly-image"],
+    ["HEAD", "/api/common-anomaly-image"],
+  ]) {
+    const response = createResponse()
+    assert.equal(blockDisabledDataRequest(
+      { method, url: pathname, headers: { host: "localhost" } },
+      response,
+      { SCS_COMMON_ANOMALY_DATA_ENABLED: "0" },
       () => {},
     ), true, pathname)
     assert.equal(response.statusCode, 503, pathname)

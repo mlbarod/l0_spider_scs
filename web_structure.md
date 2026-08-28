@@ -6,8 +6,8 @@
 
 > 현재 범위: [ADR-004](docs/decisions/ADR-004-scs-my-eqp-scope.md)에 따라 SCS는 My EQP 기능을 제공하지 않습니다. 이 문서 아래의 My EQP 상세 기술은 제거 전 구조의 역사적 기록이며 현재 route·API 계약이 아닙니다.
 
-현재 SCS 분리 checkout은 별도 환경변수 없이 mapping과 자설비 index/chart read allowlist를
-연다. `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`은 이 allowlist도 차단하고,
+현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard, mapping, 자설비 index/chart, 동일성과 공통부 이상감지 read allowlist를
+연다. 각 `SCS_*_DATA_ENABLED=0`은 대응 allowlist를 차단하고,
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 다른 App API를 포함한 전역 gate를 연다. 읽기 가능한
 `DB_INFO_PATH`가 있으면 My EQP·history 좁은 allowlist와
 `capabilities.selfEquipmentDb=true`가 활성화된다. `path_xian`에 없는 `ver` 등 DB 식별값은

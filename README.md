@@ -11,16 +11,18 @@ npm run dev
 
 The app opens directly at `/`.
 
-현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard, 자설비와 동일성 이상감지의 read API
+현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard, 자설비, 동일성과 공통부 이상감지의 read API
 (`dashboard-data`, `dashboard-latest-date`, `mapping-config`, `self-equipment-data`,
-`erd-scatter-data`, `latest-commonality-path`, `commonality-data`, `commonality-image`)를 활성화한다.
+`erd-scatter-data`, `latest-commonality-path`, `commonality-data`, `commonality-image`,
+`common-anomaly-data`, `common-anomaly-scatter-data`, `common-anomaly-image`)를 활성화한다.
 `DB_INFO_PATH`의 credential 파일이 읽기 가능하면 사용자·세 이력 DB API도
 활성화하고 mapping 응답의 `capabilities.dbConnections=true`와
 `capabilities.selfEquipmentDb=true`로 이를 알린다. 자설비 화면의 SKIP·HIT·클릭이력 action은
 원본 `l0_spider`처럼 chart `file_path`가 있으면 요청을 실행하고 서버 DB gate가 최종 허용 여부를
-결정한다. 동일성 이외의 다른 App과 image endpoint는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
+결정한다. 아직 연결하지 않은 다른 App API는 계속 안전한 `503 DATA_CONNECTIONS_DISABLED`를
 반환한다. UI shell이 필요하면 `SCS_DASHBOARD_DATA_ENABLED=0`,
 `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`, `SCS_COMMONALITY_DATA_ENABLED=0`,
+`SCS_COMMON_ANOMALY_DATA_ENABLED=0`,
 `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 API를 한 번에 활성화하므로 다른 App의 새 경로와
 DB 연결정보가 확정되기 전에는 설정하지 않는다. history 기능은 이 전역 변수를
@@ -89,9 +91,9 @@ node server.mjs
 
 ## Database References
 
-이하 데이터·DB 설명 중 Dashboard, 자설비와 동일성 파일 read는 기본 활성화된다. DB 전용 API는
+이하 데이터·DB 설명 중 Dashboard, 자설비, 동일성과 공통부 이상감지 파일 read는 기본 활성화된다. DB 전용 API는
 credential 파일 read 가능 여부와 `SCS_DB_CONNECTIONS_ENABLED`에 따라 사용자·세 이력 API가 활성화된다.
-Mailing DB API와 동일성 이외의 다른 App은
+Mailing DB API와 아직 연결하지 않은 다른 App은
 여전히 전체 gate 뒤의 재연결 기준선이며 실제 배포 환경 값과 운영 연결 결과는 `Unknown`이다.
 
 ### 메인 대시보드 데이터

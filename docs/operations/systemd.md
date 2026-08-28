@@ -66,6 +66,7 @@ systemd 실행 user는 다음 최소 범위만 가져야 한다.
 - `SCS_DASHBOARD_DATA_ENABLED` (기본 Dashboard read; UI shell 전환 시 `0`)
 - `SCS_SELF_EQUIPMENT_DATA_ENABLED` (기본 자설비 file read; UI shell 전환 시 `0`)
 - `SCS_COMMONALITY_DATA_ENABLED` (기본 동일성 file·image read; UI shell 전환 시 `0`)
+- `SCS_COMMON_ANOMALY_DATA_ENABLED` (기본 공통부 이상감지 path·data·image read; UI shell 전환 시 `0`)
 - `SCS_DB_CONNECTIONS_ENABLED` (전체 gate 비활성 mode의 credential 기반 사용자·My EQP·세 이력 API; allowlist 차단·UI shell 전환 시 `0`)
 - `SCS_SELF_EQUIPMENT_PATH_ROOT` (선택적 `path_xian` root override)
 - `VITE_SITE_URL`
@@ -150,7 +151,7 @@ systemctl status <unit-name> --no-pager
 2. `ExecStart`, working directory와 release commit이 계획과 일치한다.
 3. 승인된 port에 단일 기대 process가 listen한다.
 4. `/` liveness가 통과하고, 기본 부분 연결이면 Dashboard GET/HEAD, mapping·Self·scatter GET과 동일성 latest path·data·image read가 통과하며 다른 App은 503인지 확인한다. credential이 읽기 가능하면 사용자·My EQP와 세 이력 API가 handler에 진입한다.
-5. 명시적 UI shell이면 Dashboard·Self·동일성·DB 범위를 모두 `0`으로 설정한 뒤 `/api` namespace에서 안전한 `503 DATA_CONNECTIONS_DISABLED`가 확인된다.
+5. 명시적 UI shell이면 Dashboard·Self·동일성·공통부 이상감지·DB 범위를 모두 `0`으로 설정한 뒤 `/api` namespace에서 안전한 `503 DATA_CONNECTIONS_DISABLED`가 확인된다.
 6. 데이터 연결을 승인해 활성화한 경우에만 해당 범위의 read-only 기능 점검이 통과한다.
 7. journal에 `MODULE_NOT_FOUND`, `EADDRINUSE`, build 실패, DB·file permission 오류가 반복되지 않는다.
 8. log에 secret·credential·운영 token이 출력되지 않는다.

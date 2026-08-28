@@ -6,6 +6,7 @@ import { compressors } from "hyparquet-compressors"
 
 import { buildCommonAnomalyPath } from "../src/config/spiderDataPaths.mjs"
 import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
+import { areDbConnectionsEnabled } from "./dataConnections.mjs"
 import { COMMON_PASS_HISTORY_VERSION, listPassHistoryRecords } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
@@ -247,6 +248,23 @@ async function readCommonPathRows({ line, pathSdwt }) {
   return { filePath, rows }
 }
 
+export async function readOptionalCommonPassHistoryRecords(
+  { lineId },
+  {
+    dbConnectionsEnabled = areDbConnectionsEnabled(),
+    readRecords = listPassHistoryRecords,
+  } = {},
+) {
+  if (!dbConnectionsEnabled) return []
+
+  try {
+    const records = await readRecords({ lineId })
+    return Array.isArray(records) ? records : []
+  } catch {
+    return []
+  }
+}
+
 function aggregateValues(rows, column) {
   const counts = new Map()
   rows.forEach((row) => {
@@ -366,9 +384,13 @@ export async function handleCommonAnomalyDataRequest(req, res, url) {
       sendJson(res, 400, { ok: false, error: "line, pathSdwt, sdwt 조건이 필요합니다." })
       return
     }
+    const dbConnectionsEnabled = areDbConnectionsEnabled()
     const [{ filePath, rows }, passRecords, sensorExclusionConfig] = await Promise.all([
       readCommonPathRows(filters),
-      listPassHistoryRecords({ lineId: filters.line }),
+      readOptionalCommonPassHistoryRecords(
+        { lineId: filters.line },
+        { dbConnectionsEnabled },
+      ),
       readSensorExclusionConfig(),
     ])
     const visibleRows = excludeRecentlySkippedCommonRows(rows, passRecords)

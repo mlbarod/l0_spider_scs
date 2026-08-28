@@ -69,8 +69,9 @@ Vite 단독 개발 mode는 통합 server보다 API route가 적으므로 운영 
 | `BUILD_ON_START` | 정적 server 시작 | `0` 외 build | 운영 시작과 build를 결합하는 `Risk` |
 | `SCS_DATA_CONNECTIONS_ENABLED` | 모든 `/api` namespace 요청 | 비활성 | 새 Parquet·DB 연결 승인 전에는 미설정; `1`은 기존 file·DB handler를 다시 활성화하므로 shell 배포에서 금지 |
 | `SCS_DASHBOARD_DATA_ENABLED` | Dashboard GET/HEAD | 활성 | 명시적 UI shell에서만 `0`; 기본 Portal 최신시각·Dashboard read에 필요 |
-| `SCS_SELF_EQUIPMENT_DATA_ENABLED` | mapping GET/HEAD와 자설비 index·chart GET allowlist | 활성 | UI shell이 필요할 때 `0`; 미설정 또는 `1`이면 image와 다른 App을 제외한 자설비 read만 허용 |
+| `SCS_SELF_EQUIPMENT_DATA_ENABLED` | 자설비 index·chart GET allowlist | 활성 | UI shell이 필요할 때 `0`; mapping GET/HEAD는 자설비 또는 공통부 이상감지 gate가 활성일 때 공유 |
 | `SCS_COMMONALITY_DATA_ENABLED` | 동일성 latest path·data·image read allowlist | 활성 | UI shell이 필요할 때 `0`; 미설정 또는 `1`이면 동일성 read 허용 |
+| `SCS_COMMON_ANOMALY_DATA_ENABLED` | 공통부 이상감지 path·scatter·image read allowlist | 활성 | UI shell이 필요할 때 `0`; 미설정 또는 `1`이면 공통부 이상감지 read 허용 |
 | `SCS_DB_CONNECTIONS_ENABLED` | credential 기반 사용자·My EQP·세 이력 API allowlist | 활성 후보 | 전체 gate 비활성 mode에서 `DB_INFO_PATH`가 읽기 가능해야 활성; allowlist 차단 또는 UI shell은 `0` |
 | `SCS_SELF_EQUIPMENT_PATH_ROOT` | 자설비 team path root | `/appdata/abnormal_trend/pic/path_xian` | 다른 mount 경로를 사용할 때만 명시하고 `{line}/{pathSdwt}/df_path.parquet` read-only 권한 확인 |
 | `VITE_SITE_URL` | Vite 시작·build | 빈 값 | client-visible 설정에 secret 금지 |
@@ -124,7 +125,7 @@ npm run build
 2. Node·Python 실제 버전과 지원 기준을 운영자에게 확인한다. 저장소에는 version 선언이 없다.
 3. 정적 mode이면 `dist/index.html`과 asset 생성 성공을 확인한다.
 4. runtime 환경변수 이름만 대조하고 실제 값은 출력하지 않는다.
-   - 기본 부분 연결은 Dashboard·Self·동일성 gate가 미설정 또는 `1`이고 전체 gate는 비활성인지 확인한다. DB는 credential read 가능 여부와 DB gate를 확인한다. UI shell은 네 범위 gate가 비-`1`인지 값 노출 없이 확인한다.
+   - 기본 부분 연결은 Dashboard·Self·동일성·공통부 이상감지 gate가 미설정 또는 `1`이고 전체 gate는 비활성인지 확인한다. DB는 credential read 가능 여부와 DB gate를 확인한다. UI shell은 다섯 범위 gate가 비-`1`인지 값 노출 없이 확인한다.
 5. 대상 application user의 source·dist·Python script·credential·운영 file과 `config/sensor-exclusions.json` 읽기 권한을 확인한다. 실행 계정과 배포 계정을 분리하는 환경에서는 실행 계정의 설정 파일 쓰기 불가도 확인한다.
 6. 사용할 port와 service manager를 확인하고 기존 process 중복을 방지한다.
 7. DB schema·권한, `/appdata` mount와 데이터 freshness를 담당 owner에게 확인한다.
@@ -141,8 +142,8 @@ npm run build
 5. traffic 처리: proxy·무중단 전환 방식은 `Unknown`이므로 운영 승인 없이 변경하지 않는다.
 6. service 반영: 확인된 manager 절차로 한 instance씩 반영한다. 실제 instance 수는 `Unknown`이다.
 7. liveness 확인: `/`가 정상 HTTP 응답을 반환하는지 확인한다.
-8. 기본 부분 연결이면 Dashboard GET/HEAD, mapping·Self·scatter GET과 동일성 latest path·data·image read가 통과하고 다른 App은 503인지 확인한다. 읽기 가능한 credential이 있으면 사용자·My EQP와 세 이력 API가 handler에 진입한다.
-9. 명시적 UI shell이면 Dashboard·Self·동일성·DB 범위 변수를 모두 `0`으로 설정하고 정적 화면 route는 유지되며 `/api`와 `/api/*`가 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환하는지 확인한다.
+8. 기본 부분 연결이면 Dashboard GET/HEAD, mapping·Self·scatter GET, 동일성 latest path·data·image와 공통부 이상감지 path·scatter·image read가 통과하고 다른 App은 503인지 확인한다. 읽기 가능한 credential이 있으면 사용자·My EQP와 세 이력 API가 handler에 진입한다.
+9. 명시적 UI shell이면 Dashboard·Self·동일성·공통부 이상감지·DB 범위 변수를 모두 `0`으로 설정하고 정적 화면 route는 유지되며 `/api`와 `/api/*`가 안전한 `503 DATA_CONNECTIONS_DISABLED`를 반환하는지 확인한다.
 10. 데이터 연결을 별도 승인해 활성화한 배포만 해당 화면 API의 read-only 흐름을 확인한다.
 11. DB write·mail 기능은 실제 데이터를 생성하지 않고 담당자 확인과 기존 운영 증거로 판정한다.
 12. log·오류·resource 상태를 확인한 뒤 release를 종료한다.
@@ -157,7 +158,7 @@ npm run build
 | process | 확인된 service manager에서 active·안정 상태 | [runbook](../operations/runbook.md)·[systemd](../operations/systemd.md) |
 | listener | 승인된 host·port에서 예상 process가 listen | port 충돌·설정 확인 |
 | UI | `/`와 주요 route의 static asset 응답 | `dist`, Vite mode, proxy 확인 |
-| API gate | 기본 부분 연결은 Dashboard·Self·동일성 read와 조건부 DB allowlist만 통과; 명시적 UI shell은 전체 503; 전체 연결은 승인 범위 계약 확인 | 다섯 gate와 credential read 가능 여부 확인 |
+| API gate | 기본 부분 연결은 Dashboard·Self·동일성·공통부 이상감지 read와 조건부 DB allowlist만 통과; 명시적 UI shell은 전체 503; 전체 연결은 승인 범위 계약 확인 | 여섯 gate와 credential read 가능 여부 확인 |
 | Dashboard | 연결 승인 배포에서 read-only 조회가 정상 또는 계약된 빈 상태 | data root·latest file 확인 |
 | Self·abnormal | 연결 승인 배포에서 mapping·index·image/scatter read 경계 정상 | `/appdata`와 path 권한 확인 |
 | DB 연계 | 연결 승인 배포에서 접속 IP 기반 MY EQP와 `pass_history` read 흐름 정상 | proxy·credential·network·helper log 확인 |

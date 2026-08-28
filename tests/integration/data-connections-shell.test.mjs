@@ -99,6 +99,7 @@ test("명시적 UI shell은 외부 경로·DB helper보다 먼저 API를 차단�
       SCS_DATA_CONNECTIONS_ENABLED: "0",
       SCS_SELF_EQUIPMENT_DATA_ENABLED: "0",
       SCS_COMMONALITY_DATA_ENABLED: "0",
+      SCS_COMMON_ANOMALY_DATA_ENABLED: "0",
       SCS_DASHBOARD_DATA_ENABLED: "0",
       SCS_DB_CONNECTIONS_ENABLED: "0",
       SPIDER_DASHBOARD_PATH_ROOT: "/synthetic-path-must-not-be-read",
@@ -116,6 +117,7 @@ test("명시적 UI shell은 외부 경로·DB helper보다 먼저 API를 차단�
     "/api/dashboard-data",
     "/api/current-user",
     "/api/commonality-data",
+    "/api/common-anomaly-data",
   ]) {
     const response = await fetch(`${baseUrl}${pathname}`)
     const payload = await response.json()

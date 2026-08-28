@@ -1,17 +1,38 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
+import { buildCommonAnomalyPath } from "../src/config/spiderDataPaths.mjs"
 import {
+  COMMON_ANOMALY_COLUMNS,
   COMMON_SKIP_EXCLUSION_DURATION_MS,
   buildCommonAnomalyPayload,
   buildCommonIdentityPayload,
   buildCommonScatterPayload,
   excludeRecentlySkippedCommonRows,
+  readOptionalCommonPassHistoryRecords,
   resolveCommonAnomalyDataPath,
   resolveCommonAnomalyImagePath,
 } from "./commonAnomalyData.mjs"
 
 const NOW = Date.parse("2026-07-17T12:00:00+09:00")
+
+test("공통부 경로 테이블은 line·sdwt 경로와 지정된 9개 컬럼을 사용한다", () => {
+  assert.equal(
+    buildCommonAnomalyPath({ line: "P1L", sdwt: "RAW-SDWT-1" }),
+    "/appdata/abnormal_trend/pic/path_common/P1L/RAW-SDWT-1/df_path.parquet",
+  )
+  assert.deepEqual(COMMON_ANOMALY_COLUMNS, [
+    "file_path",
+    "sdwt",
+    "prc_group",
+    "date",
+    "priority",
+    "sensor",
+    "step",
+    "eqp",
+    "line_rev",
+  ])
+})
 
 function createPathRow(overrides = {}) {
   return {
@@ -44,6 +65,22 @@ function createCommonPassRecord(overrides = {}) {
     ...overrides,
   }
 }
+
+test("DB PASS 이력 조회 실패와 공통부 경로 테이블 조회를 분리한다", async () => {
+  assert.deepEqual(await readOptionalCommonPassHistoryRecords({ lineId: "P1L" }, {
+    dbConnectionsEnabled: false,
+    readRecords: async () => {
+      throw new Error("호출되면 안 됩니다.")
+    },
+  }), [])
+
+  assert.deepEqual(await readOptionalCommonPassHistoryRecords({ lineId: "P1L" }, {
+    dbConnectionsEnabled: true,
+    readRecords: async () => {
+      throw new Error("synthetic DB failure")
+    },
+  }), [])
+})
 
 test("공통부 동일 이상건은 지정된 7개 구분자만 비교하여 3일간 제외한다", () => {
   const row = createPathRow({ prc_group: "ORIGINAL-PRC-GROUP" })
