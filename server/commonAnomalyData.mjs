@@ -217,9 +217,18 @@ function assertPathSegment(name, value) {
   }
 }
 
+export function normalizeCommonAnomalyFilePath(value) {
+  return normalizeText(value).replaceAll("/pic_server2/", "/pic/")
+}
+
 function normalizePathRow(row) {
   return Object.fromEntries(
-    COMMON_ANOMALY_COLUMNS.map((column) => [column, normalizeText(row[column])]),
+    COMMON_ANOMALY_COLUMNS.map((column) => [
+      column,
+      column === "file_path"
+        ? normalizeCommonAnomalyFilePath(row[column])
+        : normalizeText(row[column]),
+    ]),
   )
 }
 
@@ -279,7 +288,7 @@ function aggregateValues(rows, column) {
 }
 
 export function resolveCommonAnomalyDataPath(imagePath) {
-  const normalizedImagePath = normalizeText(imagePath).replaceAll("pic_server2", "pic")
+  const normalizedImagePath = normalizeCommonAnomalyFilePath(imagePath)
   const dataPath = /\/data\.parquet$/i.test(normalizedImagePath)
     ? normalizedImagePath
     : /\/[^/]+\.png$/i.test(normalizedImagePath)
@@ -424,7 +433,7 @@ export function handleCommonAnomalyImageRequest(req, res, url) {
     return
   }
 
-  const requestedPath = normalizeText(url.searchParams.get("path")).replaceAll("pic_server2", "pic")
+  const requestedPath = normalizeCommonAnomalyFilePath(url.searchParams.get("path"))
   const filePath = resolve(requestedPath)
   if (!filePath.startsWith(`${COMMON_DATA_ROOT}${sep}`) || !filePath.toLowerCase().endsWith(".png")) {
     sendJson(res, 403, { ok: false, error: "허용되지 않은 공통부 이상감지 이미지 경로입니다." })

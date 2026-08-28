@@ -9,6 +9,7 @@ import {
   buildCommonIdentityPayload,
   buildCommonScatterPayload,
   excludeRecentlySkippedCommonRows,
+  normalizeCommonAnomalyFilePath,
   readOptionalCommonPassHistoryRecords,
   resolveCommonAnomalyDataPath,
   resolveCommonAnomalyImagePath,
@@ -110,6 +111,10 @@ test("공통부 SKIP 등록 후 정확히 3일이 지나면 일반 이상건에 
 })
 
 test("pic_server2를 pic로 바꾸고 마지막 png 파일명을 data.parquet으로 바꾼다", () => {
+  assert.equal(
+    normalizeCommonAnomalyFilePath(createPathRow().file_path),
+    "/appdata/abnormal_trend/pic/common/2026-07-17/SDWT-1/ETCH/A/TEMP/10/EQP-1.png",
+  )
   assert.equal(
     resolveCommonAnomalyDataPath(createPathRow().file_path),
     "/appdata/abnormal_trend/pic/common/2026-07-17/SDWT-1/ETCH/A/TEMP/10/data.parquet",
