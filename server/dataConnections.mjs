@@ -16,6 +16,11 @@ const SELF_EQUIPMENT_READ_METHODS = new Map([
   ["/api/self-equipment-data", new Set(["GET"])],
   ["/api/erd-scatter-data", new Set(["GET"])],
 ])
+const COMMONALITY_READ_METHODS = new Map([
+  ["/api/latest-commonality-path", new Set(["GET", "HEAD"])],
+  ["/api/commonality-data", new Set(["GET"])],
+  ["/api/commonality-image", new Set(["GET", "HEAD"])],
+])
 const DB_METHODS = new Map([
   ["/api/current-user", new Set(["GET"])],
   ["/api/hit-history", new Set(["POST"])],
@@ -26,6 +31,7 @@ const DB_METHODS = new Map([
 export const DATA_CONNECTIONS_ENABLED_ENV = "SCS_DATA_CONNECTIONS_ENABLED"
 export const DASHBOARD_DATA_ENABLED_ENV = "SCS_DASHBOARD_DATA_ENABLED"
 export const SELF_EQUIPMENT_DATA_ENABLED_ENV = "SCS_SELF_EQUIPMENT_DATA_ENABLED"
+export const COMMONALITY_DATA_ENABLED_ENV = "SCS_COMMONALITY_DATA_ENABLED"
 export const DB_CONNECTIONS_ENABLED_ENV = "SCS_DB_CONNECTIONS_ENABLED"
 
 export function areDataConnectionsEnabled(environment = process.env) {
@@ -43,6 +49,10 @@ export function areDashboardDataConnectionsEnabled(environment = process.env) {
 
 export function areSelfEquipmentDataConnectionsEnabled(environment = process.env) {
   return isDefaultEnabled(environment, SELF_EQUIPMENT_DATA_ENABLED_ENV)
+}
+
+export function areCommonalityDataConnectionsEnabled(environment = process.env) {
+  return isDefaultEnabled(environment, COMMONALITY_DATA_ENABLED_ENV)
 }
 
 export function resolveDbInfoPath(environment = process.env) {
@@ -105,6 +115,11 @@ export function blockDisabledDataRequest(
     && isExactPath
     && SELF_EQUIPMENT_READ_METHODS.get(normalizedPathname)?.has(req.method)
   )
+  const isAllowedCommonalityRead = (
+    areCommonalityDataConnectionsEnabled(environment)
+    && isExactPath
+    && COMMONALITY_READ_METHODS.get(normalizedPathname)?.has(req.method)
+  )
   const dbConnectionsEnabled = areDbConnectionsEnabled(environment, canReadDbInfo)
   const isKnownDbRequest = isExactPath && DB_METHODS.get(normalizedPathname)?.has(req.method)
   const isAllowedDbRequest = (
@@ -116,6 +131,7 @@ export function blockDisabledDataRequest(
     || areDataConnectionsEnabled(environment)
     || isAllowedDashboardRead
     || isAllowedSelfEquipmentRead
+    || isAllowedCommonalityRead
     || isAllowedDbRequest
   ) return false
 

@@ -7,6 +7,7 @@ import test from "node:test"
 
 import {
   areDashboardDataConnectionsEnabled,
+  areCommonalityDataConnectionsEnabled,
   areDataConnectionsEnabled,
   areDbConnectionsEnabled,
   areSelfEquipmentDataConnectionsEnabled,
@@ -50,6 +51,13 @@ test("Dashboard read는 기본 활성화되고 명시적인 비-1 값으로 차�
   assert.equal(areDashboardDataConnectionsEnabled({ SCS_DASHBOARD_DATA_ENABLED: "0" }), false)
   assert.equal(areDashboardDataConnectionsEnabled({ SCS_DASHBOARD_DATA_ENABLED: "true" }), false)
   assert.equal(areDashboardDataConnectionsEnabled({ SCS_DASHBOARD_DATA_ENABLED: "1" }), true)
+})
+
+test("동일성 read는 기본 활성화되고 명시적인 비-1 값으로 차단할 수 있다", () => {
+  assert.equal(areCommonalityDataConnectionsEnabled({}), true)
+  assert.equal(areCommonalityDataConnectionsEnabled({ SCS_COMMONALITY_DATA_ENABLED: "0" }), false)
+  assert.equal(areCommonalityDataConnectionsEnabled({ SCS_COMMONALITY_DATA_ENABLED: "true" }), false)
+  assert.equal(areCommonalityDataConnectionsEnabled({ SCS_COMMONALITY_DATA_ENABLED: "1" }), true)
 })
 
 test("DB 연결은 credential 파일이 읽기 가능할 때만 활성화된다", () => {
@@ -117,7 +125,7 @@ test("비허용 API 요청은 handler 실행 전에 503으로 차단된다", () 
   const response = createResponse()
   const logs = []
   const blocked = blockDisabledDataRequest(
-    { method: "GET", url: "/api/commonality-data", headers: { host: "localhost" } },
+    { method: "GET", url: "/api/common-commonality-data", headers: { host: "localhost" } },
     response,
     {},
     (message) => logs.push(message),
@@ -142,8 +150,8 @@ test("API root와 encoded separator도 같은 차단 경계로 처리한다", ()
     "/api//dashboard-data",
     "/api%2Fdashboard-data",
     "/api%5Cdashboard-data",
-    "/safe/../api/commonality-data",
-    "/safe/%2e%2e/api/commonality-data",
+    "/safe/../api/common-commonality-data",
+    "/safe/%2e%2e/api/common-commonality-data",
   ]) {
     const response = createResponse()
     assert.equal(blockDisabledDataRequest(
@@ -197,7 +205,7 @@ test("정적 UI 요청과 명시적으로 활성화한 API 요청은 기존 흐�
   assert.equal(enabledResponse.statusCode, null)
 })
 
-test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 계속 차단한다", () => {
+test("기본 실행은 Dashboard, 자설비와 동일성 read API를 열고 다른 App은 계속 차단한다", () => {
   const environment = {}
   for (const [method, pathname] of [
     ["GET", "/api/dashboard-data"],
@@ -209,6 +217,11 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
     ["GET", "/api/mapping-config"],
     ["GET", "/api/self-equipment-data"],
     ["GET", "/api/erd-scatter-data"],
+    ["GET", "/api/latest-commonality-path"],
+    ["HEAD", "/api/latest-commonality-path"],
+    ["GET", "/api/commonality-data"],
+    ["GET", "/api/commonality-image"],
+    ["HEAD", "/api/commonality-image"],
   ]) {
     assert.equal(blockDisabledDataRequest(
       { method, url: pathname, headers: { host: "localhost" } },
@@ -221,7 +234,9 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
     ["POST", "/api/dashboard-data"],
     ["POST", "/api/dashboard-stats"],
     ["POST", "/api/dashboard-latest-date"],
-    ["GET", "/api/commonality-data"],
+    ["GET", "/api/common-commonality-data"],
+    ["HEAD", "/api/commonality-data"],
+    ["POST", "/api/commonality-image"],
     ["GET", "/api/erd-file"],
     ["GET", "/api%2Fself-equipment-data"],
     ["HEAD", "/api/self-equipment-data"],
@@ -263,7 +278,7 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
     ["DELETE", "/api/mailing-registration"],
     ["GET", "/api/my-eqp-equipment-data"],
     ["POST", "/api/my-eqp-registration"],
-    ["GET", "/api/commonality-data"],
+    ["GET", "/api/common-commonality-data"],
   ]) {
     const response = createResponse()
     assert.equal(blockDisabledDataRequest(
@@ -306,6 +321,25 @@ test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 �
       { method: "GET", url: pathname, headers: { host: "localhost" } },
       response,
       { SCS_SELF_EQUIPMENT_DATA_ENABLED: "0" },
+      () => {},
+    ), true, pathname)
+    assert.equal(response.statusCode, 503, pathname)
+  }
+})
+
+test("동일성 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
+  for (const [method, pathname] of [
+    ["GET", "/api/latest-commonality-path"],
+    ["HEAD", "/api/latest-commonality-path"],
+    ["GET", "/api/commonality-data"],
+    ["GET", "/api/commonality-image"],
+    ["HEAD", "/api/commonality-image"],
+  ]) {
+    const response = createResponse()
+    assert.equal(blockDisabledDataRequest(
+      { method, url: pathname, headers: { host: "localhost" } },
+      response,
+      { SCS_COMMONALITY_DATA_ENABLED: "0" },
       () => {},
     ), true, pathname)
     assert.equal(response.statusCode, 503, pathname)

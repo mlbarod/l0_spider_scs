@@ -34,9 +34,10 @@
 
 ## 3. 교대·작업 전 사전 점검
 
-SCS 기본 실행은 Dashboard와 자설비 file read를 허용하고, 읽기 가능한 `DB_INFO_PATH`가 있으면
-사용자·My EQP와 세 이력 DB API를 허용한다. Mailing과 다른 App의 503은 정상이다. 전체 UI shell이 필요하면
+SCS 기본 실행은 Dashboard, 자설비와 동일성 file read를 허용하고, 읽기 가능한 `DB_INFO_PATH`가 있으면
+사용자·My EQP와 세 이력 DB API를 허용한다. Mailing과 동일성 이외의 다른 App의 503은 정상이다. 전체 UI shell이 필요하면
 `SCS_DASHBOARD_DATA_ENABLED=0`, `SCS_SELF_EQUIPMENT_DATA_ENABLED=0`,
+`SCS_COMMONALITY_DATA_ENABLED=0`,
 `SCS_DB_CONNECTIONS_ENABLED=0`을 함께 명시한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 전체 file·DB 승인 전에는 설정하지 않는다. My EQP와 history는
 credential 기반 좁은 allowlist를 사용하므로 전역 gate를 열 필요가 없다. 실제 배포 값은 `Unknown`이다.

@@ -98,6 +98,7 @@ test("명시적 UI shell은 외부 경로·DB helper보다 먼저 API를 차단�
       BUILD_ON_START: "0",
       SCS_DATA_CONNECTIONS_ENABLED: "0",
       SCS_SELF_EQUIPMENT_DATA_ENABLED: "0",
+      SCS_COMMONALITY_DATA_ENABLED: "0",
       SCS_DASHBOARD_DATA_ENABLED: "0",
       SCS_DB_CONNECTIONS_ENABLED: "0",
       SPIDER_DASHBOARD_PATH_ROOT: "/synthetic-path-must-not-be-read",
@@ -114,6 +115,7 @@ test("명시적 UI shell은 외부 경로·DB helper보다 먼저 API를 차단�
     "/api",
     "/api/dashboard-data",
     "/api/current-user",
+    "/api/commonality-data",
   ]) {
     const response = await fetch(`${baseUrl}${pathname}`)
     const payload = await response.json()
@@ -146,7 +148,7 @@ test("Vite 단독 개발 middleware도 API handler보다 먼저 차단한다", (
   let body = ""
   let nextCalled = false
   middleware(
-    { method: "GET", url: "/api/commonality-data", headers: { host: "localhost" } },
+    { method: "GET", url: "/api/common-commonality-data", headers: { host: "localhost" } },
     {
       writeHead(value) {
         statusCode = value

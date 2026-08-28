@@ -98,6 +98,7 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 | SCS data gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite 선행 middleware | 정확히 `"1"`인 경우만 handler 활성 | 단일 변수 오설정으로 모든 file·DB read/write 재활성화 | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; server·Vite 진입점 |
 | SCS Dashboard read gate | `SCS_DASHBOARD_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; Dashboard와 latest-date GET/HEAD만 활성 | 운영 filename·집계 노출, mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; Dashboard API |
 | SCS Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; mapping GET/HEAD와 Self·scatter GET만 handler 활성 | 기본 file read에 따른 source path 노출·mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; self read API |
+| SCS Commonality read gate | `SCS_COMMONALITY_DATA_ENABLED` | Node·Vite 선행 middleware | 미설정 또는 `"1"`; latest path·data·image read만 handler 활성 | 기본 file·image read에 따른 source path 노출·mount read | `Implemented` / 운영값 `Unknown` | `server/dataConnections.mjs`; commonality API |
 | SCS DB gate | `SCS_DB_CONNECTIONS_ENABLED`, `DB_INFO_PATH` | Node·Vite 선행 middleware | 전체 gate 비활성 mode에서 비-`1`이 아니고 credential file read 가능; 사용자·My EQP·세 이력 allowlist 활성 | My EQP와 history read/write 활성 | `Implemented` / 운영 연결 `Unknown` | `server/dataConnections.mjs`; DB API |
 | 메일 link | Dashboard·Self URL | 외부 renderer 후보 | template `urlencode`; 실제 renderer 미확인 | 수신자 혼합·URL 노출 | `Policy` / `Needs Validation` | mail template |
 
@@ -119,9 +120,9 @@ Proxy가 존재해도 신뢰 header 정책과 Node 직접 접근 차단이 확�
 
 저장소에 인증 코드가 없다는 사실만으로 운영 서비스가 인터넷에 익명 노출되었다고 단정하지 않는다.
 다만 application 자체의 write API 권한 경계는 외부 proxy가 제공하는 접근 제한과 별개로 명시적 검증이 부족하다.
-SCS 기본 실행에서는 Dashboard와 자설비 read를 허용한다. 읽기 가능한 credential이 있으면
-사용자·My EQP와 세 이력 API도 허용하지만 Mailing·image endpoint와 다른 App은 계속 차단한다.
-전체 UI shell이 필요하면 Dashboard·Self·DB 범위 변수를 모두 `0`으로 명시한다.
+SCS 기본 실행에서는 Dashboard, 자설비와 동일성 read를 허용한다. 읽기 가능한 credential이 있으면
+사용자·My EQP와 세 이력 API도 허용하지만 Mailing·다른 App은 계속 차단한다.
+전체 UI shell이 필요하면 Dashboard·Self·동일성·DB 범위 변수를 모두 `0`으로 명시한다.
 mapping capability가 DB query와 action을 프론트엔드에서도 비활성화한다.
 `SCS_DATA_CONNECTIONS_ENABLED=1`은 Parquet·이미지·DB read뿐 아니라 등록·이력 write까지
 함께 재활성화하므로 다른 App의 연결정보와 DB 승인이 완료되기 전에는 설정하지 않는다.
@@ -149,7 +150,7 @@ mapping capability가 DB query와 action을 프론트엔드에서도 비활성�
 | API 또는 영역 | 입력 | 검증 위치 | 실패 결과 | 정보 노출 위험 | 상태 | 근거 |
 |---|---|---|---|---|---|---|
 | Dashboard | `startDate`, `endDate`, repeated `line` | strict date·range parsing | 보호 오류 `code`·`requestId` | 성공 `sourcePaths` | `Implemented` / `Risk` | `dashboardData.mjs`; `safeApiError.mjs` |
-| SCS API gate | `/api` namespace | handler dispatch 전 전체 opt-in, Dashboard·Self read와 credential 기반 DB method allowlist | 비허용 요청은 `503 DATA_CONNECTIONS_DISABLED`, UUID `requestId`; HEAD 무본문 | 부분 활성 상태를 전체 활성으로 오판할 위험 | `Implemented` / 운영 적용 `Unknown` | `dataConnections.mjs`; safe error contract |
+| SCS API gate | `/api` namespace | handler dispatch 전 전체 opt-in, Dashboard·Self·동일성 read와 credential 기반 DB method allowlist | 비허용 요청은 `503 DATA_CONNECTIONS_DISABLED`, UUID `requestId`; HEAD 무본문 | 부분 활성 상태를 전체 활성으로 오판할 위험 | `Implemented` / 운영 적용 `Unknown` | `dataConnections.mjs`; safe error contract |
 | Self Equipment | `line`, `pathSdwt`, `sdwt`, filters | 필수값·path segment·option matching | 400·500 | 성공 `sourcePath` | 일부 `Implemented` | `selfEquipmentData.mjs:62-65,321-353` |
 | ERD scatter | `path`, `line`, `pathSdwt`, `eqp`, `sensor`, `chStep`, `ver`, `latestDate`, `days` | root·segment·0~30 integer; Self gate에서 분임조별 row의 path·EQP·date·sensor·step·ver 일치 | 400·403·보호 오류 500 | 성공 `sourcePath` | `Implemented` / 운영 ACL `Unknown` | `selfEquipmentData.mjs`; `safeApiError.mjs` |
 | image | absolute `path` | root·extension·file 존재 | 403·보호 오류 404/500 | 성공 요청 계약에 path 사용 | 일부 `Implemented` | file handlers |
@@ -247,9 +248,10 @@ HMAC은 서명 대상의 무결성과 진위 확인을 위한 방식이며 STEP 
 | file roots | `SPIDER_DASHBOARD_PATH_ROOT`, `COMMONALITY_ROOT_PATH`, `COMMON_COMMONALITY_ROOT_PATH`, `MAPPING_CONFIG_PATH` | Node | response·error에 간접 노출 가능 | code path | fallback path | secret 아님 | `Confirmed` | server modules |
 | process bind | `HOST`, `PORT` | Node | service endpoint로 관찰 가능 | code default | fallback | secret 아님 | `Confirmed` | `server.mjs:37-38` |
 | runtime mode | `BUILD_ON_START`, `LIVE_RELOAD` | Node | 동작에 간접 영향 | enabled unless `0` | default enabled | secret 아님 | `Confirmed` | `server.mjs:39-40` |
-| data connection gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite | API 응답에 간접 영향 | 비활성 | 정확히 `1`이 아니면 Dashboard·Self·DB allowlist 외 `/api` 차단 | secret 아님; owner 승인 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
+| data connection gate | `SCS_DATA_CONNECTIONS_ENABLED` | Node·Vite | API 응답에 간접 영향 | 비활성 | 정확히 `1`이 아니면 Dashboard·Self·동일성·DB allowlist 외 `/api` 차단 | secret 아님; owner 승인 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 | Dashboard read gate | `SCS_DASHBOARD_DATA_ENABLED` | Node·Vite | Portal·Dashboard read | 활성 | 비-`1`이면 Dashboard GET/HEAD 차단 | secret 아님 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 | Self Equipment read gate | `SCS_SELF_EQUIPMENT_DATA_ENABLED` | Node·Vite | mapping GET/HEAD, Self·scatter GET에 직접 영향 | 활성 | 미설정 또는 정확히 `1`이면 자설비 read allowlist 통과; 그 외 값은 차단 | secret 아님; 부분 연결 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
+| Commonality read gate | `SCS_COMMONALITY_DATA_ENABLED` | Node·Vite | 동일성 latest path·data·image read에 직접 영향 | 활성 | 미설정 또는 정확히 `1`이면 동일성 read allowlist 통과; 그 외 값은 차단 | secret 아님; 부분 연결 통제 | `Implemented` / 실제 값 `Unknown` | `server/dataConnections.mjs` |
 | DB connection gate | `SCS_DB_CONNECTIONS_ENABLED` | Node·Vite | 전체 gate 비활성 mode의 사용자·My EQP·세 이력 API handler 진입 | credential read 가능 시 활성 | 비-`1` 또는 credential read 불가이면 allowlist 차단 | secret 아님; 범위 통제 | `Implemented` / 실제 연결 `Unknown` | `server/dataConnections.mjs` |
 | Self Equipment team path root | `SCS_SELF_EQUIPMENT_PATH_ROOT` | Node | 분임조별 path_xian root | `/appdata/abnormal_trend/pic/path_xian` | 설정 root 아래 `{line}/{pathSdwt}/df_path.parquet` 사용 | 경로 주의 | `Implemented` / 실제 값 `Unknown` | `server/selfEquipmentData.mjs` |
 
