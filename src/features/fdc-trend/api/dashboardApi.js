@@ -49,8 +49,13 @@ export async function fetchDashboardLatestDate({ signal } = {}) {
   return payload
 }
 
-export async function fetchDashboardStats({ signal } = {}) {
-  const response = await fetch("/api/dashboard-stats", {
+export async function fetchDashboardStats({ startDate, endDate, lines = [], signal } = {}) {
+  const searchParams = new URLSearchParams()
+  if (startDate) searchParams.set("startDate", startDate)
+  if (endDate) searchParams.set("endDate", endDate)
+  lines.forEach((line) => searchParams.append("line", line))
+  const query = searchParams.toString()
+  const response = await fetch(`/api/dashboard-stats${query ? `?${query}` : ""}`, {
     headers: { Accept: "application/json" },
     signal,
   })
@@ -67,6 +72,8 @@ export async function fetchDashboardStats({ signal } = {}) {
   ) {
     throw new Error("대시보드 통계 응답 형식이 올바르지 않습니다.")
   }
+
+  assertDashboardIntegrity(payload.lineDashboard, { startDate, endDate, lines })
 
   return payload
 }

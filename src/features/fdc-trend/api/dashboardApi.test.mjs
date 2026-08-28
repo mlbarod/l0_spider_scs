@@ -59,10 +59,41 @@ test("Dashboard stats client returns the seven metrics", async () => {
       nGradeCount: 7,
       mGradeCount: 5,
     },
+    lineDashboard: cloneFixture().lineDashboard,
   }
   await withMockFetch(response, async (getRequestedUrl) => {
     assert.deepEqual(await fetchDashboardStats(), response)
     assert.equal(getRequestedUrl(), "/api/dashboard-stats")
+  })
+})
+
+test("Dashboard stats client forwards the l0_spider filters", async () => {
+  const lineDashboard = cloneFixture().lineDashboard
+  lineDashboard.filters.lines = ["TEST_LINE"]
+  const response = {
+    ok: true,
+    latestDate: "2000-01-02 08:00:00",
+    metrics: {
+      monitoringSensorTotal: 2,
+      detectedPpidCount: 1,
+      totalAnomalyCount: 1,
+      abGradeCount: 1,
+      dGradeCount: 0,
+      nGradeCount: 0,
+      mGradeCount: 0,
+    },
+    lineDashboard,
+  }
+  await withMockFetch(response, async (getRequestedUrl) => {
+    await fetchDashboardStats({
+      startDate: "2000-01-02",
+      endDate: "2000-01-02",
+      lines: ["TEST_LINE"],
+    })
+    assert.equal(
+      getRequestedUrl(),
+      "/api/dashboard-stats?startDate=2000-01-02&endDate=2000-01-02&line=TEST_LINE",
+    )
   })
 })
 

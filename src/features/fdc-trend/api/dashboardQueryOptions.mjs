@@ -1,4 +1,4 @@
-import { fetchDashboardSummary } from "./dashboardApi.js"
+import { fetchDashboardStats } from "./dashboardApi.js"
 
 export function createDashboardQueryOptions(appliedFilters = {}) {
   return {
@@ -6,7 +6,7 @@ export function createDashboardQueryOptions(appliedFilters = {}) {
       "spider-line-dashboard",
       (appliedFilters.lines ?? []).join("\u0000"),
     ],
-    queryFn: ({ signal }) => fetchDashboardSummary({ ...appliedFilters, signal }),
+    queryFn: ({ signal }) => fetchDashboardStats({ ...appliedFilters, signal }),
     staleTime: 60 * 1000,
     retry: false,
   }
@@ -21,7 +21,7 @@ export function createDashboardTrendQueryOptions(trendPeriodDays, trendFilters) 
       trendFilters?.endDate ?? "",
       (trendFilters?.lines ?? []).join("\u0000"),
     ],
-    queryFn: ({ signal }) => fetchDashboardSummary({ ...trendFilters, signal }),
+    queryFn: ({ signal }) => fetchDashboardStats({ ...trendFilters, signal }),
     enabled: Boolean(trendFilters),
     staleTime: 5 * 60 * 1000,
     retry: false,

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 import { fetchDashboardStats } from "../api/dashboardApi"
-import { SpiderStatsDashboard } from "../components/SpiderStatsDashboard"
+import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
 import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
 
 const spiderApps = [
@@ -177,13 +177,15 @@ function SpiderAppCard({ app, animationIndex = 0 }) {
 
 function LatestDataCard() {
   const dashboardQuery = useQuery({
-    queryKey: ["spider-dashboard-stats"],
+    queryKey: ["spider-line-dashboard", ""],
     queryFn: ({ signal }) => fetchDashboardStats({ signal }),
     staleTime: 60 * 1000,
     retry: false,
   })
   const latestDate = dashboardQuery.data?.latestDate ?? ""
-  const displayDateTime = latestDate || (dashboardQuery.isPending ? "조회 중" : "확인 불가")
+  const displayDateTime = latestDate
+    ? `${latestDate.slice(0, 10).replaceAll("-", ".")} ${latestDate.slice(11)}`
+    : dashboardQuery.isPending ? "조회 중" : "확인 불가"
 
   return (
     <aside
@@ -273,7 +275,7 @@ export function L0SpiderHomePage() {
               ))}
             </div>
           </section>
-          <SpiderStatsDashboard />
+          <LineAnomalyDashboard />
         </div>
       </main>
     </div>
