@@ -399,7 +399,7 @@ SDWT 필터 마지막의 `SKIP LIST`를 선택하면 선택 Line에서 `ver = NA
 
 `/matching-anomaly`은 실제 동일성 기준 이상감지 그래프 파일을 사용한다. Line Name과
 SDWT는 자설비 이상감지와 동일하게 `mapping_config.json`의 `line_mapping`,
-`sdwt_mapping`을 사용한다. 필터 순서는 Line Name → SDWT → STEP(`step_seq`, API `stepDesc`) →
+`sdwt_mapping`을 사용한다. 필터 순서는 Line Name → SDWT → STEP(`step_seq`, API `stepSeq`) →
 Sensor → `ch_step`이다. 서버는 경로 테이블의 `sdwt_code`, `step_seq`, `recipe_id`,
 `priority`, `sensor`, `ch_step`, `path` 컬럼을 읽는다. 화면 계약에는 각각 SDWT, STEP,
 PPID, grade, Sensor, ch_step으로 변환하고 그래프 경로는 `path + /img.png`로 만든다.

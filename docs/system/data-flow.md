@@ -179,7 +179,7 @@ flowchart LR
 | `chStep` / `ch_step` | 사용자 선택 | API query는 `chStep` | row `step`, 자설비 axis `${sensor}*${chStep}` | sensor `ALL`이면 `ALL`만 정상 분기 | 코드 `Confirmed` | Self payload |
 | `latest_date` | 서버의 filename 선택·오늘 날짜 생성 또는 Self team row의 `file_path` | 자설비 chart API에는 `latestDate`로 전달 | dashboard 날짜 file, 오늘 commonality path table, Self scoped row 검증 | 유효 날짜 없으면 오류 | 코드 `Confirmed`; 운영 file `Unknown` | dashboard/latest/self modules |
 | `step_desc` | Parquet row·directory | UI label·`stepDesc` query | detail row filter·directory segment | 선택 전 결과 row 없음 | `Confirmed` | data handlers |
-| `step_seq` | commonality path table | 기존 `stepDesc` query·UI STEP | image row metadata·filter | path table에 의존 | `Confirmed` | `readCommonalityPathRows` |
+| `step_seq` | commonality path table | `stepSeq` query·UI STEP; legacy `stepDesc` 허용 | image row metadata·filter | path table에 의존 | `Confirmed` | `readCommonalityPathRows` |
 | `ppid` | file path·Parquet row | chart grouping·표시 | ERD/commonality path와 grouping | 원천 값에 의존 | `Confirmed` | path config·pages |
 | `recipe_id` | dashboard detail row | 직접 query로 전달하지 않음 | 5-key 고유 이상건 집계 | 빈 문자열도 정규화 key에 참여 | `Confirmed` | `LINE_ANOMALY_ID_COLUMNS` |
 | `eqp` | row·등록 DB·사용자 선택 | `eqp` query 또는 `eqpCh` | file row filter·chart group·MY EQP match | endpoint별 조건부 필수 | `Confirmed` | Self/Common modules |

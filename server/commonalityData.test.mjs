@@ -92,6 +92,7 @@ test("step_seq, sensor와 ch_step으로 종속 필터 데이터를 생성한다"
     sensor: "",
     chStep: "",
   })
+  assert.deepEqual(stepOptionsPayload.stepSeqs, ["100", "200"])
   assert.deepEqual(stepOptionsPayload.stepDescs, ["100", "200"])
   assert.deepEqual(stepOptionsPayload.sensors, [])
   assert.equal(stepOptionsPayload.rows.length, 0)
@@ -100,11 +101,12 @@ test("step_seq, sensor와 ch_step으로 종속 필터 데이터를 생성한다"
     line: "P1L",
     pathSdwt: "SDWT-1",
     sdwt: "SDWT-1",
-    stepDesc: "100",
+    stepSeq: "100",
     sensor: "PRESSURE_SENSOR",
     chStep: "20@001",
   })
   assert.deepEqual(payload.sensors, ["PRESSURE_SENSOR"])
+  assert.equal(payload.filters.stepSeq, "100")
   assert.deepEqual(payload.chSteps, ["10@001", "20@001"])
   assert.equal(payload.rows.length, 1)
   assert.equal(payload.rows[0].ppid, "RECIPE-2")
@@ -113,11 +115,22 @@ test("step_seq, sensor와 ch_step으로 종속 필터 데이터를 생성한다"
     line: "P1L",
     pathSdwt: "SDWT-1",
     sdwt: "SDWT-1",
-    stepDesc: "100",
+    stepSeq: "100",
     sensor: "ALL",
     chStep: "ALL",
   })
   assert.equal(allSensorsPayload.filters.sensor, "ALL")
   assert.deepEqual(allSensorsPayload.chSteps, ["ALL"])
   assert.equal(allSensorsPayload.rows.length, 2)
+
+  const legacyPayload = buildCommonalityFilterPayload(index, {
+    line: "P1L",
+    pathSdwt: "SDWT-1",
+    sdwt: "SDWT-1",
+    stepDesc: "200",
+    sensor: "",
+    chStep: "",
+  })
+  assert.equal(legacyPayload.filters.stepSeq, "200")
+  assert.equal(legacyPayload.filters.stepDesc, "200")
 })

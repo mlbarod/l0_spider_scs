@@ -12,12 +12,12 @@ export async function fetchCommonalityData({
   line,
   pathSdwt,
   sdwt,
-  stepDesc,
+  stepSeq,
   sensor,
   chStep,
 }) {
   const searchParams = new URLSearchParams({ line, pathSdwt, sdwt })
-  if (stepDesc) searchParams.set("stepDesc", stepDesc)
+  if (stepSeq) searchParams.set("stepSeq", stepSeq)
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
   const response = await fetch(`/api/commonality-data?${searchParams.toString()}`, {

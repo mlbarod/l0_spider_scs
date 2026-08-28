@@ -111,10 +111,10 @@ CommonalityAnomalyPage
 → STEP별 이미지 카드
 ```
 
-화면은 mapping으로 Line별 SDWT 후보를 만든 뒤 `stepDesc`, `sensor`, `chStep`을 API에 보낸다.
+화면은 mapping으로 Line별 SDWT 후보를 만든 뒤 `stepSeq`, `sensor`, `chStep`을 API에 보낸다.
 CORE-04 이후 mapping API가 성공하고 최소 runtime 계약을 통과하기 전에는 동일성·공통부·Self의 종속 조회를 시작하지 않는다. 빈 `line_mapping`, 잘못된 dictionary type과 API 실패는 일반 empty가 아니라 기준정보 오류로 표시하며 사용자가 다시 조회할 수 있다.
 서버 경로에는 Line segment가 없으며 Line은 화면에서 SDWT 후보를 제한하고 응답 filter에 유지된다.
-서버는 `step_seq → sensor → ch_step` 종속 option을 기존 `stepDesc → sensor → chStep` API 형태로 만들고
+서버는 `step_seq → sensor → ch_step` 종속 option을 `stepSeq → sensor → chStep` API 형태로 만들고
 최종 row의 `filePath`를 image endpoint에 전달한다. `recipe_id`는 PPID, `priority`는 grade로 표시한다.
 화면은 한 페이지에 최대 18개 row를 렌더링하며 STEP(`step_seq`)으로 그룹화한다.
 
@@ -214,8 +214,8 @@ Self와 공통부의 후속 데이터는 index row의 절대 `file_path`를 기�
 | `line` | mapping의 Line 값 | Dashboard 반복 `line`; 다른 화면 단일 `line` | team/common index path; matching은 SDWT 후보 제한에만 사용 | Line filter·summary | `Confirmed` |
 | `sdwt` | mapping key·display, path row | `pathSdwt`와 표시 `sdwt`를 분리 | index path·row filter·directory segment | SDWT filter·label | `Confirmed` |
 | `grade` | URL/UI Grade 또는 row `priority` | API에는 주로 반복 `priority` | detail·path row와 directory `grade` | badge·KPI·filter | `Confirmed` |
-| `step_seq` | commonality directory | query로 직접 전달하지 않음 | directory metadata | 동일성 image card 보조 정보 | `Confirmed` |
-| `step_desc` | row `desc` 또는 directory | `desc`·`stepDesc` | row filter와 path segment | STEP filter·group title | `Confirmed` |
+| `step_seq` | commonality path table | `stepSeq`; legacy `stepDesc`도 허용 | 동일성 row filter·metadata | STEP filter·group title | `Confirmed` |
+| `step_desc` | dashboard·기존 directory row | `desc`·일부 legacy `stepDesc` | 동일성 이외 row filter와 path segment | 기능별 STEP 표현 | `Confirmed` |
 | `ppid` | ERD/commonality path | 직접 query로 전달하지 않음 | ERD `{ppid}`, commonality duplicate PPID directory | chart/card PPID | `Confirmed` |
 | `sensor` | row·directory | `sensor` | row filter와 axis column | filter·card·axis | `Confirmed` |
 | `ch_step` | row `step`·directory suffix | query `chStep` | Self는 `${sensor}*${chStep}`, 공통부는 `${sensor}_${chStep}` column | filter·chart title | `Confirmed` |
