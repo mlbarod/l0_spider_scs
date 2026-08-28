@@ -299,6 +299,84 @@ export async function authorizeSelfEquipmentDataPath({
   }
 }
 
+function normalizeSkipRecordDate(value) {
+  const text = value instanceof Date
+    ? value.toISOString().replace("T", " ").replace("Z", "")
+    : normalizeTextValue(value)
+  const match = text.match(/^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}:\d{2}))?/)
+  if (!match) return text
+  return !match[2] || match[2] === "00:00:00" ? match[1] : `${match[1]} ${match[2]}`
+}
+
+function isSkipRecordTeamRowMatch(record, row) {
+  const recordDesc = normalizeTextValue(record.desc)
+  const recordRecipeId = normalizeTextValue(record.recipe_id)
+  const descMatches = recordDesc === normalizeTextValue(row.desc)
+    || (recordDesc === recordRecipeId && Boolean(recordRecipeId))
+
+  return descMatches
+    && normalizeTextValue(record.line_id) === normalizeTextValue(row.line_rev)
+    && normalizeTextValue(record.sdwt) === normalizeTextValue(row.sdwt)
+    && normalizeTextValue(record.ver) === normalizeTextValue(row.ver)
+    && recordRecipeId === normalizeTextValue(row.recipe_id)
+    && normalizeTextValue(record.priority) === normalizeTextValue(row.priority)
+    && normalizeTextValue(record.sensor) === normalizeTextValue(row.sensor)
+    && normalizeTextValue(record.step) === normalizeTextValue(row.step)
+    && normalizeSkipEqp(record.eqp) === normalizeSkipEqp(row.eqp)
+    && normalizeSkipRecordDate(record.update_date) === normalizeSkipRecordDate(row.latest_date)
+}
+
+export async function resolveSelfEquipmentSkipListRecords(records, {
+  readMapping = readLineMapping,
+  readRows = readTeamErdRows,
+} = {}) {
+  const sourceRecords = Array.isArray(records) ? records : []
+  const selfRecords = sourceRecords.filter((record) => (
+    normalizeTextValue(record.ver)
+    && normalizeTextValue(record.ver) !== COMMON_PASS_HISTORY_VERSION
+  ))
+  if (!selfRecords.length) return sourceRecords
+
+  let mapping
+  try {
+    mapping = await readMapping()
+  } catch {
+    return sourceRecords
+  }
+
+  const recordScopes = new Set(selfRecords.map((record) => (
+    `${normalizeTextValue(record.line_id)}\u0000${normalizeTextValue(record.sdwt)}`
+  )))
+  const teamScopes = Object.entries(mapping.line_mapping ?? {}).flatMap(([pathSdwt, line]) => {
+    const displaySdwt = normalizeTextValue(mapping.sdwt_mapping?.[pathSdwt] ?? pathSdwt)
+    return recordScopes.has(`${normalizeTextValue(line)}\u0000${displaySdwt}`)
+      ? [{ line: normalizeTextValue(line), pathSdwt }]
+      : []
+  })
+  if (!teamScopes.length) return sourceRecords
+
+  const teamSources = await Promise.allSettled(teamScopes.map(async ({ line, pathSdwt }) => {
+    const source = await readRows({ line, pathSdwt })
+    return scopeSelfEquipmentRows(source.rows, { line, pathSdwt, mapping })
+  }))
+  const teamRows = teamSources.flatMap((result) => (
+    result.status === "fulfilled" ? result.value : []
+  ))
+  if (!teamRows.length) return sourceRecords
+
+  return sourceRecords.map((record) => {
+    const matches = teamRows.filter((row) => isSkipRecordTeamRowMatch(record, row))
+    const paths = Array.from(new Set(matches.map((row) => row.file_path).filter(Boolean)))
+    if (paths.length !== 1) return record
+    const matchedRow = matches.find((row) => row.file_path === paths[0])
+    return {
+      ...record,
+      chart_file_path: paths[0],
+      chart_latest_date: matchedRow?.latest_date ?? "",
+    }
+  })
+}
+
 export function isSelfEquipmentSkipListDataPathAllowed(records, {
   dataDirectoryPath,
   eqp,
@@ -322,7 +400,9 @@ export function isSelfEquipmentSkipListDataPathAllowed(records, {
 
     let recordPath = ""
     try {
-      recordPath = normalizeSelfEquipmentFilePath(buildPassHistoryErdImagePath(record))
+      recordPath = normalizeSelfEquipmentFilePath(
+        record.chart_file_path || buildPassHistoryErdImagePath(record),
+      )
     } catch {
       return false
     }
@@ -355,11 +435,13 @@ async function readCachedSkipListAuthorizationRecords(line) {
 
 export async function authorizeSelfEquipmentSkipListDataPath(request, {
   readRecords = ({ lineId }) => readCachedSkipListAuthorizationRecords(lineId),
+  resolveRecords = resolveSelfEquipmentSkipListRecords,
   nowMs = Date.now(),
 } = {}) {
   try {
     const records = await readRecords({ lineId: request.line })
-    return isSelfEquipmentSkipListDataPathAllowed(records, request, nowMs)
+    const resolvedRecords = await resolveRecords(records)
+    return isSelfEquipmentSkipListDataPathAllowed(resolvedRecords, request, nowMs)
   } catch {
     return false
   }

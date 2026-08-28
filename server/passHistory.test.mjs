@@ -222,6 +222,35 @@ test("과거 SKIP 이력의 실제 desc 경로가 여러 개면 임의 경로를
   )
 })
 
+test("SKIP LIST payload는 path_xian에서 다시 연결한 원본 file_path를 우선한다", () => {
+  const originalFilePath = "/mounted/runtime/chart-result/EQP-1.png"
+  const payload = buildPassHistoryFilterPayload([{
+    line_id: "P1L",
+    ver: "V1",
+    sdwt: "SDWT-1",
+    desc: "R1",
+    recipe_id: "R1",
+    update_date: "2026-07-17",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+    exec_date: "2026-07-17 14:00:00",
+    chart_file_path: originalFilePath,
+    chart_latest_date: "2026-07-17",
+  }], {
+    lineId: "P1L",
+    priorities: ["A"],
+    desc: "R1",
+    eqpCh: "EQP-1",
+    sensor: "TEMP",
+    chStep: "10@MAIN",
+  }, NOW)
+
+  assert.equal(payload.rows[0].file_path, originalFilePath)
+  assert.equal(payload.rows[0].latest_date, "2026-07-17")
+})
+
 test("과거 빈 ver SKIP도 필터 행으로 반환해 SKIP해제할 수 있다", () => {
   const record = {
     line_id: "P1L",

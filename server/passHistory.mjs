@@ -285,7 +285,7 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
     sensors,
     chSteps,
     rows: chartRecords.map((record) => {
-      const filePath = buildPassHistoryErdImagePath(record)
+      const filePath = normalizeText(record.chart_file_path) || buildPassHistoryErdImagePath(record)
       return {
         id: `pass-${encodeURIComponent(passRecordIdentity(record))}`,
         sdwt: normalizeText(record.sdwt),
@@ -299,7 +299,9 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
         file_path: filePath,
         line_rev: normalizeText(record.line_id),
         path_sdwt: SELF_SKIP_LIST_PATH_SDWT,
-        latest_date: normalizeDbDate(record.update_date),
+        latest_date: Object.hasOwn(record, "chart_latest_date")
+          ? normalizeText(record.chart_latest_date)
+          : normalizeDbDate(record.update_date),
         pass_history: record,
       }
     }),
@@ -588,7 +590,9 @@ export function buildPassHistoryRecord({
   }
 }
 
-export async function handlePassHistoryRequest(req, res, url) {
+export async function handlePassHistoryRequest(req, res, url, {
+  resolveSelfSkipListRecords = async (records) => records,
+} = {}) {
   try {
     if (req.method === "GET") {
       const lineId = normalizeText(url.searchParams.get("lineId"))
@@ -604,7 +608,8 @@ export async function handlePassHistoryRequest(req, res, url) {
         desc: isFilterView ? "" : normalizeText(url.searchParams.get("desc")),
       })
       if (view === "filters") {
-        sendJson(res, 200, buildPassHistoryFilterPayload(records, {
+        const resolvedRecords = await resolveSelfSkipListRecords(records)
+        sendJson(res, 200, buildPassHistoryFilterPayload(resolvedRecords, {
           lineId,
           priorities: url.searchParams.getAll("priority").map(normalizeText).filter(Boolean),
           desc: normalizeText(url.searchParams.get("desc")),

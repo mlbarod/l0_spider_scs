@@ -15,6 +15,7 @@ import {
   normalizeSelfEquipmentFilePath,
   normalizeTeamErdRow,
   readOptionalPassHistoryRecords,
+  resolveSelfEquipmentSkipListRecords,
   resolveErdScatterProjection,
   resolveErdDataFilePath,
   resolveErdHistoryFilePath,
@@ -535,8 +536,74 @@ test("SKIP LIST chart authorization은 활성 PASS row의 경로와 식별값만
       assert.equal(lineId, "P1L")
       return [record]
     },
+    resolveRecords: async (records) => records,
     nowMs: NOW,
   }), true)
+})
+
+test("SKIP LIST는 현재 path_xian 행에서 원본 chart file_path를 다시 연결한다", async () => {
+  const record = {
+    line_id: "P1L",
+    ver: "V1",
+    sdwt: "SDWT-1",
+    desc: "R1",
+    recipe_id: "R1",
+    update_date: "2026-07-16",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+  }
+  const originalFilePath = "/mounted/runtime/2026-07-16/chart-result/EQP-1.png"
+  const resolved = await resolveSelfEquipmentSkipListRecords([record], {
+    readMapping: async () => ({
+      line_mapping: { "RAW-1": "P1L" },
+      sdwt_mapping: { "RAW-1": "SDWT-1" },
+    }),
+    readRows: async ({ line, pathSdwt }) => {
+      assert.equal(line, "P1L")
+      assert.equal(pathSdwt, "RAW-1")
+      return {
+        rows: [createRow({
+          desc: "ETCH",
+          recipe_id: "R1",
+          file_path: originalFilePath,
+        })],
+      }
+    },
+  })
+
+  assert.equal(resolved[0].chart_file_path, originalFilePath)
+  assert.equal(resolved[0].chart_latest_date, "2026-07-16")
+})
+
+test("SKIP LIST path_xian 후보가 여러 경로면 임의 chart file_path를 선택하지 않는다", async () => {
+  const record = {
+    line_id: "P1L",
+    ver: "V1",
+    sdwt: "SDWT-1",
+    desc: "R1",
+    recipe_id: "R1",
+    update_date: "2026-07-16",
+    priority: "A",
+    sensor: "TEMP",
+    step: "10@MAIN",
+    eqp: "EQP-1",
+  }
+  const resolved = await resolveSelfEquipmentSkipListRecords([record], {
+    readMapping: async () => ({
+      line_mapping: { "RAW-1": "P1L" },
+      sdwt_mapping: { "RAW-1": "SDWT-1" },
+    }),
+    readRows: async () => ({
+      rows: [
+        createRow({ desc: "ETCH", recipe_id: "R1", file_path: "/first/2026-07-16/EQP-1.png" }),
+        createRow({ desc: "CVD", recipe_id: "R1", file_path: "/second/2026-07-16/EQP-1.png" }),
+      ],
+    }),
+  })
+
+  assert.equal(resolved[0].chart_file_path, undefined)
 })
 
 test("chart handler는 다른 App 경로를 Parquet read 전에 403으로 거부한다", async () => {

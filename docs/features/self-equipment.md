@@ -149,8 +149,9 @@ legacy 경로 형식이나 운영 mount root에 의존하지 않는다.
 72시간 제외를 유지하며, SKIP LIST에서는 chart를 복원하지 않고 SKIP해제만 제공한다.
 `ver`가 있는 활성 SKIP LIST row는 `pathSdwt=__SKIP_LIST__`를 chart 요청에 전달하고, 서버가
 `pass_history`의 Line·경로·EQP·sensor·step·`ver`를 재검증한 뒤 Scatter·동일성 chart를 읽는다.
-과거 자설비 목록에서 `desc` 대신 `recipe_id`가 저장된 활성 이력은 기본 복원 경로가 없고 나머지
-식별값에 맞는 실제 `desc` 경로가 하나일 때만 그 경로로 복원한다.
+SKIP LIST 응답과 chart 권한 검증은 이력 식별값에 맞는 현재 분임조별 `path_xian` 행이 하나일 때
+그 행의 원본 `file_path`를 함께 사용한다. 과거 자설비 목록에서 `desc` 대신 `recipe_id`가 저장된
+활성 이력도 나머지 식별값으로 연결하며, 원본 행 또는 복원 경로 후보가 여러 개면 임의로 선택하지 않는다.
 화면의 클릭이력 디버깅 표는 제공하지 않으며, 실패 응답은 안전한 오류 code와 문의용 request ID만 유지한다.
 ## 9. Self Equipment 요청 흐름
 

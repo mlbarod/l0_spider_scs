@@ -202,15 +202,15 @@ SKIP 상태인 차트는 상단에 `이상감지 SKIP 건` 배지와 하단에 `
 
 SDWT 필터의 마지막에는 가상 항목인 `SKIP LIST`가 표시된다. 일반 SDWT 조회에서는 SKIP 등록 시각(`exec_date`)부터 72시간 동안 `latest_date`를 제외한 ERD 경로의 모든 식별값(`line_id`, `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`)이 같은 행을 동일 이상건으로 처리한다. 과거 빈 `ver` 행은 나머지 식별값을 같은 방식으로 비교해 기존 SKIP 효력을 유지한다. 해당 행은 차트 목록뿐 아니라 STEP, `eqp_ch`, `sensor`, `ch_step`의 일반 이상건수 집계에서도 제외한다. 정확히 72시간이 지나면 일반 이상건과 SKIP 상태로부터 해제되고 `SKIP LIST`에서도 제거된다. 이 만료 처리는 조회 결과에서만 제외하는 UI 동작이며 `pass_history` 행은 삭제하지 않는다. 만료된 동일 식별 건을 다시 SKIP하면 기존 DB 행의 `knox_id`, `exec_date`, `comment`를 갱신하여 새로운 72시간 SKIP 기간을 시작한다.
 
-`SKIP LIST`를 선택하면 ERD 원본 목록 대신 선택 Line의 `pass_history`를 조회한다. 이후 Sensor Grade → STEP(`desc`) → `eqp_ch`(`eqp`) → `sensor` → `ch_step`(`step`) 필터와 차트 목록은 모두 해당 테이블의 구분값으로 생성한다. 최종 차트 경로는 다음 규칙으로 복원하며, SKIP 해제 시 목록을 다시 조회하여 해제된 차트를 즉시 제거한다.
+`SKIP LIST`를 선택하면 ERD 원본 목록 대신 선택 Line의 `pass_history`를 조회한다. 이후 Sensor Grade → STEP(`desc`) → `eqp_ch`(`eqp`) → `sensor` → `ch_step`(`step`) 필터와 차트 목록은 모두 해당 테이블의 구분값으로 생성한다. 차트는 이력 식별값과 일치하는 현재 분임조별 `path_xian` 행이 하나이면 해당 행의 원본 `file_path`를 사용한다. 원본 행을 찾지 못한 경우에만 다음 규칙으로 경로를 복원하며, SKIP 해제 시 목록을 다시 조회하여 해제된 차트를 즉시 제거한다.
 
 ```text
 /appdata/abnormal_trend/pic/erd/{update_date}/{sdwt}/{desc}/{ver}/{recipe_id}/{priority}/{sensor}/{step}/{eqp}.png
 ```
 
-과거 자설비 목록에서 `desc` 대신 `recipe_id`가 저장된 활성 SKIP 이력은 위 기본 경로가 없고
-나머지 식별값과 일치하는 실제 `desc` 경로가 하나일 때만 해당 경로로 복원한다. 후보가 여러 개면
-임의의 차트를 표시하지 않는다.
+과거 자설비 목록에서 `desc` 대신 `recipe_id`가 저장된 활성 SKIP 이력도 나머지 식별값과 일치하는
+`path_xian` 원본 행이 하나일 때 연결한다. 원본 행과 복원 경로 후보가 여러 개면 임의의 차트를
+표시하지 않는다.
 
 ### `hit_history`
 
