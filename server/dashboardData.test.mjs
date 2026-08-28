@@ -15,7 +15,7 @@ import {
 import { formatLineDisplayName } from "../src/features/fdc-trend/utils/lineDisplay.mjs"
 
 test("대시보드 참조 컬럼 계약을 유지한다", () => {
-  assert.deepEqual(DASHBOARD_STATS_COLUMNS, ["exec_date", "recipe_id", "priority", "ng", "total"])
+  assert.deepEqual(DASHBOARD_STATS_COLUMNS, ["exec_date", "line_id", "recipe_id", "priority", "ng", "total"])
   assert.deepEqual(DASHBOARD_DETAIL_COLUMNS, ["sdwt", "desc", "recipe_id", "priority", "sensor", "eqp"])
   assert.deepEqual(LINE_ANOMALY_ID_COLUMNS, ["desc", "recipe_id", "priority", "sensor", "eqp"])
 })

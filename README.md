@@ -101,7 +101,7 @@ SPIDER 메인 하단의 라인별 이상 현황 대시보드는
 
 | 구분 | 경로 | 참조 컬럼 |
 | --- | --- | --- |
-| 전체 통계 | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | `exec_date`, `recipe_id`, `priority`, `ng`, `total` |
+| 전체 통계 | `/appdata/abnormal_trend/pic/stats/{latest_date}_spider_step_stats.parquets` | `exec_date`, `line_id`, `recipe_id`, `priority`, `ng`, `total` |
 | 세부 통계 | `/appdata/abnormal_trend/pic/path/{latest_date}` | `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` |
 
 라인별 이상 1건은 세부 통계의 `sdwt`를 `/appdata/l0_spider_scs/mapping_config.json`의

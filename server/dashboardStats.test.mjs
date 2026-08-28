@@ -27,20 +27,20 @@ test("stats 파일명에서 유효한 latest_date만 선택한다", () => {
   })
 })
 
-test("stats의 recipe_id를 l0_spider 대시보드 구조로 집계한다", () => {
+test("stats의 line_id를 l0_spider 대시보드 구조로 집계한다", () => {
   const latestRows = [
-    { recipe_id: "TL-1", priority: "TL", total: 100 },
-    { recipe_id: "R1", priority: "A", ng: 2 },
-    { recipe_id: "R1", priority: "B", ng: 3 },
-    { recipe_id: "R2", priority: "D", ng: 4 },
+    { line_id: "P1", recipe_id: "TL-1", priority: "TL", total: 100 },
+    { line_id: "P1", recipe_id: "R1", priority: "A", ng: 2 },
+    { line_id: "P1", recipe_id: "R2", priority: "B", ng: 3 },
+    { line_id: "P2", recipe_id: "R1", priority: "D", ng: 4 },
   ]
   const payload = buildStatsLineDashboard([
     { dateTime: "2026-08-28 14:30:00", rows: latestRows },
   ], {
     dateTime: "2026-08-27 14:30:00",
     rows: [
-      { recipe_id: "R1", priority: "A", ng: 1 },
-      { recipe_id: "R2", priority: "D", ng: 6 },
+      { line_id: "P1", recipe_id: "R1", priority: "A", ng: 1 },
+      { line_id: "P2", recipe_id: "R1", priority: "D", ng: 6 },
     ],
   }, {
     startDate: "2026-08-28",
@@ -58,7 +58,7 @@ test("stats의 recipe_id를 l0_spider 대시보드 구조로 집계한다", () =
     latestDate: "2026-08-28",
     latestDateTime: "2026-08-28 14:30:00",
     latestDateCount: 9,
-    topLine: "R1",
+    topLine: "P1",
     topLineCount: 5,
     previousDate: "2026-08-27",
     previousDateTime: "2026-08-27 14:30:00",
@@ -75,8 +75,8 @@ test("stats의 recipe_id를 l0_spider 대시보드 구조로 집계한다", () =
     previousDateCount: row.previousDateCount,
     changeCount: row.changeCount,
   })), [
-    { lineId: "R1", totalCount: 5, previousDateCount: 1, changeCount: 4 },
-    { lineId: "R2", totalCount: 4, previousDateCount: 6, changeCount: -2 },
+    { lineId: "P1", totalCount: 5, previousDateCount: 1, changeCount: 4 },
+    { lineId: "P2", totalCount: 4, previousDateCount: 6, changeCount: -2 },
   ])
 })
 

@@ -26,6 +26,7 @@
   "columns": {
     "stats": [
       "exec_date",
+      "line_id",
       "recipe_id",
       "priority",
       "ng",

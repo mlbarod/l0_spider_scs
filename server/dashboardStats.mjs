@@ -135,21 +135,21 @@ export function buildDashboardStatsMetrics(statsRows) {
 }
 
 function aggregateStatsRows(rows) {
-  const countsByRecipe = new Map()
-  const gradeCountsByRecipe = new Map()
+  const countsByLine = new Map()
+  const gradeCountsByLine = new Map()
 
   rows.forEach((row) => {
-    const recipeId = normalizeText(row.recipe_id)
+    const lineId = normalizeText(row.line_id)
     const priority = normalizePriority(row.priority)
-    if (!recipeId || !["A", "B", "A/B", "D", "N", "M"].includes(priority)) return
+    if (!lineId || !["A", "B", "A/B", "D", "N", "M"].includes(priority)) return
     const count = normalizeNumber(row.ng)
-    countsByRecipe.set(recipeId, (countsByRecipe.get(recipeId) ?? 0) + count)
-    const gradeCounts = gradeCountsByRecipe.get(recipeId) ?? new Map()
+    countsByLine.set(lineId, (countsByLine.get(lineId) ?? 0) + count)
+    const gradeCounts = gradeCountsByLine.get(lineId) ?? new Map()
     gradeCounts.set(priority, (gradeCounts.get(priority) ?? 0) + count)
-    gradeCountsByRecipe.set(recipeId, gradeCounts)
+    gradeCountsByLine.set(lineId, gradeCounts)
   })
 
-  return { countsByRecipe, gradeCountsByRecipe }
+  return { countsByLine, gradeCountsByLine }
 }
 
 export function buildStatsLineDashboard(datedRows, previousRows, filters) {
@@ -158,48 +158,48 @@ export function buildStatsLineDashboard(datedRows, previousRows, filters) {
     { dateTime, ...aggregateStatsRows(rows) },
   ]))
   const previousAggregate = previousRows ? aggregateStatsRows(previousRows.rows) : null
-  const availableRecipes = Array.from(new Set(
+  const availableLines = Array.from(new Set(
     Array.from(aggregatesByDate.values()).flatMap((aggregate) => (
-      Array.from(aggregate.countsByRecipe.keys())
+      Array.from(aggregate.countsByLine.keys())
     )),
   )).sort(compareText)
-  const requestedRecipes = Array.from(new Set((filters.lines ?? []).map(normalizeText).filter(Boolean)))
-  if (requestedRecipes.some((recipeId) => !availableRecipes.includes(recipeId))) {
-    throw createStatsError("DASHBOARD_STATS_INVALID_FILTER", "조회할 RECIPE_ID가 통계 범위에 없습니다.")
+  const requestedLines = Array.from(new Set((filters.lines ?? []).map(normalizeText).filter(Boolean)))
+  if (requestedLines.some((lineId) => !availableLines.includes(lineId))) {
+    throw createStatsError("DASHBOARD_STATS_INVALID_FILTER", "조회할 line_id가 통계 범위에 없습니다.")
   }
-  const selectedRecipes = requestedRecipes.length ? requestedRecipes : availableRecipes
+  const selectedLines = requestedLines.length ? requestedLines : availableLines
   const dates = enumerateDates(filters.startDate, filters.endDate)
   const latestDateTime = datedRows.map((item) => item.dateTime).sort().at(-1) ?? null
   const latestDate = latestDateTime?.slice(0, 10) ?? null
   const previousDateTime = previousRows?.dateTime ?? null
   const previousDate = previousDateTime?.slice(0, 10) ?? null
-  const getCount = (date, recipeId) => aggregatesByDate.get(date)?.countsByRecipe.get(recipeId) ?? 0
-  const getGradeCount = (date, recipeId, priorities) => priorities.reduce((sum, priority) => (
-    sum + (aggregatesByDate.get(date)?.gradeCountsByRecipe.get(recipeId)?.get(priority) ?? 0)
+  const getCount = (date, lineId) => aggregatesByDate.get(date)?.countsByLine.get(lineId) ?? 0
+  const getGradeCount = (date, lineId, priorities) => priorities.reduce((sum, priority) => (
+    sum + (aggregatesByDate.get(date)?.gradeCountsByLine.get(lineId)?.get(priority) ?? 0)
   ), 0)
 
-  const lineSummary = selectedRecipes.map((recipeId) => {
-    const totalCount = dates.reduce((sum, date) => sum + getCount(date, recipeId), 0)
-    const latestDateCount = latestDate ? getCount(latestDate, recipeId) : 0
+  const lineSummary = selectedLines.map((lineId) => {
+    const totalCount = dates.reduce((sum, date) => sum + getCount(date, lineId), 0)
+    const latestDateCount = latestDate ? getCount(latestDate, lineId) : 0
     const previousDateCount = previousAggregate
-      ? previousAggregate.countsByRecipe.get(recipeId) ?? 0
+      ? previousAggregate.countsByLine.get(lineId) ?? 0
       : null
     const sensorGrades = Array.from(new Set(datedRows.flatMap(({ rows }) => (
       rows
-        .filter((row) => normalizeText(row.recipe_id) === recipeId)
+        .filter((row) => normalizeText(row.line_id) === lineId)
         .map((row) => normalizePriority(row.priority))
         .filter((priority) => ["A", "B", "A/B", "D", "N", "M"].includes(priority))
     )))).sort(compareText)
     return {
-      lineId: recipeId,
+      lineId,
       totalCount,
       abGradeCount: dates.reduce((sum, date) => (
-        sum + getGradeCount(date, recipeId, ["A", "B", "A/B"])
+        sum + getGradeCount(date, lineId, ["A", "B", "A/B"])
       ), 0),
       latestDateCount,
       previousDateCount,
       changeCount: previousDateCount === null ? null : latestDateCount - previousDateCount,
-      lastAbnormalDate: [...dates].reverse().find((date) => getCount(date, recipeId) > 0) ?? null,
+      lastAbnormalDate: [...dates].reverse().find((date) => getCount(date, lineId) > 0) ?? null,
       ratio: 0,
       sdwts: [],
       sensorGrades,
@@ -218,8 +218,8 @@ export function buildStatsLineDashboard(datedRows, previousRows, filters) {
     ? lineSummary.reduce((sum, row) => sum + row.previousDateCount, 0)
     : null
   const sumGradeCount = (priorities) => dates.reduce((dateSum, date) => (
-    dateSum + selectedRecipes.reduce((recipeSum, recipeId) => (
-      recipeSum + getGradeCount(date, recipeId, priorities)
+    dateSum + selectedLines.reduce((lineSum, lineId) => (
+      lineSum + getGradeCount(date, lineId, priorities)
     ), 0)
   ), 0)
   const latestRows = latestDate
@@ -231,10 +231,10 @@ export function buildStatsLineDashboard(datedRows, previousRows, filters) {
     filters: {
       startDate: filters.startDate,
       endDate: filters.endDate,
-      lines: requestedRecipes,
+      lines: requestedLines,
     },
     options: {
-      lines: availableRecipes,
+      lines: availableLines,
       minDate: filters.minDate,
       maxDate: filters.maxDate,
       defaultStartDate: filters.defaultStartDate,
@@ -273,7 +273,7 @@ export function buildStatsLineDashboard(datedRows, previousRows, filters) {
   assertDashboardIntegrity(payload, {
     startDate: filters.startDate,
     endDate: filters.endDate,
-    lines: requestedRecipes,
+    lines: requestedLines,
   })
   return payload
 }

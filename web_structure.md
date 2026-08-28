@@ -512,7 +512,7 @@ API 경로의 최종 등록 위치는 [`server.mjs`](server.mjs), 브라우저 �
 | 위 common 디렉터리의 `{eqp}.png` | 공통부 카드 이미지 | `commonAnomalyData.mjs` | 공통부 이미지 카드 |
 | `pic/erd_commonality/{date time}/.../img.png` | 동일성 결과 이미지 | `commonalityData.mjs` | 동일성 이미지 카드 |
 | `pic/path/{date time}` | 대시보드 상세 `sdwt`, `desc`, `recipe_id`, `priority`, `sensor`, `eqp` | `dashboardData.mjs` | 라인/기간/Grade 집계 |
-| `pic/stats/{date time}_spider_step_stats.parquets` | `exec_date`, `recipe_id`, `priority`, `ng`, `total` | `dashboardData.mjs` | 최신 KPI |
+| `pic/stats/{date time}_spider_step_stats.parquets` | `exec_date`, `line_id`, `recipe_id`, `priority`, `ng`, `total` | `dashboardData.mjs`, `dashboardStats.mjs` | 최신 KPI와 Line별 집계 |
 | `pic/stats/{date time}_spider_step_stats_except_v.parquets` | V 제외 통계 템플릿 | 현재 운영 handler 직접 사용 없음 | prototype/reference |
 | `docs/user-manual/USER_MANUAL.md` 및 images | 사용자 문서 원본 | Vite raw import | `/manual` |
 | `public/mailing-report.html` | Jinja 호환 Mailing HTML 템플릿 | 이 저장소 런타임이 직접 렌더링하지 않음 | 외부 메일 발송기 |
