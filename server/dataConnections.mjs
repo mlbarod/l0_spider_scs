@@ -8,6 +8,7 @@ const DISABLED_ERROR_MESSAGE = "SCS ETCH SPIDER 데이터 연결을 준비 중�
 const DEFAULT_DB_INFO_PATH = "/appdata/l0_spider_scs/db_info.pkl"
 const DASHBOARD_READ_METHODS = new Map([
   ["/api/dashboard-data", new Set(["GET", "HEAD"])],
+  ["/api/dashboard-stats", new Set(["GET", "HEAD"])],
   ["/api/dashboard-latest-date", new Set(["GET", "HEAD"])],
 ])
 const SELF_EQUIPMENT_READ_METHODS = new Map([

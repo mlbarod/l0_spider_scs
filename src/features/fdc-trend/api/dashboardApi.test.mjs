@@ -2,7 +2,7 @@ import assert from "node:assert/strict"
 import { readFileSync } from "node:fs"
 import test from "node:test"
 
-import { fetchDashboardLatestDate, fetchDashboardSummary } from "./dashboardApi.js"
+import { fetchDashboardLatestDate, fetchDashboardStats, fetchDashboardSummary } from "./dashboardApi.js"
 
 const successFixture = JSON.parse(readFileSync(
   new URL("../../../../harness/fixtures/dashboard/dashboard-success.json", import.meta.url),
@@ -43,6 +43,26 @@ test("Dashboard latest date client returns the filename text", async () => {
     const payload = await fetchDashboardLatestDate()
     assert.equal(payload.latestDate, "2026-08-27 14:25:30")
     assert.equal(getRequestedUrl(), "/api/dashboard-latest-date")
+  })
+})
+
+test("Dashboard stats client returns the seven metrics", async () => {
+  const response = {
+    ok: true,
+    latestDate: "2026-08-28 14:30:00",
+    metrics: {
+      monitoringSensorTotal: 100,
+      detectedPpidCount: 6,
+      totalAnomalyCount: 21,
+      abGradeCount: 5,
+      dGradeCount: 4,
+      nGradeCount: 7,
+      mGradeCount: 5,
+    },
+  }
+  await withMockFetch(response, async (getRequestedUrl) => {
+    assert.deepEqual(await fetchDashboardStats(), response)
+    assert.equal(getRequestedUrl(), "/api/dashboard-stats")
   })
 })
 

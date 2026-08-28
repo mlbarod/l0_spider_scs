@@ -202,6 +202,8 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
   for (const [method, pathname] of [
     ["GET", "/api/dashboard-data"],
     ["HEAD", "/api/dashboard-data"],
+    ["GET", "/api/dashboard-stats"],
+    ["HEAD", "/api/dashboard-stats"],
     ["GET", "/api/dashboard-latest-date"],
     ["HEAD", "/api/dashboard-latest-date"],
     ["GET", "/api/mapping-config"],
@@ -217,6 +219,7 @@ test("기본 실행은 Dashboard와 자설비 read API를 열고 다른 App은 �
 
   for (const [method, pathname] of [
     ["POST", "/api/dashboard-data"],
+    ["POST", "/api/dashboard-stats"],
     ["POST", "/api/dashboard-latest-date"],
     ["GET", "/api/commonality-data"],
     ["GET", "/api/erd-file"],

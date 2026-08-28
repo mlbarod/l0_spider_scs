@@ -5,9 +5,8 @@ import { Link } from "react-router-dom"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
-import { fetchDashboardLatestDate } from "../api/dashboardApi"
-import { getDashboardLatestDate } from "../api/dashboardLatestDate.mjs"
-import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
+import { fetchDashboardStats } from "../api/dashboardApi"
+import { SpiderStatsDashboard } from "../components/SpiderStatsDashboard"
 import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
 
 const spiderApps = [
@@ -178,12 +177,12 @@ function SpiderAppCard({ app, animationIndex = 0 }) {
 
 function LatestDataCard() {
   const dashboardQuery = useQuery({
-    queryKey: ["spider-dashboard-latest-date"],
-    queryFn: ({ signal }) => fetchDashboardLatestDate({ signal }),
+    queryKey: ["spider-dashboard-stats"],
+    queryFn: ({ signal }) => fetchDashboardStats({ signal }),
     staleTime: 60 * 1000,
     retry: false,
   })
-  const latestDate = getDashboardLatestDate(dashboardQuery.data)
+  const latestDate = dashboardQuery.data?.latestDate ?? ""
   const displayDateTime = latestDate || (dashboardQuery.isPending ? "조회 중" : "확인 불가")
 
   return (
@@ -274,7 +273,7 @@ export function L0SpiderHomePage() {
               ))}
             </div>
           </section>
-          <LineAnomalyDashboard />
+          <SpiderStatsDashboard />
         </div>
       </main>
     </div>

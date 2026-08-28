@@ -11,6 +11,7 @@ import {
   handleDashboardDataRequest,
   handleDashboardLatestDateRequest,
 } from "./server/dashboardData.mjs"
+import { handleDashboardStatsRequest } from "./server/dashboardStats.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
 import { handleClickedCategoryHistoryRequest } from "./server/clickedCategoryHistory.mjs"
 import {
@@ -140,6 +141,13 @@ const server = createServer((req, res) => {
 
   if (url.pathname === "/api/dashboard-data") {
     handleDashboardDataRequest(req, res).catch((error) => {
+      sendJson(res, 500, { ok: false, error: error.message })
+    })
+    return
+  }
+
+  if (url.pathname === "/api/dashboard-stats") {
+    handleDashboardStatsRequest(req, res).catch((error) => {
       sendJson(res, 500, { ok: false, error: error.message })
     })
     return
