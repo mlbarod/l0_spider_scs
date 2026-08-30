@@ -236,6 +236,24 @@ sequenceDiagram
 | `DS-DB-HIST` | DB | `pass_history`, `hit_history`, `clicked_category_history` | history helper | Self와 다른 App의 SKIP·HIT·click | 읽기·쓰기 | L0 Spider 쓰기 | 코드 `Confirmed`; 운영 DB `Unknown` |
 
 통계 파일과 공통성 이미지 경로는 저장소에 존재하지만 현재 Self Equipment 요청 흐름의 직접 원천으로 확인되지 않았다.
+
+### 13.1 Data References
+
+아래 표는 다른 서버에 별도 서비스할 자설비 이상감지 App의 신규 데이터 연결 기준이다.
+실제 파일 연결과 운영 데이터 검증은 아직 수행하지 않았다.
+
+| 구분 | 참조 파일 | 참조 경로 | 참조 컬럼/키 |
+| --- | --- | --- | --- |
+| `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
+| 최신 자설비 index | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `ver` 포함; 현재 일반 자설비 필터에서는 사용하지 않음 |
+| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev` |
+| 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | 선택적 `ver`가 있으면 정확히 일치하는 row 우선·단일값 file-scope fallback, 없으면 선택 경로에 한정된 파일로 처리; `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 hover 컬럼 |
+| 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | 위와 같은 선택적 `ver` 규칙, `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 hover 컬럼 |
+| EQP 변경점 이력 | `{eqp}.parquet` | 선택한 `data.parquet`와 같은 디렉터리의 `{eqp}.parquet` | `date` (세로 점선 위치), `work_type` (점선 라벨), `ctttm_url`, `desc` |
+
+새 데이터 파일이나 참조 컬럼/키가 추가되면 이 표와
+`src/config/spiderDataPaths.mjs`를 함께 업데이트한다.
+
 ## 14. 데이터 경로 패턴
 
 | 경로 또는 자원 ID | 코드의 경로 패턴 | 용도 | 경로 변수 | 누락 처리 | 상태 |
