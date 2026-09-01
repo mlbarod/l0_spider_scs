@@ -36,12 +36,22 @@ export const TEAM_ERD_COLUMNS = Object.freeze([
   "file_path",
   "line_rev",
 ])
+export const EQP_REFERENCE_COLUMNS = Object.freeze([
+  "line_no",
+  "fdc_model",
+  "main",
+  "disp_name",
+  "sdwt_prod",
+  "prc_group",
+])
 
 const PIC_FILE_ROOT = "/appdata/abnormal_trend/pic"
 const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd_xian"
 const ERD_BACKUP_ROOT = "/appdata/abnormal_trend/pic/backup"
 const SELF_EQUIPMENT_PATH_ROOT = process.env.SCS_SELF_EQUIPMENT_PATH_ROOT
   ?? SPIDER_DATA_PATH_TEMPLATES.selfEquipmentIndexRoot
+const EQP_REFERENCE_PATH = process.env.SCS_EQP_REFERENCE_PATH
+  ?? SPIDER_DATA_PATH_TEMPLATES.eqpReference
 const SELF_EQUIPMENT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/
 const ALL_EQP_CHANNELS = "ALL"
 const ALL_SENSORS = "ALL"
@@ -107,11 +117,32 @@ export function normalizeTeamErdRow(row, { line, pathSdwt, displaySdwt }) {
     sensor: normalizeTextValue(row.sensor),
     step: normalizeTextValue(row.step),
     eqp: normalizeTextValue(row.eqp),
+    prc_group: normalizeTextValue(row.prc_group),
     file_path: normalizeSelfEquipmentFilePath(row.file_path),
     line_rev: normalizeTextValue(line),
     path_sdwt: normalizeTextValue(pathSdwt),
     latest_date: getSelfEquipmentLatestDateFromFilePath(row.file_path),
   }
+}
+
+export function getTeamErdEqpJoinKey(value) {
+  return normalizeTextValue(value).replace(/\.png$/i, "").split("-", 1)[0]
+}
+
+export function joinTeamErdRowsWithEqpReference(rows, referenceRows) {
+  const prcGroupByEqp = new Map()
+  referenceRows.forEach((row) => {
+    const eqp = normalizeTextValue(row.main)
+    const prcGroup = normalizeTextValue(row.prc_group)
+    if (eqp && prcGroup && !prcGroupByEqp.has(eqp)) {
+      prcGroupByEqp.set(eqp, prcGroup)
+    }
+  })
+
+  return rows.map((row) => ({
+    ...row,
+    prc_group: prcGroupByEqp.get(getTeamErdEqpJoinKey(row.eqp)) ?? "",
+  }))
 }
 
 function normalizeSkipEqp(value) {
@@ -209,6 +240,31 @@ export async function readTeamErdRows({ line, pathSdwt }) {
     column === "file_path"
       ? normalizeSelfEquipmentFilePath(row[column])
       : normalizeTextValue(row[column]),
+  ])))
+  setLruEntry(
+    parquetCache,
+    filePath,
+    { mtimeMs: fileStat.mtimeMs, size: fileStat.size, rows },
+    PARQUET_CACHE_MAX_ENTRIES,
+  )
+  return { filePath, rows }
+}
+
+export async function readEqpReferenceRows(filePath = EQP_REFERENCE_PATH) {
+  const fileStat = statSync(filePath)
+  const cached = getLruEntry(parquetCache, filePath)
+  if (cached?.mtimeMs === fileStat.mtimeMs && cached?.size === fileStat.size) {
+    return { filePath, rows: cached.rows }
+  }
+
+  const file = await asyncBufferFromFile(filePath)
+  const rows = (await parquetReadObjects({
+    file,
+    columns: EQP_REFERENCE_COLUMNS,
+    compressors,
+  })).map((row) => Object.fromEntries(EQP_REFERENCE_COLUMNS.map((column) => [
+    column,
+    normalizeTextValue(row[column]),
   ])))
   setLruEntry(
     parquetCache,
@@ -340,10 +396,20 @@ export function buildSelfEquipmentPayload(rows, filters) {
     rowCount: recipeRows.length,
     equipmentCount: uniqueCount(recipeRows, "eqp"),
   })), "desc")
-  const selectedDesc = steps.some((item) => item.desc === filters.desc)
+  const prcGroups = sortByLabel(aggregateBy(baseRows, "prc_group", (prcGroup, prcGroupRows) => ({
+    prcGroup,
+    rowCount: prcGroupRows.length,
+    equipmentCount: uniqueCount(prcGroupRows, "eqp"),
+  })), "prcGroup")
+  const selectedPrcGroup = prcGroups.some((item) => item.prcGroup === filters.prcGroup)
+    ? filters.prcGroup
+    : ""
+  const selectedDesc = !selectedPrcGroup && steps.some((item) => item.desc === filters.desc)
     ? filters.desc
     : ""
-  const stepRows = selectedDesc
+  const stepRows = selectedPrcGroup
+    ? baseRows.filter((row) => row.prc_group === selectedPrcGroup)
+    : selectedDesc
     ? baseRows.filter((row) => row.recipe_id === selectedDesc)
     : []
   const eqpChannels = sortByRowCount(aggregateBy(stepRows, "eqp", (eqpCh, eqpChRows) => ({
@@ -399,6 +465,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
       sdwt: filters.sdwt,
       priorities: filters.priorities,
       desc: selectedDesc,
+      prcGroup: selectedPrcGroup,
       eqpCh: selectedEqpCh,
       sensor: selectedSensor,
       chStep: selectedChStep,
@@ -408,6 +475,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
       chartRows: chartRows.length,
     },
     steps,
+    prcGroups,
     eqpChannels,
     sensors,
     chSteps,
@@ -422,6 +490,7 @@ function readFilters(url) {
     sdwt: url.searchParams.get("sdwt")?.trim() ?? "",
     priorities: url.searchParams.getAll("priority").map((value) => value.trim()).filter(Boolean),
     desc: url.searchParams.get("desc")?.trim() ?? "",
+    prcGroup: url.searchParams.get("prcGroup")?.trim() ?? "",
     eqpCh: url.searchParams.get("eqpCh")?.trim() ?? "",
     sensor: url.searchParams.get("sensor")?.trim() ?? "",
     chStep: url.searchParams.get("chStep")?.trim() ?? "",
@@ -442,8 +511,15 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
     }
 
     const dbConnectionsEnabled = areDbConnectionsEnabled()
-    const [{ filePath, rows: sourceRows }, mapping, sensorExclusionConfig, passRecords] = await Promise.all([
+    const [
+      { filePath, rows: sourceRows },
+      { filePath: referencePath, rows: referenceRows },
+      mapping,
+      sensorExclusionConfig,
+      passRecords,
+    ] = await Promise.all([
       readTeamErdRows({ line: filters.line, pathSdwt: filters.pathSdwt }),
+      readEqpReferenceRows(),
       readLineMapping(),
       readSensorExclusionConfig(),
       readOptionalPassHistoryRecords(
@@ -451,7 +527,8 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
         { dbConnectionsEnabled },
       ),
     ])
-    const rows = scopeSelfEquipmentRows(sourceRows, { ...filters, mapping })
+    const joinedRows = joinTeamErdRowsWithEqpReference(sourceRows, referenceRows)
+    const rows = scopeSelfEquipmentRows(joinedRows, { ...filters, mapping })
     const trustedSdwt = normalizeTextValue(mapping.sdwt_mapping[filters.pathSdwt] ?? filters.pathSdwt)
     const visibleRows = excludeRecentlySkippedRows(rows, passRecords)
     const sensorExclusion = excludeSensorRows(
@@ -471,6 +548,7 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
         excludedSensorRows: sensorExclusion.excludedCount,
       },
       sourcePath: filePath,
+      referencePath,
     })
   } catch {
     sendJson(res, 500, createSafeApiError({

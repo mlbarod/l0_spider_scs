@@ -1621,7 +1621,7 @@ export function FdcTrendPage() {
           pathSdwt: activeTeam,
           sdwt: activeTeamLabel,
           priorities,
-          desc: selectedDesc,
+          prcGroup: selectedDesc,
           eqpCh: selectedEqpCh,
           sensor: selectedSensor,
           chStep: selectedChStep,
@@ -1640,11 +1640,15 @@ export function FdcTrendPage() {
       return sameFiltersExceptChStep ? previousData : undefined
     },
   })
-  const steps = dataQuery.data?.steps ?? []
+  const steps = isSkipList
+    ? dataQuery.data?.steps ?? []
+    : dataQuery.data?.prcGroups ?? []
   const eqpChannels = dataQuery.data?.eqpChannels ?? []
   const sensors = dataQuery.data?.sensors ?? []
   const chSteps = dataQuery.data?.chSteps ?? []
-  const activeDesc = dataQuery.data?.filters?.desc ?? ""
+  const activeDesc = isSkipList
+    ? dataQuery.data?.filters?.desc ?? ""
+    : dataQuery.data?.filters?.prcGroup ?? ""
   const activeEqpCh = dataQuery.data?.filters?.eqpCh ?? ""
   const activeSensor = dataQuery.data?.filters?.sensor ?? ""
   const activeChStep = dataQuery.data?.filters?.chStep ?? ""
@@ -1743,7 +1747,7 @@ export function FdcTrendPage() {
         pathSdwt: activeTeam,
         sdwt: activeTeamLabel,
         priorities,
-        desc: activeDesc,
+        prcGroup: activeDesc,
         eqpCh: group.rows[0]?.eqp ?? group.eqp,
         sensor,
       })
@@ -1779,8 +1783,8 @@ export function FdcTrendPage() {
   )
   const filteredSteps = filterItems(
     steps.map((item) => ({
-      value: item.desc,
-      label: item.desc,
+      value: isSkipList ? item.desc : item.prcGroup,
+      label: isSkipList ? item.desc : item.prcGroup,
       meta: `${item.rowCount.toLocaleString()}건 · ${item.equipmentCount.toLocaleString()} eqp`,
     })),
     queries.step,
@@ -1884,7 +1888,7 @@ export function FdcTrendPage() {
           pathSdwt: activeTeam,
           sdwt: activeTeamLabel,
           priorities,
-          desc: selectedDesc,
+          prcGroup: selectedDesc,
           eqpCh: selectedEqpCh,
           sensor: selectedSensor,
           chStep: nextChStep,
@@ -1925,7 +1929,7 @@ export function FdcTrendPage() {
               <h1 className="text-lg font-semibold tracking-tight">자설비 이상감지</h1>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              라인, 분임조, 센서 등급과 RECIPE_ID, eqp_ch, sensor, ch_step을 선택해 ERD 결과를 조회합니다.
+              라인, 분임조, 센서 등급과 PRC_Group, eqp_ch, sensor, ch_step을 선택해 ERD 결과를 조회합니다.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
@@ -2046,10 +2050,14 @@ export function FdcTrendPage() {
               ))}
             </FilterCard>
             <FilterCard
-              title="RECIPE_ID"
+              title={isSkipList ? "RECIPE_ID" : "PRC_Group"}
               badge={steps.length ? `${steps.length}` : null}
               disabled={!activeTeam || dataQuery.isLoading}
-              placeholder={dataQuery.isLoading ? "로딩 중…" : "선택 조건에 해당하는 RECIPE_ID가 없습니다."}
+              placeholder={dataQuery.isLoading
+                ? "로딩 중…"
+                : isSkipList
+                ? "선택 조건에 해당하는 RECIPE_ID가 없습니다."
+                : "선택 조건에 해당하는 PRC_Group이 없습니다."}
               isActive={Boolean(activeDesc)}
               isLoading={dataQuery.isFetching && !selectedDesc}
               query={queries.step}
@@ -2078,7 +2086,9 @@ export function FdcTrendPage() {
               title="eqp_ch"
               badge={eqpChannels.length ? `${eqpChannels.length}` : null}
               disabled={!activeDesc || dataQuery.isLoading}
-              placeholder={activeDesc ? "선택 RECIPE_ID에 해당하는 eqp_ch가 없습니다." : "RECIPE_ID를 먼저 선택하세요"}
+              placeholder={activeDesc
+                ? `선택 ${isSkipList ? "RECIPE_ID" : "PRC_Group"}에 해당하는 eqp_ch가 없습니다.`
+                : `${isSkipList ? "RECIPE_ID" : "PRC_Group"}을 먼저 선택하세요`}
               isActive={Boolean(activeEqpCh)}
               isLoading={dataQuery.isFetching && Boolean(activeDesc) && !selectedEqpCh}
               query={queries.eqpCh}
@@ -2222,7 +2232,7 @@ export function FdcTrendPage() {
           ) : null}
           {!chStepIsSelected ? (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-              RECIPE_ID, eqp_ch, sensor와 ch_step을 선택하면 scatter chart가 표시됩니다.
+              {isSkipList ? "RECIPE_ID" : "PRC_Group"}, eqp_ch, sensor와 ch_step을 선택하면 scatter chart가 표시됩니다.
             </div>
           ) : chartGroups.length ? (
             <div className="grid min-w-0 gap-5">

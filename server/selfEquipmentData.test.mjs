@@ -2,15 +2,18 @@ import assert from "node:assert/strict"
 import test from "node:test"
 
 import {
+  EQP_REFERENCE_COLUMNS,
   SKIP_EXCLUSION_DURATION_MS,
   TEAM_ERD_COLUMNS,
   authorizeSelfEquipmentDataPath,
   buildSelfEquipmentPayload,
   excludeRecentlySkippedRows,
   getSelfEquipmentLatestDateFromFilePath,
+  getTeamErdEqpJoinKey,
   handleErdScatterDataRequest,
   isDirectSkipListErdPathAllowed,
   isSelfEquipmentDataPathAllowed,
+  joinTeamErdRowsWithEqpReference,
   normalizeSelfEquipmentFilePath,
   normalizeTeamErdRow,
   readOptionalPassHistoryRecords,
@@ -173,6 +176,31 @@ test("분임조별 path_xian 테이블은 ver를 포함한 원본 컬럼을 proj
   ])
 })
 
+test("eqp 기준정보는 운영 parquet의 지정 컬럼만 projection한다", () => {
+  assert.deepEqual(EQP_REFERENCE_COLUMNS, [
+    "line_no",
+    "fdc_model",
+    "main",
+    "disp_name",
+    "sdwt_prod",
+    "prc_group",
+  ])
+})
+
+test("경로 테이블 eqp의 첫 하이픈 앞 값을 eqp 기준정보 main과 결합한다", () => {
+  const rows = joinTeamErdRowsWithEqpReference([
+    createRow({ eqp: "EQP01-CH1.png" }),
+    createRow({ eqp: "EQP02-CH2.png" }),
+    createRow({ eqp: "UNKNOWN-CH1.png" }),
+  ], [
+    { main: "EQP01", prc_group: "ETCH" },
+    { main: "EQP02", prc_group: "CLEAN" },
+  ])
+
+  assert.equal(getTeamErdEqpJoinKey(" EQP01-CH1.png "), "EQP01")
+  assert.deepEqual(rows.map((row) => row.prc_group), ["ETCH", "CLEAN", ""])
+})
+
 test("분임조별 path_xian row는 ver를 경로 추정 없이 원본 컬럼에서 정규화한다", () => {
   assert.deepEqual(normalizeTeamErdRow({
     sdwt: " SDWT-1 ",
@@ -197,6 +225,7 @@ test("분임조별 path_xian row는 ver를 경로 추정 없이 원본 컬럼에
     sensor: "TEMP",
     step: "10@MAIN",
     eqp: "EQP-1",
+    prc_group: "",
     file_path: "/appdata/abnormal_trend/pic/erd/2026-08-27/SDWT-1/ETCH/V7/RECIPE-1/A/TEMP/10@MAIN/EQP-1.png",
     line_rev: "P1L",
     path_sdwt: "RAW-SDWT-1",
@@ -599,6 +628,28 @@ test("RECIPE_ID 필터는 분임조별 table의 recipe_id를 사용하고 desc·
   assert.deepEqual(payload.steps.map((item) => item.desc), ["TEAM-RECIPE"])
   assert.equal(payload.filters.desc, "TEAM-RECIPE")
   assert.equal(payload.rows.length, 0)
+})
+
+test("PRC_Group 필터는 결합된 prc_group으로 이후 eqp 후보를 제한한다", () => {
+  const rows = [
+    createRow({ eqp: "EQP-1.png", recipe_id: "R1", prc_group: "ETCH" }),
+    createRow({ eqp: "EQP-2.png", recipe_id: "R2", prc_group: "CLEAN" }),
+  ]
+  const payload = buildSelfEquipmentPayload(rows, {
+    line: "P1L",
+    pathSdwt: "SDWT-1",
+    sdwt: "SDWT-1",
+    priorities: ["A"],
+    prcGroup: "ETCH",
+    desc: "",
+    eqpCh: "",
+    sensor: "",
+    chStep: "",
+  })
+
+  assert.deepEqual(payload.prcGroups.map((item) => item.prcGroup), ["CLEAN", "ETCH"])
+  assert.equal(payload.filters.prcGroup, "ETCH")
+  assert.deepEqual(payload.eqpChannels.map((item) => item.eqpCh), ["EQP-1.png"])
 })
 
 test("chart API는 path_xian latestDate 형식이 잘못되면 파일을 읽기 전에 거부한다", async () => {

@@ -182,7 +182,7 @@ test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", as
     pathSdwt: "SDWT-1",
     sdwt: "SDWT-1",
     priorities: ["A"],
-    desc: "STEP-1",
+    prcGroup: "ETCH",
     eqpCh: "EQP-1",
     sensor: "SENSOR-1",
   })
@@ -190,6 +190,7 @@ test("자설비 EQP ALL SKIP 대상은 일반 자설비 API로 조회한다", as
   assert.match(requestedUrl, /^\/api\/self-equipment-data\?/)
   assert.match(requestedUrl, /pathSdwt=SDWT-1/)
   assert.match(requestedUrl, /sensor=SENSOR-1/)
+  assert.match(requestedUrl, /prcGroup=ETCH/)
   assert.match(requestedUrl, /chStep=ALL/)
   assert.deepEqual(targets, [{
     filePath: "/appdata/erd/chart.png",

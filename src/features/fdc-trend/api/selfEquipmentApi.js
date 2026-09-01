@@ -64,6 +64,7 @@ export async function fetchSelfEquipmentData({
   sdwt,
   priorities,
   desc,
+  prcGroup,
   eqpCh,
   sensor,
   chStep,
@@ -71,6 +72,7 @@ export async function fetchSelfEquipmentData({
   const searchParams = new URLSearchParams({ line, pathSdwt, sdwt })
   priorities.forEach((priority) => searchParams.append("priority", priority))
   if (desc) searchParams.set("desc", desc)
+  if (prcGroup) searchParams.set("prcGroup", prcGroup)
   if (eqpCh) searchParams.set("eqpCh", eqpCh)
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
@@ -92,6 +94,7 @@ export async function fetchEqpAllSkipTargets({
   pathSdwt,
   sdwt,
   priorities,
+  prcGroup,
   desc,
   eqpCh,
   sensor,
@@ -103,7 +106,7 @@ export async function fetchEqpAllSkipTargets({
   const filters = {
     line,
     priorities,
-    desc,
+    ...(prcGroup ? { prcGroup } : desc ? { desc } : {}),
     eqpCh,
     sensor: targetSensor,
     chStep: "ALL",

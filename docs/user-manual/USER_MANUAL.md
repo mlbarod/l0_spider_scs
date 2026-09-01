@@ -46,7 +46,7 @@ Dashboard에서는 Line별 이상 현황과 최근 추이를 확인합니다.
 1. `Line Name`
 2. `SDWT`
 3. `Sensor Grade`
-4. `RECIPE_ID`
+4. `PRC_Group`
 5. `eqp_ch`
 6. `sensor`
 7. `ch_step`
