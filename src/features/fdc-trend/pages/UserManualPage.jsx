@@ -6,8 +6,11 @@ import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { useLanguage } from "@/i18n"
 
-import manualMarkdown from "../../../../docs/user-manual/USER_MANUAL.md?raw"
+import englishManualMarkdown from "../../../../docs/user-manual/USER_MANUAL.md?raw"
+import koreanManualMarkdown from "../../../../docs/user-manual/USER_MANUAL.ko.md?raw"
+import chineseManualMarkdown from "../../../../docs/user-manual/USER_MANUAL.zh-CN.md?raw"
 
 const manualImageModules = import.meta.glob(
   [
@@ -35,7 +38,7 @@ function slugifyHeading(value) {
     .replace(/^-+|-+$/g, "")
 }
 
-function buildManualHtml() {
+function buildManualHtml(manualMarkdown) {
   const markdownWithImages = manualMarkdown.replace(
     /\]\(images\/([^)]+)\)/g,
     (match, fileName) => {
@@ -53,7 +56,11 @@ function buildManualHtml() {
 }
 
 export function UserManualPage() {
-  const manualHtml = useMemo(buildManualHtml, [])
+  const { language } = useLanguage()
+  const manualMarkdown = language === "ko"
+    ? koreanManualMarkdown
+    : language === "zh-CN" ? chineseManualMarkdown : englishManualMarkdown
+  const manualHtml = useMemo(() => buildManualHtml(manualMarkdown), [manualMarkdown])
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-background">

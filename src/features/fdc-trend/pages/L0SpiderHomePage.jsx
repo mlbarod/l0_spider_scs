@@ -3,6 +3,7 @@ import { Activity, ArrowRight, BookOpen, CalendarClock, ChartNoAxesCombined, Gau
 import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
+import { LanguageSwitcher } from "@/i18n"
 import { cn } from "@/lib/utils"
 
 import { fetchDashboardStats } from "../api/dashboardApi"
@@ -216,10 +217,11 @@ export function L0SpiderHomePage() {
       <nav className="sticky top-0 z-40 h-11 bg-black text-white" aria-label="Global navigation">
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-5 sm:px-8">
           <Link to="/" className="text-xs font-semibold tracking-[0.08em]">SPIDER</Link>
-          <div className="flex items-center gap-6 text-xs text-white/75">
+          <div className="flex items-center gap-3 text-xs text-white/75 sm:gap-6">
             <a href="#spider-apps" className="hidden transition-colors hover:text-white sm:inline">Applications</a>
             <a href="#line-dashboard" className="hidden transition-colors hover:text-white sm:inline">Dashboard</a>
-            <Link to="/manual" className="transition-colors hover:text-white">User Manual</Link>
+            <Link to="/manual" className="hidden transition-colors hover:text-white md:inline">User Manual</Link>
+            <LanguageSwitcher />
           </div>
         </div>
       </nav>
