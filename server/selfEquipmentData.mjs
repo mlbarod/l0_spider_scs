@@ -145,6 +145,17 @@ export function joinTeamErdRowsWithEqpReference(rows, referenceRows) {
   }))
 }
 
+export function resolveEqpReferenceProjection(schemaColumns) {
+  const availableColumns = new Set(schemaColumns)
+  if (!availableColumns.has("main") || !availableColumns.has("prc_group")) {
+    throw new Error("eqp 기준정보에 main, prc_group 컬럼이 필요합니다.")
+  }
+  return {
+    joinColumn: "main",
+    columns: EQP_REFERENCE_COLUMNS.filter((column) => availableColumns.has(column)),
+  }
+}
+
 function normalizeSkipEqp(value) {
   return String(value ?? "").trim().replace(/\.png$/i, "")
 }
@@ -251,28 +262,46 @@ export async function readTeamErdRows({ line, pathSdwt }) {
 }
 
 export async function readEqpReferenceRows(filePath = EQP_REFERENCE_PATH) {
-  const fileStat = statSync(filePath)
-  const cached = getLruEntry(parquetCache, filePath)
+  const fallbackPath = filePath.endsWith(".parque") ? `${filePath}t` : ""
+  const resolvedFilePath = existsSync(filePath)
+    ? filePath
+    : fallbackPath && existsSync(fallbackPath)
+    ? fallbackPath
+    : filePath
+  const fileStat = statSync(resolvedFilePath)
+  const cached = getLruEntry(parquetCache, resolvedFilePath)
   if (cached?.mtimeMs === fileStat.mtimeMs && cached?.size === fileStat.size) {
-    return { filePath, rows: cached.rows }
+    return {
+      filePath: resolvedFilePath,
+      rows: cached.rows,
+      joinColumn: cached.joinColumn,
+    }
   }
 
-  const file = await asyncBufferFromFile(filePath)
+  const file = await asyncBufferFromFile(resolvedFilePath)
+  const metadata = await parquetMetadataAsync(file)
+  const schemaColumns = parquetSchema(metadata).children.map((column) => column.element.name)
+  const projection = resolveEqpReferenceProjection(schemaColumns)
   const rows = (await parquetReadObjects({
     file,
-    columns: EQP_REFERENCE_COLUMNS,
+    columns: projection.columns,
     compressors,
-  })).map((row) => Object.fromEntries(EQP_REFERENCE_COLUMNS.map((column) => [
-    column,
-    normalizeTextValue(row[column]),
-  ])))
+  })).map((row) => Object.fromEntries(projection.columns.map((column) => [
+      column,
+      normalizeTextValue(row[column]),
+    ])))
   setLruEntry(
     parquetCache,
-    filePath,
-    { mtimeMs: fileStat.mtimeMs, size: fileStat.size, rows },
+    resolvedFilePath,
+    {
+      mtimeMs: fileStat.mtimeMs,
+      size: fileStat.size,
+      rows,
+      joinColumn: projection.joinColumn,
+    },
     PARQUET_CACHE_MAX_ENTRIES,
   )
-  return { filePath, rows }
+  return { filePath: resolvedFilePath, rows, joinColumn: projection.joinColumn }
 }
 
 export async function readOptionalPassHistoryRecords(
@@ -513,13 +542,16 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
     const dbConnectionsEnabled = areDbConnectionsEnabled()
     const [
       { filePath, rows: sourceRows },
-      { filePath: referencePath, rows: referenceRows },
+      { filePath: referencePath, rows: referenceRows, joinColumn: referenceJoinColumn },
       mapping,
       sensorExclusionConfig,
       passRecords,
     ] = await Promise.all([
       readTeamErdRows({ line: filters.line, pathSdwt: filters.pathSdwt }),
-      readEqpReferenceRows(),
+      readEqpReferenceRows().catch((error) => {
+        error.dataSource = "eqp-reference"
+        throw error
+      }),
       readLineMapping(),
       readSensorExclusionConfig(),
       readOptionalPassHistoryRecords(
@@ -546,11 +578,26 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
         ...payload.counts,
         excludedSkipRows: rows.length - visibleRows.length,
         excludedSensorRows: sensorExclusion.excludedCount,
+        joinedPrcGroupRows: rows.filter((row) => row.prc_group).length,
+        unmatchedPrcGroupRows: rows.filter((row) => !row.prc_group).length,
       },
       sourcePath: filePath,
       referencePath,
+      referenceJoinColumn,
+      pathPreviewRows: rows.slice(0, 5).map((row) => ({
+        ...row,
+        eqp_join_key: getTeamErdEqpJoinKey(row.eqp),
+      })),
     })
-  } catch {
+  } catch (error) {
+    if (error?.dataSource === "eqp-reference") {
+      sendJson(res, 500, createSafeApiError({
+        code: "EQP_REFERENCE_LOAD_FAILED",
+        message: "eqp 기준정보 파일을 불러오지 못했습니다. 파일 경로와 main, prc_group 컬럼을 확인해 주세요.",
+        scope: "self-equipment-eqp-reference",
+      }))
+      return
+    }
     sendJson(res, 500, createSafeApiError({
       code: "SELF_EQUIPMENT_DATA_LOAD_FAILED",
       message: "분임조별 ERD 이상감지 경로 데이터를 불러오지 못했습니다.",

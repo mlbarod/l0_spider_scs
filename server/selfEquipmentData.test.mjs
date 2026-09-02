@@ -17,6 +17,7 @@ import {
   normalizeSelfEquipmentFilePath,
   normalizeTeamErdRow,
   readOptionalPassHistoryRecords,
+  resolveEqpReferenceProjection,
   resolveErdScatterProjection,
   resolveErdDataFilePath,
   resolveErdHistoryFilePath,
@@ -185,6 +186,17 @@ test("eqp 기준정보는 운영 parquet의 지정 컬럼만 projection한다", 
     "sdwt_prod",
     "prc_group",
   ])
+})
+
+test("eqp 기준정보는 비필수 컬럼이 없어도 main과 prc_group으로 읽는다", () => {
+  assert.deepEqual(resolveEqpReferenceProjection(["main", "disp_name", "prc_group"]), {
+    joinColumn: "main",
+    columns: ["main", "disp_name", "prc_group"],
+  })
+  assert.throws(
+    () => resolveEqpReferenceProjection(["disp_name", "prc_group"]),
+    /main, prc_group/,
+  )
 })
 
 test("경로 테이블 eqp의 첫 하이픈 앞 값을 eqp 기준정보 main과 결합한다", () => {

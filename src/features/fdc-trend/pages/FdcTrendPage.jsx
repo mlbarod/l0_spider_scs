@@ -96,6 +96,20 @@ const SCATTER_CHART_MARGIN = Object.freeze({ top: 42, right: 18, bottom: 28, lef
 const SCATTER_Y_AXIS_WIDTH = 64
 const SCATTER_X_AXIS_HEIGHT = 30
 const EMPTY_EQP_SET = new Set()
+const PATH_PREVIEW_COLUMNS = Object.freeze([
+  ["sdwt", "sdwt"],
+  ["desc", "desc"],
+  ["ver", "ver"],
+  ["recipe_id", "recipe_id"],
+  ["priority", "priority"],
+  ["sensor", "sensor"],
+  ["step", "step"],
+  ["eqp", "eqp"],
+  ["eqp_join_key", "eqp join key"],
+  ["prc_group", "prc_group"],
+  ["file_path", "file_path"],
+  ["line_rev", "line_rev"],
+])
 function expandPriorities(grades) {
   return Array.from(new Set(
     grades.flatMap((grade) => (grade === "A/B" ? ["A", "B"] : [grade])),
@@ -1652,6 +1666,7 @@ export function FdcTrendPage() {
   const activeEqpCh = dataQuery.data?.filters?.eqpCh ?? ""
   const activeSensor = dataQuery.data?.filters?.sensor ?? ""
   const activeChStep = dataQuery.data?.filters?.chStep ?? ""
+  const pathPreviewRows = isSkipList ? EMPTY_LIST : dataQuery.data?.pathPreviewRows ?? EMPTY_LIST
   const gatherContextKey = [
     activeLine,
     activeTeam,
@@ -2157,6 +2172,61 @@ export function FdcTrendPage() {
             </div>
           </div>
         </ResizableFilterArea>
+        {!isSkipList && activeTeam ? (
+          <div className="border-t bg-muted/20 px-6 py-3">
+            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="text-sm font-semibold">분임조별 ERD 이상감지 경로 데이터 head(5)</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  eqp에서 추출한 join key와 EQP 기준정보의 {dataQuery.data?.referenceJoinColumn || "main"}을 결합한 결과입니다.
+                  {dataQuery.data?.counts
+                    ? ` 결합 ${Number(dataQuery.data.counts.joinedPrcGroupRows ?? 0).toLocaleString()}건 · 미결합 ${Number(dataQuery.data.counts.unmatchedPrcGroupRows ?? 0).toLocaleString()}건`
+                    : ""}
+                </p>
+              </div>
+              {dataQuery.data?.referencePath ? (
+                <code className="max-w-full truncate text-xs text-muted-foreground" title={dataQuery.data.referencePath}>
+                  {dataQuery.data.referencePath}
+                </code>
+              ) : null}
+            </div>
+            <div className="h-64 rounded-md border bg-card">
+              <Table>
+                <TableHeader className="sticky top-0 z-10 bg-muted/95">
+                  <TableRow>
+                    {PATH_PREVIEW_COLUMNS.map(([key, label]) => (
+                      <TableHead key={key} className="whitespace-nowrap text-xs">{label}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pathPreviewRows.length ? pathPreviewRows.map((row, rowIndex) => (
+                    <TableRow key={`${row.file_path}-${row.eqp}-${rowIndex}`}>
+                      {PATH_PREVIEW_COLUMNS.map(([key]) => (
+                        <TableCell
+                          key={key}
+                          className={cn(
+                            "max-w-72 whitespace-nowrap py-2 font-mono text-xs",
+                            key === "prc_group" && "font-semibold text-primary",
+                          )}
+                          title={String(row[key] ?? "")}
+                        >
+                          <span className="block truncate">{String(row[key] ?? "") || "-"}</span>
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  )) : (
+                    <TableRow>
+                      <TableCell colSpan={PATH_PREVIEW_COLUMNS.length} className="h-20 text-center text-sm text-muted-foreground">
+                        {dataQuery.isLoading ? "경로 데이터를 불러오는 중입니다." : "표시할 경로 데이터가 없습니다."}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        ) : null}
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive">
             <span>기준정보 매핑 오류: {mappingQuery.error.message}</span>
