@@ -3,7 +3,7 @@ import { relative, resolve, sep } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 
 import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
-import { readEqpReferenceRows } from "./eqpReference.mjs"
+import { createEqpReferencePrcGroupResolver, readEqpReferenceRows } from "./eqpReference.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 
 const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd_xian"
@@ -172,17 +172,13 @@ export function buildPassHistoryFilterPayload(
     seenRecords.add(identity)
     return true
   })
-  const prcGroupByMain = new Map()
-  referenceRows.forEach((row) => {
-    const main = normalizeText(row.main)
-    const prcGroup = normalizeText(row.prc_group)
-    if (main && prcGroup && !prcGroupByMain.has(main)) {
-      prcGroupByMain.set(main, prcGroup)
-    }
-  })
+  const resolvePrcGroup = createEqpReferencePrcGroupResolver(referenceRows)
   const enrichedRecords = uniqueRecords.map((record) => ({
     ...record,
-    prc_group: prcGroupByMain.get(normalizeEqp(record.eqp).split("-", 1)[0]) ?? "",
+    prc_group: resolvePrcGroup({
+      sdwt: record.sdwt,
+      main: normalizeEqp(record.eqp).split("-", 1)[0],
+    }),
     source_record: record,
   }))
   const availablePriorities = Array.from(new Set(

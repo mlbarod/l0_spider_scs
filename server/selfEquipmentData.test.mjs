@@ -213,6 +213,30 @@ test("경로 테이블 eqp의 첫 하이픈 앞 값을 eqp 기준정보 main과 
   assert.deepEqual(rows.map((row) => row.prc_group), ["ETCH", "CLEAN", ""])
 })
 
+test("같은 main이 여러 SDWT에 있어도 sdwt·eqp가 일치하는 PRC_Group만 결합한다", () => {
+  const rows = joinTeamErdRowsWithEqpReference([
+    createRow({ line_rev: "OTHER-LINE", sdwt: "SDWT-1", eqp: "EQP01-CH1.png" }),
+    createRow({ line_rev: "P2L", sdwt: "SDWT-2", eqp: "EQP01-CH1.png" }),
+    createRow({ line_rev: "P1L", sdwt: "SDWT-3", eqp: "EQP01-CH1.png" }),
+  ], [
+    { line_no: "P2L", sdwt_prod: "SDWT-2", main: "EQP01", prc_group: "CLEAN" },
+    { line_no: "P1L", sdwt_prod: "SDWT-1", main: "EQP01", prc_group: "ETCH" },
+  ])
+
+  assert.deepEqual(rows.map((row) => row.prc_group), ["ETCH", "CLEAN", ""])
+})
+
+test("동일 sdwt·eqp 기준정보의 PRC_Group이 충돌하면 임의의 그룹을 선택하지 않는다", () => {
+  const [row] = joinTeamErdRowsWithEqpReference([
+    createRow({ line_rev: "P1L", sdwt: "SDWT-1", eqp: "EQP01-CH1.png" }),
+  ], [
+    { line_no: "P1L", sdwt_prod: "SDWT-1", main: "EQP01", prc_group: "ETCH" },
+    { line_no: "P1L", sdwt_prod: "SDWT-1", main: "EQP01", prc_group: "CLEAN" },
+  ])
+
+  assert.equal(row.prc_group, "")
+})
+
 test("분임조별 path_xian row는 ver를 경로 추정 없이 원본 컬럼에서 정규화한다", () => {
   assert.deepEqual(normalizeTeamErdRow({
     sdwt: " SDWT-1 ",
@@ -443,10 +467,12 @@ test("ERD data 경로는 backup root와 하위만 거부하고 이름이 비슷�
   )
 })
 
-test("선택한 Line과 SDWT의 분임조별 path_xian row를 직접 사용한다", () => {
+test("선택한 SDWT의 분임조별 path_xian row를 직접 사용한다", () => {
   const rows = [
     createRow({ sdwt: "RAW-1" }),
     createRow({ sdwt: "RAW-1", eqp: "EQP-2" }),
+    createRow({ line_rev: "P2L", sdwt: "RAW-1", eqp: "OTHER-LINE-EQP" }),
+    createRow({ sdwt: "RAW-2", eqp: "OTHER-SDWT-EQP" }),
   ]
   const mapping = {
     line_mapping: { "RAW-1": "P1L" },
@@ -460,7 +486,7 @@ test("선택한 Line과 SDWT의 분임조별 path_xian row를 직접 사용한�
     mapping,
   })
 
-  assert.equal(scoped.length, 2)
+  assert.equal(scoped.length, 3)
   assert.ok(scoped.every((row) => row.line_rev === "P1L"))
   assert.ok(scoped.every((row) => row.path_sdwt === "RAW-1"))
   assert.ok(scoped.every((row) => row.sdwt === "SDWT-1"))

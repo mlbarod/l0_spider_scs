@@ -19,6 +19,7 @@ import { assertKnownMappingLineSdwt, readLineMapping } from "./mappingConfig.mjs
 import { createSafeApiError } from "./safeApiError.mjs"
 import {
   EQP_REFERENCE_COLUMNS,
+  createEqpReferencePrcGroupResolver,
   readEqpReferenceRows,
   resolveEqpReferenceProjection,
 } from "./eqpReference.mjs"
@@ -126,18 +127,14 @@ export function getTeamErdEqpJoinKey(value) {
 }
 
 export function joinTeamErdRowsWithEqpReference(rows, referenceRows) {
-  const prcGroupByEqp = new Map()
-  referenceRows.forEach((row) => {
-    const eqp = normalizeTextValue(row.main)
-    const prcGroup = normalizeTextValue(row.prc_group)
-    if (eqp && prcGroup && !prcGroupByEqp.has(eqp)) {
-      prcGroupByEqp.set(eqp, prcGroup)
-    }
-  })
+  const resolvePrcGroup = createEqpReferencePrcGroupResolver(referenceRows)
 
   return rows.map((row) => ({
     ...row,
-    prc_group: prcGroupByEqp.get(getTeamErdEqpJoinKey(row.eqp)) ?? "",
+    prc_group: resolvePrcGroup({
+      sdwt: row.sdwt,
+      main: getTeamErdEqpJoinKey(row.eqp),
+    }),
   }))
 }
 
@@ -269,7 +266,13 @@ export function scopeSelfEquipmentRows(rows, { line, pathSdwt, mapping }) {
   assertKnownMappingLineSdwt(mapping, { line, pathSdwt })
 
   const displaySdwt = normalizeTextValue(mapping.sdwt_mapping[pathSdwt] ?? pathSdwt)
-  return rows.map((row) => normalizeTeamErdRow(row, { line, pathSdwt, displaySdwt }))
+  const allowedSdwts = new Set([normalizeTextValue(pathSdwt), displaySdwt])
+  return rows
+    .filter((row) => {
+      const rowSdwt = normalizeTextValue(row.sdwt)
+      return !rowSdwt || allowedSdwts.has(rowSdwt)
+    })
+    .map((row) => normalizeTeamErdRow(row, { line, pathSdwt, displaySdwt }))
 }
 
 export function isSelfEquipmentDataPathAllowed(rows, {

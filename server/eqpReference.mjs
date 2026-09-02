@@ -29,6 +29,46 @@ function normalizeText(value) {
   return value === null || value === undefined ? "" : String(value).trim()
 }
 
+function buildSdwtEqpKey(sdwt, main) {
+  return [sdwt, main].map(normalizeText).join("\u0000")
+}
+
+function getOnlyValue(values) {
+  return values?.size === 1 ? values.values().next().value : ""
+}
+
+export function createEqpReferencePrcGroupResolver(referenceRows) {
+  const groupsBySdwtEqp = new Map()
+  const groupsByMain = new Map()
+  const sdwtScopedMains = new Set()
+
+  referenceRows.forEach((row) => {
+    const sdwt = normalizeText(row.sdwt_prod)
+    const main = normalizeText(row.main)
+    const prcGroup = normalizeText(row.prc_group)
+    if (!main || !prcGroup) return
+
+    const mainGroups = groupsByMain.get(main) ?? new Set()
+    mainGroups.add(prcGroup)
+    groupsByMain.set(main, mainGroups)
+
+    if (!sdwt) return
+    sdwtScopedMains.add(main)
+    const sdwtEqpKey = buildSdwtEqpKey(sdwt, main)
+    const sdwtEqpGroups = groupsBySdwtEqp.get(sdwtEqpKey) ?? new Set()
+    sdwtEqpGroups.add(prcGroup)
+    groupsBySdwtEqp.set(sdwtEqpKey, sdwtEqpGroups)
+  })
+
+  return ({ sdwt, main }) => {
+    const normalizedMain = normalizeText(main)
+    const sdwtEqpGroups = groupsBySdwtEqp.get(buildSdwtEqpKey(sdwt, normalizedMain))
+    if (sdwtEqpGroups) return getOnlyValue(sdwtEqpGroups)
+
+    return sdwtScopedMains.has(normalizedMain) ? "" : getOnlyValue(groupsByMain.get(normalizedMain))
+  }
+}
+
 export function resolveEqpReferenceProjection(schemaColumns) {
   const availableColumns = new Set(schemaColumns)
   if (!availableColumns.has("main") || !availableColumns.has("prc_group")) {
