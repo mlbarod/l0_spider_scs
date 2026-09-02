@@ -17,6 +17,11 @@ import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
 import { areDbConnectionsEnabled } from "./dataConnections.mjs"
 import { assertKnownMappingLineSdwt, readLineMapping } from "./mappingConfig.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
+import {
+  EQP_REFERENCE_COLUMNS,
+  readEqpReferenceRows,
+  resolveEqpReferenceProjection,
+} from "./eqpReference.mjs"
 import { excludeSensorRows, readSensorExclusionConfig } from "./sensorExclusionConfig.mjs"
 import {
   SELF_SKIP_LIST_PATH_SDWT,
@@ -36,22 +41,13 @@ export const TEAM_ERD_COLUMNS = Object.freeze([
   "file_path",
   "line_rev",
 ])
-export const EQP_REFERENCE_COLUMNS = Object.freeze([
-  "line_no",
-  "fdc_model",
-  "main",
-  "disp_name",
-  "sdwt_prod",
-  "prc_group",
-])
+export { EQP_REFERENCE_COLUMNS, resolveEqpReferenceProjection }
 
 const PIC_FILE_ROOT = "/appdata/abnormal_trend/pic"
 const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd_xian"
 const ERD_BACKUP_ROOT = "/appdata/abnormal_trend/pic/backup"
 const SELF_EQUIPMENT_PATH_ROOT = process.env.SCS_SELF_EQUIPMENT_PATH_ROOT
   ?? SPIDER_DATA_PATH_TEMPLATES.selfEquipmentIndexRoot
-const EQP_REFERENCE_PATH = process.env.SCS_EQP_REFERENCE_PATH
-  ?? SPIDER_DATA_PATH_TEMPLATES.eqpReference
 const SELF_EQUIPMENT_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2}:\d{2})?$/
 const ALL_EQP_CHANNELS = "ALL"
 const ALL_SENSORS = "ALL"
@@ -143,17 +139,6 @@ export function joinTeamErdRowsWithEqpReference(rows, referenceRows) {
     ...row,
     prc_group: prcGroupByEqp.get(getTeamErdEqpJoinKey(row.eqp)) ?? "",
   }))
-}
-
-export function resolveEqpReferenceProjection(schemaColumns) {
-  const availableColumns = new Set(schemaColumns)
-  if (!availableColumns.has("main") || !availableColumns.has("prc_group")) {
-    throw new Error("eqp 기준정보에 main, prc_group 컬럼이 필요합니다.")
-  }
-  return {
-    joinColumn: "main",
-    columns: EQP_REFERENCE_COLUMNS.filter((column) => availableColumns.has(column)),
-  }
 }
 
 function normalizeSkipEqp(value) {
@@ -259,49 +244,6 @@ export async function readTeamErdRows({ line, pathSdwt }) {
     PARQUET_CACHE_MAX_ENTRIES,
   )
   return { filePath, rows }
-}
-
-export async function readEqpReferenceRows(filePath = EQP_REFERENCE_PATH) {
-  const fallbackPath = filePath.endsWith(".parque") ? `${filePath}t` : ""
-  const resolvedFilePath = existsSync(filePath)
-    ? filePath
-    : fallbackPath && existsSync(fallbackPath)
-    ? fallbackPath
-    : filePath
-  const fileStat = statSync(resolvedFilePath)
-  const cached = getLruEntry(parquetCache, resolvedFilePath)
-  if (cached?.mtimeMs === fileStat.mtimeMs && cached?.size === fileStat.size) {
-    return {
-      filePath: resolvedFilePath,
-      rows: cached.rows,
-      joinColumn: cached.joinColumn,
-    }
-  }
-
-  const file = await asyncBufferFromFile(resolvedFilePath)
-  const metadata = await parquetMetadataAsync(file)
-  const schemaColumns = parquetSchema(metadata).children.map((column) => column.element.name)
-  const projection = resolveEqpReferenceProjection(schemaColumns)
-  const rows = (await parquetReadObjects({
-    file,
-    columns: projection.columns,
-    compressors,
-  })).map((row) => Object.fromEntries(projection.columns.map((column) => [
-      column,
-      normalizeTextValue(row[column]),
-    ])))
-  setLruEntry(
-    parquetCache,
-    resolvedFilePath,
-    {
-      mtimeMs: fileStat.mtimeMs,
-      size: fileStat.size,
-      rows,
-      joinColumn: projection.joinColumn,
-    },
-    PARQUET_CACHE_MAX_ENTRIES,
-  )
-  return { filePath: resolvedFilePath, rows, joinColumn: projection.joinColumn }
 }
 
 export async function readOptionalPassHistoryRecords(
@@ -542,7 +484,7 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
     const dbConnectionsEnabled = areDbConnectionsEnabled()
     const [
       { filePath, rows: sourceRows },
-      { filePath: referencePath, rows: referenceRows, joinColumn: referenceJoinColumn },
+      { rows: referenceRows },
       mapping,
       sensorExclusionConfig,
       passRecords,
@@ -578,16 +520,8 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
         ...payload.counts,
         excludedSkipRows: rows.length - visibleRows.length,
         excludedSensorRows: sensorExclusion.excludedCount,
-        joinedPrcGroupRows: rows.filter((row) => row.prc_group).length,
-        unmatchedPrcGroupRows: rows.filter((row) => !row.prc_group).length,
       },
       sourcePath: filePath,
-      referencePath,
-      referenceJoinColumn,
-      pathPreviewRows: rows.slice(0, 5).map((row) => ({
-        ...row,
-        eqp_join_key: getTeamErdEqpJoinKey(row.eqp),
-      })),
     })
   } catch (error) {
     if (error?.dataSource === "eqp-reference") {

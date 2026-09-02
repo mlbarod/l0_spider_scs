@@ -57,7 +57,6 @@ import {
   fetchSkipListData,
 } from "../api/passHistoryApi"
 import {
-  buildErdDataReferencePath,
   fetchErdIdentityData,
   fetchErdScatterData,
   fetchEqpAllSkipTargets,
@@ -96,20 +95,6 @@ const SCATTER_CHART_MARGIN = Object.freeze({ top: 42, right: 18, bottom: 28, lef
 const SCATTER_Y_AXIS_WIDTH = 64
 const SCATTER_X_AXIS_HEIGHT = 30
 const EMPTY_EQP_SET = new Set()
-const PATH_PREVIEW_COLUMNS = Object.freeze([
-  ["sdwt", "sdwt"],
-  ["desc", "desc"],
-  ["ver", "ver"],
-  ["recipe_id", "recipe_id"],
-  ["priority", "priority"],
-  ["sensor", "sensor"],
-  ["step", "step"],
-  ["eqp", "eqp"],
-  ["eqp_join_key", "eqp join key"],
-  ["prc_group", "prc_group"],
-  ["file_path", "file_path"],
-  ["line_rev", "line_rev"],
-])
 function expandPriorities(grades) {
   return Array.from(new Set(
     grades.flatMap((grade) => (grade === "A/B" ? ["A", "B"] : [grade])),
@@ -488,17 +473,10 @@ function ChartLoadingSurface({ active, label }) {
   )
 }
 
-function ChartLoadError({ error, filePath }) {
-  const referencePath = buildErdDataReferencePath(filePath)
+function ChartLoadError({ error }) {
   return (
-    <div className="grid max-w-2xl gap-3 px-4 text-center text-sm text-destructive">
+    <div className="px-4 text-center text-sm text-destructive">
       <p>{error?.message ?? "차트 데이터를 불러오지 못했습니다."}</p>
-      {referencePath ? (
-        <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-left text-xs">
-          <p className="mb-1 font-medium">차트 참조 경로</p>
-          <code className="block select-all break-all font-mono text-foreground">{referencePath}</code>
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -689,7 +667,7 @@ export function IdentityChartDialog({
           </div>
         ) : identityQuery.isError ? (
           <div className="grid min-h-80 place-items-center px-6">
-            <ChartLoadError error={identityQuery.error} filePath={row.file_path} />
+            <ChartLoadError error={identityQuery.error} />
           </div>
         ) : groups.length ? (
           <div
@@ -878,7 +856,7 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
             label="최근 3일 동일성 차트를 준비 중입니다."
           />
         ) : identityQuery.isError ? (
-          <ChartLoadError error={identityQuery.error} filePath={row.file_path} />
+          <ChartLoadError error={identityQuery.error} />
         ) : groups.length ? (
           <div ref={chartRef} className="h-[320px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -1331,7 +1309,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
             label="Scatter chart를 준비 중입니다."
           />
         ) : chartQuery.isError ? (
-          <ChartLoadError error={chartQuery.error} filePath={row.file_path} />
+          <ChartLoadError error={chartQuery.error} />
         ) : points.length ? (
           <div
             ref={chartContainerRef}
@@ -1625,7 +1603,7 @@ export function FdcTrendPage() {
       ? fetchSkipListData({
           lineId: activeLine,
           priorities,
-          desc: selectedDesc,
+          prcGroup: selectedDesc,
           eqpCh: selectedEqpCh,
           sensor: selectedSensor,
           chStep: selectedChStep,
@@ -1654,19 +1632,14 @@ export function FdcTrendPage() {
       return sameFiltersExceptChStep ? previousData : undefined
     },
   })
-  const steps = isSkipList
-    ? dataQuery.data?.steps ?? []
-    : dataQuery.data?.prcGroups ?? []
+  const steps = dataQuery.data?.prcGroups ?? []
   const eqpChannels = dataQuery.data?.eqpChannels ?? []
   const sensors = dataQuery.data?.sensors ?? []
   const chSteps = dataQuery.data?.chSteps ?? []
-  const activeDesc = isSkipList
-    ? dataQuery.data?.filters?.desc ?? ""
-    : dataQuery.data?.filters?.prcGroup ?? ""
+  const activeDesc = dataQuery.data?.filters?.prcGroup ?? ""
   const activeEqpCh = dataQuery.data?.filters?.eqpCh ?? ""
   const activeSensor = dataQuery.data?.filters?.sensor ?? ""
   const activeChStep = dataQuery.data?.filters?.chStep ?? ""
-  const pathPreviewRows = isSkipList ? EMPTY_LIST : dataQuery.data?.pathPreviewRows ?? EMPTY_LIST
   const gatherContextKey = [
     activeLine,
     activeTeam,
@@ -1798,8 +1771,8 @@ export function FdcTrendPage() {
   )
   const filteredSteps = filterItems(
     steps.map((item) => ({
-      value: isSkipList ? item.desc : item.prcGroup,
-      label: isSkipList ? item.desc : item.prcGroup,
+      value: item.prcGroup,
+      label: item.prcGroup,
       meta: `${item.rowCount.toLocaleString()}건 · ${item.equipmentCount.toLocaleString()} eqp`,
     })),
     queries.step,
@@ -2065,13 +2038,11 @@ export function FdcTrendPage() {
               ))}
             </FilterCard>
             <FilterCard
-              title={isSkipList ? "RECIPE_ID" : "PRC_Group"}
+              title="PRC_Group"
               badge={steps.length ? `${steps.length}` : null}
               disabled={!activeTeam || dataQuery.isLoading}
               placeholder={dataQuery.isLoading
                 ? "로딩 중…"
-                : isSkipList
-                ? "선택 조건에 해당하는 RECIPE_ID가 없습니다."
                 : "선택 조건에 해당하는 PRC_Group이 없습니다."}
               isActive={Boolean(activeDesc)}
               isLoading={dataQuery.isFetching && !selectedDesc}
@@ -2102,8 +2073,8 @@ export function FdcTrendPage() {
               badge={eqpChannels.length ? `${eqpChannels.length}` : null}
               disabled={!activeDesc || dataQuery.isLoading}
               placeholder={activeDesc
-                ? `선택 ${isSkipList ? "RECIPE_ID" : "PRC_Group"}에 해당하는 eqp_ch가 없습니다.`
-                : `${isSkipList ? "RECIPE_ID" : "PRC_Group"}을 먼저 선택하세요`}
+                ? "선택 PRC_Group에 해당하는 eqp_ch가 없습니다."
+                : "PRC_Group을 먼저 선택하세요"}
               isActive={Boolean(activeEqpCh)}
               isLoading={dataQuery.isFetching && Boolean(activeDesc) && !selectedEqpCh}
               query={queries.eqpCh}
@@ -2172,61 +2143,6 @@ export function FdcTrendPage() {
             </div>
           </div>
         </ResizableFilterArea>
-        {!isSkipList && activeTeam ? (
-          <div className="border-t bg-muted/20 px-6 py-3">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h2 className="text-sm font-semibold">분임조별 ERD 이상감지 경로 데이터 head(5)</h2>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  eqp에서 추출한 join key와 EQP 기준정보의 {dataQuery.data?.referenceJoinColumn || "main"}을 결합한 결과입니다.
-                  {dataQuery.data?.counts
-                    ? ` 결합 ${Number(dataQuery.data.counts.joinedPrcGroupRows ?? 0).toLocaleString()}건 · 미결합 ${Number(dataQuery.data.counts.unmatchedPrcGroupRows ?? 0).toLocaleString()}건`
-                    : ""}
-                </p>
-              </div>
-              {dataQuery.data?.referencePath ? (
-                <code className="max-w-full truncate text-xs text-muted-foreground" title={dataQuery.data.referencePath}>
-                  {dataQuery.data.referencePath}
-                </code>
-              ) : null}
-            </div>
-            <div className="h-64 rounded-md border bg-card">
-              <Table>
-                <TableHeader className="sticky top-0 z-10 bg-muted/95">
-                  <TableRow>
-                    {PATH_PREVIEW_COLUMNS.map(([key, label]) => (
-                      <TableHead key={key} className="whitespace-nowrap text-xs">{label}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pathPreviewRows.length ? pathPreviewRows.map((row, rowIndex) => (
-                    <TableRow key={`${row.file_path}-${row.eqp}-${rowIndex}`}>
-                      {PATH_PREVIEW_COLUMNS.map(([key]) => (
-                        <TableCell
-                          key={key}
-                          className={cn(
-                            "max-w-72 whitespace-nowrap py-2 font-mono text-xs",
-                            key === "prc_group" && "font-semibold text-primary",
-                          )}
-                          title={String(row[key] ?? "")}
-                        >
-                          <span className="block truncate">{String(row[key] ?? "") || "-"}</span>
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  )) : (
-                    <TableRow>
-                      <TableCell colSpan={PATH_PREVIEW_COLUMNS.length} className="h-20 text-center text-sm text-muted-foreground">
-                        {dataQuery.isLoading ? "경로 데이터를 불러오는 중입니다." : "표시할 경로 데이터가 없습니다."}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        ) : null}
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive">
             <span>기준정보 매핑 오류: {mappingQuery.error.message}</span>
@@ -2302,7 +2218,7 @@ export function FdcTrendPage() {
           ) : null}
           {!chStepIsSelected ? (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-              {isSkipList ? "RECIPE_ID" : "PRC_Group"}, eqp_ch, sensor와 ch_step을 선택하면 scatter chart가 표시됩니다.
+              PRC_Group, eqp_ch, sensor와 ch_step을 선택하면 scatter chart가 표시됩니다.
             </div>
           ) : chartGroups.length ? (
             <div className="grid min-w-0 gap-5">

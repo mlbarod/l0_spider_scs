@@ -171,6 +171,53 @@ test("SKIP LIST는 eqp_ch ALL과 sensor ALL 조합에서 ch_step ALL과 전체 �
   )))
 })
 
+test("자설비 SKIP LIST도 eqp 앞부분과 기준정보 main을 결합해 PRC_Group으로 필터한다", () => {
+  const records = [
+    {
+      line_id: "P1L",
+      ver: "V1",
+      sdwt: "SDWT-1",
+      desc: "RECIPE-1",
+      recipe_id: "PPID-1",
+      update_date: "2026-07-17",
+      priority: "A",
+      sensor: "TEMP",
+      step: "10@MAIN",
+      eqp: "EQP01-CH1",
+      exec_date: "2026-07-17 14:00:00",
+    },
+    {
+      line_id: "P1L",
+      ver: "V1",
+      sdwt: "SDWT-1",
+      desc: "RECIPE-2",
+      recipe_id: "PPID-2",
+      update_date: "2026-07-17",
+      priority: "A",
+      sensor: "PRESSURE",
+      step: "20@MAIN",
+      eqp: "EQP02-CH1",
+      exec_date: "2026-07-17 14:00:00",
+    },
+  ]
+  const payload = buildPassHistoryFilterPayload(records, {
+    lineId: "P1L",
+    priorities: ["A"],
+    prcGroup: "ETCH",
+    desc: "",
+    eqpCh: "",
+    sensor: "",
+    chStep: "",
+  }, NOW, [
+    { main: "EQP01", prc_group: "ETCH" },
+    { main: "EQP02", prc_group: "CLEAN" },
+  ])
+
+  assert.deepEqual(payload.prcGroups.map((item) => item.prcGroup), ["CLEAN", "ETCH"])
+  assert.equal(payload.filters.prcGroup, "ETCH")
+  assert.deepEqual(payload.eqpChannels.map((item) => item.eqpCh), ["EQP01-CH1"])
+})
+
 test("과거 빈 ver SKIP도 필터 행으로 반환해 SKIP해제할 수 있다", () => {
   const record = {
     line_id: "P1L",

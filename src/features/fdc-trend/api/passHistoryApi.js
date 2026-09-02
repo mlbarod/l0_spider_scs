@@ -21,14 +21,14 @@ export async function fetchPassHistory({ lineId, sdwt, desc }) {
 export async function fetchSkipListData({
   lineId,
   priorities,
-  desc,
+  prcGroup,
   eqpCh,
   sensor,
   chStep,
 }) {
   const searchParams = new URLSearchParams({ view: "filters", lineId })
   priorities.forEach((priority) => searchParams.append("priority", priority))
-  if (desc) searchParams.set("desc", desc)
+  if (prcGroup) searchParams.set("prcGroup", prcGroup)
   if (eqpCh) searchParams.set("eqpCh", eqpCh)
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)

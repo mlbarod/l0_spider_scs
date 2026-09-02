@@ -35,7 +35,7 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 
 - `/api/self-equipment-data`의 기본 조건은 `line`, `pathSdwt`, `sdwt`이며 `priority`, `prcGroup`, `eqpCh`, `sensor`, `chStep`을 선택적으로 전달한다. 기존 API의 `desc` 조건도 호환을 위해 유지한다.
 - 화면의 PRC_Group은 분임조별 경로 테이블의 `eqp`에서 첫 `-` 앞 값을 추출하고 EQP 기준정보의 `main`과 결합해 얻은 `prc_group`을 사용한다. 기준정보의 나머지 비필수 컬럼 누락은 전체 조회 실패로 처리하지 않는다.
-- 필터 하단의 `분임조별 ERD 이상감지 경로 데이터 head(5)`에서 원본 `eqp`, 추출한 join key, 결합된 `prc_group`과 전체 결합·미결합 건수를 확인할 수 있다.
+- 일반 자설비와 SKIP LIST 모두 같은 `prc_group` 기준으로 이후 `eqp_ch`, `sensor`, `ch_step` 후보를 제한한다.
 - chart 요청은 `path`, `eqp`, `sensor`, `chStep`과 선택적인 `ver`, `latestDate`, `line`, `pathSdwt`를 전달한다.
 - 이미지 경로, directory 경로와 직접 `data.parquet` 경로의 기존 변환 규칙을 보존한다.
 - Sensor 제외 설정이 없으면 빈 제외 규칙으로 동작한다.
@@ -43,6 +43,7 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 ## 5. 오류와 보안
 
 - 조건에 맞는 행이 없는 정상 빈 상태와 파일·DB 오류를 구분한다.
+- chart 파일 로딩 실패 화면에는 내부 파일 경로를 노출하지 않는다.
 - `/appdata` 파일은 읽기 전용 원천으로 취급하며 자동 생성·수정하지 않는다.
 - 사용자가 전달한 path는 허용 root 안에서만 처리한다.
 - query string과 로그에 credential 또는 개인정보를 추가하지 않는다.

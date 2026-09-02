@@ -17,7 +17,7 @@ Defect/L1/L3 직접 route는 mock data 기반 화면이 남아 있지만 공식 
 
 ## 3. 자설비 데이터
 
-자설비는 `path_xian/{line}/{sdwt}/df_path.parquet`에서 필터와 실제 데이터 경로를 얻고, 선택 경로의 `data.parquet`과 이미지·EQP 이력 Parquet을 읽는다. 주요 선택값은 Line, 분임조, Grade, RECIPE_ID, EQP, Sensor, STEP이다.
+자설비는 `path_xian/{line}/{sdwt}/df_path.parquet`에서 필터와 실제 데이터 경로를 얻고, 선택 경로의 `data.parquet`과 이미지·EQP 이력 Parquet을 읽는다. 주요 선택값은 Line, 분임조, Grade, PRC_Group, EQP, Sensor, STEP이다.
 
 MY EQP 전용 조회, `/api/my-eqp-*`, `step=ALL` 등록 설비 흐름은 현재 계약에 없다. 상세 내용과 보존된 데이터 참조 표는 [self-equipment.md](self-equipment.md)를 따른다.
 

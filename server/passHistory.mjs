@@ -3,6 +3,7 @@ import { relative, resolve, sep } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 
 import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
+import { readEqpReferenceRows } from "./eqpReference.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 
 const ERD_FILE_ROOT = "/appdata/abnormal_trend/pic/erd_xian"
@@ -156,7 +157,12 @@ function buildCommonDataPath(record) {
   return `${COMMON_FILE_ROOT}/${segments.join("/")}/data.parquet`
 }
 
-export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now()) {
+export function buildPassHistoryFilterPayload(
+  records,
+  filters,
+  nowMs = Date.now(),
+  referenceRows = [],
+) {
   const seenRecords = new Set()
   const uniqueRecords = records.filter((record) => {
     if (!isActivePassHistoryRecord(record, nowMs)) return false
@@ -166,18 +172,43 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
     seenRecords.add(identity)
     return true
   })
+  const prcGroupByMain = new Map()
+  referenceRows.forEach((row) => {
+    const main = normalizeText(row.main)
+    const prcGroup = normalizeText(row.prc_group)
+    if (main && prcGroup && !prcGroupByMain.has(main)) {
+      prcGroupByMain.set(main, prcGroup)
+    }
+  })
+  const enrichedRecords = uniqueRecords.map((record) => ({
+    ...record,
+    prc_group: prcGroupByMain.get(normalizeEqp(record.eqp).split("-", 1)[0]) ?? "",
+    source_record: record,
+  }))
   const availablePriorities = Array.from(new Set(
-    uniqueRecords.map((record) => normalizeText(record.priority)).filter(Boolean),
+    enrichedRecords.map((record) => normalizeText(record.priority)).filter(Boolean),
   )).sort((left, right) => left.localeCompare(right, "ko", { numeric: true }))
   const selectedPriorities = new Set(filters.priorities)
-  const baseRecords = uniqueRecords.filter((record) => selectedPriorities.has(normalizeText(record.priority)))
+  const baseRecords = enrichedRecords.filter((record) => selectedPriorities.has(normalizeText(record.priority)))
   const steps = aggregateBy(baseRecords, "desc", (desc, stepRecords) => ({
     desc,
     rowCount: stepRecords.length,
     equipmentCount: uniqueCount(stepRecords, "eqp", normalizeEqp),
   })).sort((left, right) => left.desc.localeCompare(right.desc, "ko", { numeric: true }))
-  const selectedDesc = steps.some((item) => item.desc === filters.desc) ? filters.desc : ""
-  const stepRecords = selectedDesc
+  const prcGroups = aggregateBy(baseRecords, "prc_group", (prcGroup, prcGroupRecords) => ({
+    prcGroup,
+    rowCount: prcGroupRecords.length,
+    equipmentCount: uniqueCount(prcGroupRecords, "eqp", normalizeEqp),
+  })).sort((left, right) => left.prcGroup.localeCompare(right.prcGroup, "ko", { numeric: true }))
+  const selectedPrcGroup = prcGroups.some((item) => item.prcGroup === filters.prcGroup)
+    ? filters.prcGroup
+    : ""
+  const selectedDesc = !selectedPrcGroup && steps.some((item) => item.desc === filters.desc)
+    ? filters.desc
+    : ""
+  const stepRecords = selectedPrcGroup
+    ? baseRecords.filter((record) => normalizeText(record.prc_group) === selectedPrcGroup)
+    : selectedDesc
     ? baseRecords.filter((record) => normalizeText(record.desc) === selectedDesc)
     : []
   const eqpChannels = sortByCount(aggregateBy(stepRecords, "eqp", (eqpCh, eqpRecords) => ({
@@ -231,6 +262,7 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
       pathSdwt: SELF_SKIP_LIST_PATH_SDWT,
       priorities: filters.priorities,
       desc: selectedDesc,
+      prcGroup: selectedPrcGroup,
       eqpCh: selectedEqpCh,
       sensor: selectedSensor,
       chStep: selectedChStep,
@@ -238,6 +270,7 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
     counts: { filteredRows: baseRecords.length, chartRows: chartRecords.length },
     availablePriorities,
     steps,
+    prcGroups,
     eqpChannels,
     sensors,
     chSteps,
@@ -253,11 +286,12 @@ export function buildPassHistoryFilterPayload(records, filters, nowMs = Date.now
         sensor: normalizeText(record.sensor),
         step: normalizeText(record.step),
         eqp: `${normalizeEqp(record.eqp)}.png`,
+        prc_group: normalizeText(record.prc_group),
         file_path: filePath,
         line_rev: normalizeText(record.line_id),
         path_sdwt: SELF_SKIP_LIST_PATH_SDWT,
         latest_date: normalizeDbDate(record.update_date),
-        pass_history: record,
+        pass_history: record.source_record,
       }
     }),
   }
@@ -561,14 +595,16 @@ export async function handlePassHistoryRequest(req, res, url) {
         desc: isFilterView ? "" : normalizeText(url.searchParams.get("desc")),
       })
       if (view === "filters") {
+        const { rows: referenceRows } = await readEqpReferenceRows()
         sendJson(res, 200, buildPassHistoryFilterPayload(records, {
           lineId,
           priorities: url.searchParams.getAll("priority").map(normalizeText).filter(Boolean),
           desc: normalizeText(url.searchParams.get("desc")),
+          prcGroup: normalizeText(url.searchParams.get("prcGroup")),
           eqpCh: normalizeText(url.searchParams.get("eqpCh")),
           sensor: normalizeText(url.searchParams.get("sensor")),
           chStep: normalizeText(url.searchParams.get("chStep")),
-        }))
+        }, Date.now(), referenceRows))
         return
       }
       if (view === "common-filters") {
