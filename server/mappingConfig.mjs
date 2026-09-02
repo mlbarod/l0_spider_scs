@@ -41,7 +41,7 @@ export async function requireLineMapping(mappingReader = readLineMapping) {
   } catch {
     throw createMappingError(
       MAPPING_CONFIG_UNAVAILABLE_CODE,
-      "기준정보 매핑을 사용할 수 없습니다.",
+      "Reference mappings are unavailable.",
     )
   }
 }
@@ -56,7 +56,7 @@ export function buildMappingConfigResponse(mapping, environment = process.env) {
 export function assertKnownMappingLine(mapping, requestedLine) {
   const line = normalizeText(requestedLine)
   if (!line || !Object.values(mapping.line_mapping).some((value) => normalizeText(value) === line)) {
-    throw createMappingError(MAPPING_SCOPE_MISMATCH_CODE, "기준정보 매핑 범위가 일치하지 않습니다.")
+    throw createMappingError(MAPPING_SCOPE_MISMATCH_CODE, "The reference mapping scope does not match.")
   }
 }
 
@@ -68,7 +68,7 @@ export function assertKnownMappingLineSdwt(mapping, { line, pathSdwt }) {
     || !normalizedPathSdwt
     || normalizeText(mapping.line_mapping[normalizedPathSdwt]) !== normalizedLine
   ) {
-    throw createMappingError(MAPPING_SCOPE_MISMATCH_CODE, "기준정보 매핑 범위가 일치하지 않습니다.")
+    throw createMappingError(MAPPING_SCOPE_MISMATCH_CODE, "The reference mapping scope does not match.")
   }
 }
 
@@ -80,7 +80,7 @@ export function assertKnownMappingSdwts(mapping, { line = "", sdwts }) {
   const requestedSdwts = Array.isArray(sdwts) ? sdwts.map(normalizeText).filter(Boolean) : []
 
   if (!requestedSdwts.length || requestedSdwts.some((sdwt) => !allowedSdwts.has(sdwt))) {
-    throw createMappingError(MAPPING_SCOPE_MISMATCH_CODE, "기준정보 매핑 범위가 일치하지 않습니다.")
+    throw createMappingError(MAPPING_SCOPE_MISMATCH_CODE, "The reference mapping scope does not match.")
   }
 }
 
@@ -108,7 +108,7 @@ export async function handleMappingConfigRequest(req, res) {
     })
     res.end(JSON.stringify(createSafeApiError({
       code: "MAPPING_CONFIG_LOAD_FAILED",
-      message: "기준정보 매핑을 불러오지 못했습니다.",
+      message: "Unable to load reference mappings.",
       scope: "mapping-config",
     })))
   }

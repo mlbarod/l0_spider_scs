@@ -227,7 +227,7 @@ test("EQP ALL SKIP 대상 조회는 sensor ALL을 허용하지 않는다", async
       eqpCh: "EQP-1",
       sensor: "ALL",
     }),
-    /개별 sensor/,
+    /specific sensor/,
   )
   assert.equal(fetchCalled, false)
 })

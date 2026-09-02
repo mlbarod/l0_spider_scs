@@ -24,7 +24,7 @@ export async function fetchDashboardSummary({ startDate, endDate, lines = [], si
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "대시보드 데이터를 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load dashboard data."))
   }
 
   assertDashboardIntegrity(payload.lineDashboard, { startDate, endDate, lines })
@@ -40,10 +40,10 @@ export async function fetchDashboardLatestDate({ signal } = {}) {
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "마지막 알고리즘 수행 시간을 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load the last algorithm run time."))
   }
   if (typeof payload.latestDate !== "string" || !payload.latestDate.trim()) {
-    throw new Error("마지막 알고리즘 수행 시간이 응답에 없습니다.")
+    throw new Error("The response does not include the last algorithm run time.")
   }
 
   return payload
@@ -62,7 +62,7 @@ export async function fetchDashboardStats({ startDate, endDate, lines = [], sign
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "대시보드 통계 파일을 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load the dashboard statistics file."))
   }
   if (
     typeof payload.latestDate !== "string"
@@ -70,7 +70,7 @@ export async function fetchDashboardStats({ startDate, endDate, lines = [], sign
     || !payload.metrics
     || DASHBOARD_STATS_METRIC_KEYS.some((key) => !Number.isFinite(payload.metrics[key]))
   ) {
-    throw new Error("대시보드 통계 응답 형식이 올바르지 않습니다.")
+    throw new Error("The dashboard statistics response is invalid.")
   }
 
   assertDashboardIntegrity(payload.lineDashboard, { startDate, endDate, lines })

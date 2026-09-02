@@ -24,7 +24,7 @@ function normalizeText(value) {
 
 function normalizeDbDateTime(value, now = new Date()) {
   const date = normalizeText(value) ? new Date(value) : now
-  if (Number.isNaN(date.getTime())) throw new Error("이력저장 시각이 올바르지 않습니다.")
+  if (Number.isNaN(date.getTime())) throw new Error("The history save time is invalid.")
   const pad = (number) => String(number).padStart(2, "0")
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
@@ -61,12 +61,12 @@ function isValidDateTime(value) {
 }
 
 function assertSafeAbsolutePath(filePath) {
-  if (!isAbsolute(filePath)) throw new Error("Chart 파일 경로는 절대 경로여야 합니다.")
+  if (!isAbsolute(filePath)) throw new Error("The Chart file path must be absolute.")
   if (filePath.slice(1).split(/[\\/]/).some((segment) => segment === "")) {
-    throw new Error("Chart 파일 경로에 빈 segment가 있습니다.")
+    throw new Error("The Chart file path contains an empty segment.")
   }
   if (filePath.split(/[\\/]/).some((segment) => segment === "." || segment === "..")) {
-    throw new Error("Chart 파일 경로에 허용되지 않은 segment가 있습니다.")
+    throw new Error("The Chart file path contains a disallowed segment.")
   }
 }
 
@@ -97,7 +97,7 @@ export function parseHitHistoryPath(filePath, {
       || (!isValidDateOnly(commonSegments[0]) && !isValidDateTime(commonSegments[0]))
       || !imageName.toLowerCase().endsWith(".png")
       || imageName.slice(0, -".png".length).trim() === "") {
-      throw new Error("공통부 이상감지 결과 경로에서 HIT 이력 정보를 찾지 못했습니다.")
+      throw new Error("HIT history information was not found in the common-area anomaly result path.")
     }
     return { updateDate: commonSegments[0], sdwt: commonSegments[1] }
   }
@@ -113,7 +113,7 @@ export function parseHitHistoryPath(filePath, {
       || delimiterIndex <= 0
       || delimiterIndex === sensorChStep.length - 1
       || commonalitySegments.at(-1) !== "img.png") {
-      throw new Error("동일성 이상감지 결과 경로에서 HIT 이력 정보를 찾지 못했습니다.")
+      throw new Error("HIT history information was not found in the similarity anomaly result path.")
     }
     return { updateDate: commonalitySegments[0], sdwt: commonalitySegments[1] }
   }
@@ -128,14 +128,14 @@ export function parseHitHistoryPath(filePath, {
       || delimiterIndex <= 0
       || delimiterIndex === sensorChStep.length - 1
       || commonCommonalitySegments.at(-1) !== "img.png") {
-      throw new Error("공통부 동일성 이상감지 결과 경로에서 HIT 이력 정보를 찾지 못했습니다.")
+      throw new Error("HIT history information was not found in the common-area similarity result path.")
     }
     return { updateDate: commonCommonalitySegments[0], sdwt: commonCommonalitySegments[1] }
   }
 
   const { updateDate, sdwt } = parsePassHistoryPath(normalizedPath)
   if (!isValidDateOnly(updateDate) && !isValidDateTime(updateDate)) {
-    throw new Error("ERD 차트 경로의 날짜가 올바르지 않습니다.")
+    throw new Error("The date in the ERD chart path is invalid.")
   }
   return { updateDate, sdwt }
 }
@@ -144,13 +144,13 @@ async function readJsonBody(req) {
   let body = ""
   for await (const chunk of req) {
     body += chunk
-    if (body.length > 64 * 1024) throw new Error("요청 데이터가 너무 큽니다.")
+    if (body.length > 64 * 1024) throw new Error("The request payload is too large.")
   }
   if (!body.trim()) return {}
   try {
     return JSON.parse(body)
   } catch {
-    throw new Error("요청 JSON이 올바르지 않습니다.")
+    throw new Error("The request JSON is invalid.")
   }
 }
 
@@ -177,7 +177,7 @@ function runHitHistoryHelper(payload) {
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        reject(new Error("HIT 이력 저장 시간이 초과되었습니다."))
+        reject(new Error("Saving HIT history timed out."))
         return
       }
 
@@ -185,11 +185,11 @@ function runHitHistoryHelper(payload) {
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        reject(new Error("HIT 이력 응답을 해석하지 못했습니다."))
+        reject(new Error("Unable to parse the HIT history response."))
         return
       }
       if (!result.ok) {
-        reject(new Error(result.error || "HIT 이력을 저장하지 못했습니다."))
+        reject(new Error(result.error || "Unable to save HIT history."))
         return
       }
       resolvePromise(result)
@@ -220,8 +220,8 @@ export function buildHitHistoryRecord({
 }) {
   const normalizedLineId = normalizeText(lineId)
   const originalFilePath = normalizeText(filePath)
-  if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
-  if (!originalFilePath) throw new Error("Chart 파일 경로가 필요합니다.")
+  if (!normalizedLineId) throw new Error("Line Name is required.")
+  if (!originalFilePath) throw new Error("A Chart file path is required.")
 
   const selectedUpdateDate = normalizeText(updateDate)
   const selectedSdwt = normalizeText(sdwt)
@@ -247,7 +247,7 @@ export async function handleHitHistoryRequest(req, res) {
   try {
     const remoteIp = getRemoteIp(req)
     if (!remoteIp) {
-      sendJson(res, 400, { ok: false, error: "접속자 IP를 확인하지 못했습니다." })
+      sendJson(res, 400, { ok: false, error: "Unable to determine the client IP." })
       return
     }
     const [body, currentUser] = await Promise.all([
@@ -263,7 +263,7 @@ export async function handleHitHistoryRequest(req, res) {
   } catch {
     const errorPayload = createSafeApiError({
       code: "HIT_HISTORY_REQUEST_FAILED",
-      message: "HIT 이력 요청을 처리하지 못했습니다.",
+      message: "Unable to process the HIT history request.",
       scope: "hit-history",
     })
     sendJson(res, 500, errorPayload)

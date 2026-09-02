@@ -83,7 +83,7 @@ export async function fetchSelfEquipmentData({
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "자설비 이상감지 데이터를 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load equipment anomaly data."))
   }
 
   return payload
@@ -101,7 +101,7 @@ export async function fetchEqpAllSkipTargets({
 }) {
   const targetSensor = String(sensor ?? "").trim()
   if (!targetSensor || targetSensor === "ALL") {
-    throw new Error("EQP ALL SKIP은 개별 sensor를 지정해야 합니다.")
+    throw new Error("EQP ALL SKIP requires a specific sensor.")
   }
   const filters = {
     line,
@@ -135,7 +135,7 @@ export async function fetchErdScatterData({ filePath, eqp, sensor, chStep, ver, 
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "ERD 이상감지 데이터를 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load ERD anomaly data."))
   }
 
   return payload
@@ -157,7 +157,7 @@ export async function fetchErdIdentityData({ filePath, eqp, sensor, chStep, ver,
   const payload = await response.json().catch(() => ({}))
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "동일성 차트 데이터를 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load similarity chart data."))
   }
 
   return payload

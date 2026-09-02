@@ -28,7 +28,7 @@ export function getRemoteIp(req) {
 export async function resolveCurrentUser(remoteIp) {
   const normalizedRemoteIp = normalizeRemoteIp(remoteIp)
   if (!isIP(normalizedRemoteIp)) {
-    const error = new Error("접속자 IP를 확인하지 못했습니다.")
+    const error = new Error("Unable to determine the client IP.")
     error.code = "IP_NOT_FOUND"
     throw error
   }
@@ -43,7 +43,7 @@ export async function handleCurrentUserRequest(req, res) {
 
   const remoteIp = getRemoteIp(req)
   if (!remoteIp) {
-    sendJson(res, 400, { ok: false, error: "접속자 IP를 확인하지 못했습니다." })
+    sendJson(res, 400, { ok: false, error: "Unable to determine the client IP." })
     return
   }
 
@@ -53,7 +53,7 @@ export async function handleCurrentUserRequest(req, res) {
   } catch {
     sendJson(res, 400, createSafeApiError({
       code: "CURRENT_USER_IP_INVALID",
-      message: "접속자 IP를 확인하지 못했습니다.",
+      message: "Unable to determine the client IP.",
       scope: "current-user",
     }))
   }

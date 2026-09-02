@@ -96,9 +96,9 @@ export async function readCommonalityPathRows(latestPath) {
     )
     const pathColumns = ["path", "file_path"].filter((column) => schemaColumns.has(column))
     const missingColumns = COMMONALITY_PATH_COLUMNS.filter((column) => !schemaColumns.has(column))
-    if (!pathColumns.length) missingColumns.push("path 또는 file_path")
+    if (!pathColumns.length) missingColumns.push("path or file_path")
     if (missingColumns.length) {
-      const error = new Error(`동일성 경로 테이블 필수 컬럼이 없습니다: ${missingColumns.join(", ")}`)
+      const error = new Error(`The similarity path table is missing required columns: ${missingColumns.join(", ")}`)
       error.code = "COMMONALITY_PATH_TABLE_SCHEMA_INVALID"
       throw error
     }
@@ -130,7 +130,7 @@ export function scopeCommonalityRows(rows, { pathSdwt, sdwt }) {
   const scopedRows = rows.filter((row) => candidates.has(row.sdwt))
   if (!scopedRows.length) {
     const error = new Error(
-      `선택한 SDWT의 동일성 이상감지 행을 찾지 못했습니다: ${Array.from(candidates).join(" 또는 ")}`,
+      `No similarity anomaly row was found for the selected SDWT: ${Array.from(candidates).join(" or ")}`,
     )
     error.code = "COMMONALITY_SDWT_NOT_FOUND"
     throw error
@@ -222,7 +222,7 @@ export async function handleCommonalityDataRequest(req, res, url) {
       chStep: normalizeText(url.searchParams.get("chStep")),
     }
     if (!filters.line || !filters.pathSdwt || !filters.sdwt) {
-      sendJson(res, 400, { ok: false, error: "line, pathSdwt, sdwt 조건이 필요합니다." })
+      sendJson(res, 400, { ok: false, error: "line, pathSdwt, and sdwt are required." })
       return
     }
 
@@ -255,8 +255,8 @@ export async function handleCommonalityDataRequest(req, res, url) {
     sendJson(res, statusCode, createSafeApiError({
       code: statusCode === 404 ? "COMMONALITY_DATA_NOT_FOUND" : "COMMONALITY_DATA_LOAD_FAILED",
       message: statusCode === 404
-        ? "동일성 데이터 경로를 찾지 못했습니다."
-        : "동일성 데이터를 불러오지 못했습니다.",
+        ? "Unable to find the similarity data path."
+        : "Unable to load similarity data.",
       scope: "commonality-data",
     }))
   }
@@ -274,13 +274,13 @@ export async function handleCommonalityImageRequest(req, res, url) {
     const resolvedPath = resolve(requestedPath)
     const rows = await readCommonalityPathRows(latestPath)
     if (!rows.some((row) => row.filePath === resolvedPath)) {
-      sendJson(res, 403, { ok: false, error: "허용되지 않은 동일성 이미지 경로입니다." })
+      sendJson(res, 403, { ok: false, error: "This similarity image path is not allowed." })
       return
     }
     if (!await isRegularFile(resolvedPath)) {
       sendJson(res, 404, createSafeApiError({
         code: "COMMONALITY_IMAGE_NOT_FOUND",
-        message: "동일성 이미지 파일을 찾지 못했습니다.",
+        message: "Unable to find the similarity image file.",
         scope: "commonality-image",
       }))
       return
@@ -298,7 +298,7 @@ export async function handleCommonalityImageRequest(req, res, url) {
   } catch {
     sendJson(res, 500, createSafeApiError({
       code: "COMMONALITY_IMAGE_LOAD_FAILED",
-      message: "동일성 이미지를 불러오지 못했습니다.",
+      message: "Unable to load the similarity image.",
       scope: "commonality-image",
     }))
   }

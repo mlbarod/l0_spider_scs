@@ -64,7 +64,7 @@ def read_email_column_schema(connection, db_name):
     missing_columns = REQUIRED_EMAIL_COLUMNS.difference(schema)
     if missing_columns:
         missing_text = ", ".join(sorted(missing_columns))
-        raise ValueError(f"email 테이블에 필요한 컬럼이 없습니다: {missing_text}")
+        raise ValueError(f"The email table is missing required columns: {missing_text}")
     return schema
 
 
@@ -72,8 +72,8 @@ def ensure_text_fits(column_name, value, column_schema):
     max_length = column_schema[column_name]["maxLength"]
     if max_length is not None and len(value) > max_length:
         raise ValueError(
-            f"email.{column_name} 컬럼 길이가 부족합니다. "
-            f"현재 VARCHAR({max_length}), 필요한 길이 {len(value)}자"
+            f"The email.{column_name} column is too short. "
+            f"Current VARCHAR({max_length}), required length {len(value)}"
         )
 
 
@@ -90,13 +90,13 @@ def split_list_for_column(values, max_length, column_name):
             continue
         if not current:
             raise ValueError(
-                f"email.{column_name} 컬럼 VARCHAR({max_length})에 값 1개도 저장할 수 없습니다: {value}"
+                f"The email.{column_name} VARCHAR({max_length}) column cannot store even one value: {value}"
             )
         chunks.append(current)
         current = [value]
         if len(serialize_list(current)) > max_length:
             raise ValueError(
-                f"email.{column_name} 컬럼 VARCHAR({max_length})에 값 1개도 저장할 수 없습니다: {value}"
+                f"The email.{column_name} VARCHAR({max_length}) column cannot store even one value: {value}"
             )
 
     if current:
@@ -289,18 +289,18 @@ def delete_line_registration(payload, db_info):
 
 
 def database_error_payload(error, action):
-    action_label = {"insert": "저장", "list": "조회", "delete_line": "삭제"}.get(action, "처리")
+    action_label = {"insert": "save", "list": "query", "delete_line": "delete"}.get(action, "process")
     error_code = error.args[0] if getattr(error, "args", None) and isinstance(error.args[0], int) else None
     detail = str(error)
 
     if error_code == 1406:
-        message = "email 테이블 VARCHAR 컬럼 길이를 초과했습니다. 컬럼 길이를 확인해 주세요."
+        message = "An email table VARCHAR column length was exceeded. Check the column length."
     elif error_code == 1146:
-        message = "email 테이블을 찾지 못했습니다. DB 이름과 테이블명을 확인해 주세요."
+        message = "Unable to find the email table. Check the DB and table names."
     elif error_code == 1054:
-        message = "email 테이블 컬럼 구성이 코드와 다릅니다. email, sdwt, priority 컬럼을 확인해 주세요."
+        message = "The email table schema does not match the code. Check the email, sdwt, and priority columns."
     else:
-        message = f"Mailing 기준정보 DB {action_label}에 실패했습니다: {detail}"
+        message = f"The Mailing reference DB {action_label} operation failed: {detail}"
 
     return {
         "ok": False,
@@ -322,7 +322,7 @@ def main():
         elif action == "delete_line":
             result = delete_line_registration(payload, db_info)
         else:
-            raise ValueError("지원하지 않는 Mailing DB 작업입니다.")
+            raise ValueError("This Mailing DB operation is not supported.")
         write_json(result)
     except Exception as error:
         print(f"mailing registration failed: {error}", file=sys.stderr)

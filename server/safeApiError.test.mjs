@@ -24,10 +24,10 @@ test("안전한 API 오류는 고정 메시지와 추적 가능한 문의 코드
 test("안전하지 않은 code와 scope는 거부한다", () => {
   assert.throws(
     () => createSafeApiError({ code: "bad-code", message: "실패", scope: "synthetic-test" }),
-    /code 형식/,
+    /error code format/,
   )
   assert.throws(
     () => createSafeApiError({ code: "SAFE_CODE", message: "실패", scope: "../secret" }),
-    /scope 형식/,
+    /error scope format/,
   )
 })

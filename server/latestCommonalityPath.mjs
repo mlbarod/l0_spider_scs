@@ -17,7 +17,7 @@ const DATE_TIME_FILE_PATTERN = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})
 
 export function getCommonalityLatestDate(now = new Date()) {
   if (!(now instanceof Date) || Number.isNaN(now.getTime())) {
-    throw new Error("동일성 기준 날짜가 올바르지 않습니다.")
+    throw new Error("The similarity reference date is invalid.")
   }
   const pad = (value) => String(value).padStart(2, "0")
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
@@ -58,7 +58,7 @@ export async function getLatestCommonalityPath(
     entries = await readdir(normalizedRootPath, { withFileTypes: true })
   } catch {
     const error = new Error(
-      `동일성 경로 테이블 root를 읽지 못했습니다: ${normalizedRootPath}`,
+      `Unable to read the similarity path-table root: ${normalizedRootPath}`,
     )
     error.code = "COMMONALITY_PATH_TABLE_NOT_FOUND"
     throw error
@@ -69,7 +69,7 @@ export async function getLatestCommonalityPath(
     .sort((left, right) => right.localeCompare(left))[0]
   if (!latestDateTime) {
     const error = new Error(
-      `동일성 접속일 경로 테이블을 찾지 못했습니다: ${normalizedRootPath}에 ${systemDate}를 포함하는 YYYY-MM-DD hh:mm:ss 파일이 없습니다.`,
+      `Unable to find the similarity path table for the access date: no YYYY-MM-DD hh:mm:ss file under ${normalizedRootPath} contains ${systemDate}.`,
     )
     error.code = "COMMONALITY_PATH_TABLE_NOT_FOUND"
     throw error
@@ -111,8 +111,8 @@ export async function handleLatestCommonalityPathRequest(req, res) {
         ? "COMMONALITY_LATEST_DATE_NOT_FOUND"
         : "COMMONALITY_LATEST_PATH_LOAD_FAILED",
       message: notFound
-        ? "동일성 최신날짜 데이터가 없습니다."
-        : "동일성 최신날짜 경로를 확인하지 못했습니다.",
+        ? "No latest similarity date data is available."
+        : "Unable to determine the latest similarity date path.",
       scope: "latest-commonality-path",
     })))
   }

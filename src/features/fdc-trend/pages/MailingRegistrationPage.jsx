@@ -102,10 +102,10 @@ function FilterPanel({
             <CardTitle className="truncate text-sm">{title}</CardTitle>
           </div>
           {isLoading ? (
-            <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="로딩 중" />
+            <Loader2 className="size-4 animate-spin text-muted-foreground" aria-label="Loading" />
           ) : (
             <Badge variant="secondary" className="shrink-0 tabular-nums">
-              {multiple && selectedValues.length ? `${selectedValues.length} 선택` : options.length}
+              {multiple && selectedValues.length ? `${selectedValues.length} selected` : options.length}
             </Badge>
           )}
         </div>
@@ -117,17 +117,17 @@ function FilterPanel({
           <Input
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
-            placeholder={`${title} 검색`}
+            placeholder={`Search ${title}`}
             className="h-8 pl-8 text-xs"
             disabled={disabled}
-            aria-label={`${title} 검색`}
+            aria-label={`Search ${title}`}
           />
         </div>
       </div>
       <CardContent className="min-h-0 flex-1 overflow-y-auto bg-background/60 p-2.5">
         {disabled || options.length === 0 ? (
           <div className="grid min-h-32 place-items-center px-5 text-center text-xs leading-5 text-muted-foreground">
-            {isLoading ? "기준정보를 불러오는 중입니다." : emptyMessage}
+            {isLoading ? "Loading reference data." : emptyMessage}
           </div>
         ) : (
           <div className="grid gap-1.5">
@@ -187,7 +187,7 @@ function SelectionItem({ label, value, complete }) {
           "truncate text-sm font-semibold",
           complete ? "text-foreground" : "text-muted-foreground",
         )} title={value}>
-          {value || "미선택"}
+          {value || "Not selected"}
         </p>
       </div>
     </div>
@@ -234,7 +234,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
       .map((value) => ({ value, label: value }))
   }, [lineMapping, sdwtMapping, selectedLine])
   const visibleSdwtOptions = (sdwtOptions.length ? [
-    { value: ALL_SDWT, label: "ALL", meta: `${sdwtOptions.length.toLocaleString()}개` },
+    { value: ALL_SDWT, label: "ALL", meta: `${sdwtOptions.length.toLocaleString()} items` },
     ...sdwtOptions,
   ] : []).filter((option) => matchesQuery(option.label, sdwtQuery))
   const validSdwtValues = useMemo(() => new Set(sdwtOptions.map((option) => option.value)), [sdwtOptions])
@@ -245,7 +245,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
     ? sdwtOptions.map((option) => option.value)
     : activeSdwts
   const selectedSdwtLabel = activeSdwts.includes(ALL_SDWT)
-    ? `ALL (${sdwtOptions.length.toLocaleString()}개)`
+    ? `ALL (${sdwtOptions.length.toLocaleString()} items)`
     : activeSdwts.join(", ")
   const validLookupKnoxId = lookupKnoxId.length <= 128 && KNOX_ID_PATTERN.test(lookupKnoxId)
     ? lookupKnoxId
@@ -290,8 +290,8 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
       savedKnoxIds.forEach((knoxId) => {
         queryClient.invalidateQueries({ queryKey: ["mailing-registrations", knoxId] })
       })
-      toast.success("Mailing 기능을 등록했습니다.", {
-        description: `${savedKnoxIds.length}명 · ${result.registration?.sdwts?.length ?? resolvedSdwts.length}개 SDWT · 5개 Grade`,
+      toast.success("Mailing feature registered.", {
+        description: `${savedKnoxIds.length} recipients · ${result.registration?.sdwts?.length ?? resolvedSdwts.length} SDWTs · 5 Grades`,
       })
     },
     onError: (error) => toast.error(error.message),
@@ -303,8 +303,8 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
       const deletedKnoxId = deleteTarget?.knoxId ?? validLookupKnoxId
       setDeleteTarget(null)
       queryClient.invalidateQueries({ queryKey: ["mailing-registrations", deletedKnoxId] })
-      toast.success(`${formatLineDisplayName(deletedLine)} Line Mailing 조건을 삭제했습니다.`, {
-        description: `DB 반영 ${result.affectedRows?.toLocaleString() ?? 0}행`,
+      toast.success(`Deleted Mailing filters for ${formatLineDisplayName(deletedLine)} Line.`, {
+        description: `${result.affectedRows?.toLocaleString() ?? 0} DB rows affected`,
       })
     },
     onError: (error) => toast.error(error.message),
@@ -335,8 +335,8 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
   const addRecipientKnoxId = () => {
     const knoxId = normalizeKnoxId(recipientKnoxInput)
     if (!knoxId || knoxId.length > 128 || !KNOX_ID_PATTERN.test(knoxId)) {
-      toast.error("knox_id 형식을 확인해 주세요.", {
-        description: "영문, 숫자, 점(.), 밑줄(_), 하이픈(-)만 입력할 수 있습니다.",
+      toast.error("Check the knox_id format.", {
+        description: "Only letters, numbers, periods (.), underscores (_), and hyphens (-) are allowed.",
       })
       return
     }
@@ -392,16 +392,16 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
               <MailPlus className="size-5" aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <h1 className="text-lg font-semibold tracking-tight">이상감지 Mailing Report 수신인 등록</h1>
+              <h1 className="text-lg font-semibold tracking-tight">Anomaly Mailing Report Recipients</h1>
               <p className="mt-1 text-xs text-muted-foreground">
-                Line과 SDWT 조건별 이상감지 Mailing 대상자를 등록합니다.
+                Register anomaly Mailing recipients by Line and SDWT filters.
               </p>
             </div>
           </div>
           <Button type="button" variant="outline" size="sm" asChild>
             <Link to="/">
               <ArrowLeft className="size-4" aria-hidden="true" />
-              SPIDER 메인
+              SPIDER Home
             </Link>
           </Button>
         </div>
@@ -412,9 +412,9 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
         <div className="mx-auto grid w-full max-w-[1680px] gap-5">
           <section aria-labelledby="mailing-filter-title">
             <div className="mb-3">
-              <h2 id="mailing-filter-title" className="text-base font-semibold">Mailing 조건 선택</h2>
+              <h2 id="mailing-filter-title" className="text-base font-semibold">Select Mailing Filters</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Line을 선택한 뒤 SDWT를 복수 선택하거나 ALL로 한 번에 선택할 수 있습니다.
+                Select a Line, then select multiple SDWTs or use ALL.
               </p>
             </div>
 
@@ -423,7 +423,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                 <FilterPanel
                   step="1"
                   title="Line Name"
-                  description="Mailing을 등록할 Line을 선택하세요."
+                  description="Select the Line for Mailing registration."
                   options={lineOptions}
                   selectedValue={selectedLine}
                   onSelect={handleLineChange}
@@ -431,12 +431,12 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                   onQueryChange={setLineQuery}
                   disabled={mappingQuery.isLoading || lines.length === 0}
                   isLoading={mappingQuery.isFetching}
-                  emptyMessage="선택 가능한 Line이 없습니다."
+                  emptyMessage="No lines are available."
                 />
                 <FilterPanel
                   step="2"
                   title="SDWT"
-                  description="복수 선택할 수 있으며, ALL은 해당 Line 전체를 의미합니다."
+                  description="Multiple selections are allowed. ALL includes the entire Line."
                   options={visibleSdwtOptions}
                   selectedValues={activeSdwts}
                   multiple
@@ -444,14 +444,14 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                   query={sdwtQuery}
                   onQueryChange={setSdwtQuery}
                   disabled={!selectedLine}
-                  emptyMessage="Line Name을 먼저 선택하세요."
+                  emptyMessage="Select Line Name first."
                 />
               </div>
             </ResizableFilterArea>
 
             {mappingQuery.isError ? (
               <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive">
-                <span>기준정보 매핑 오류: {mappingQuery.error.message}</span>
+                <span>Reference mapping error: {mappingQuery.error.message}</span>
                 <Button
                   type="button"
                   size="sm"
@@ -459,7 +459,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                   disabled={mappingQuery.isFetching}
                   onClick={() => mappingQuery.refetch()}
                 >
-                  다시 조회
+                  Retry
                 </Button>
               </div>
             ) : null}
@@ -470,13 +470,13 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
               <section className="p-5 sm:p-6" aria-labelledby="mailing-knox-id-title">
                 <div className="flex items-center gap-2">
                   <UserRound className="size-4 text-primary" aria-hidden="true" />
-                  <h2 id="mailing-knox-id-title" className="text-base font-semibold">수신인 knox_id</h2>
+                  <h2 id="mailing-knox-id-title" className="text-base font-semibold">Recipient knox_id</h2>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  knox_id를 입력하고 Enter를 누르세요. 지정된 수신인별로 Mailing 조건이 저장됩니다.
+                  Enter a knox_id and press Enter. Mailing filters are saved for each recipient.
                 </p>
                 <label htmlFor="mailing-knox-id" className="mb-2 mt-5 block text-xs font-medium">
-                  knox_id 입력
+                  Enter knox_id
                 </label>
                 <Input
                   id="mailing-knox-id"
@@ -487,16 +487,16 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                     event.preventDefault()
                     addRecipientKnoxId()
                   }}
-                  placeholder="knox_id 입력 후 Enter"
+                  placeholder="Enter knox_id and press Enter"
                   className="h-12 max-w-xl text-base font-semibold"
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  복수 등록할 수 있으며, email 테이블에 수신인별로 1행씩 저장됩니다.
+                  You can register multiple recipients; one row per recipient is stored in the email table.
                 </p>
                 {recipientKnoxIds.length ? (
                   <div className="mt-4 rounded-xl border bg-muted/20 p-4">
                     <p className="mb-2 text-xs font-semibold text-foreground">
-                      지정된 수신인 {recipientKnoxIds.length.toLocaleString()}명
+                      {recipientKnoxIds.length.toLocaleString()} specified recipients
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {recipientKnoxIds.map((knoxId) => (
@@ -508,7 +508,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                           <button
                             type="button"
                             className="focus-visible:outline-none focus-visible:underline"
-                            title={`${knoxId} 등록 조건 조회`}
+                            title={`View registration filters for ${knoxId}`}
                             onClick={() => setLookupKnoxId(knoxId)}
                           >
                             {knoxId}
@@ -516,7 +516,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                           <button
                             type="button"
                             className="grid size-5 place-items-center rounded-full hover:bg-background/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            aria-label={`${knoxId} 삭제`}
+                            aria-label={`Remove ${knoxId}`}
                             onClick={() => removeRecipientKnoxId(knoxId)}
                           >
                             <X className="size-3" aria-hidden="true" />
@@ -527,14 +527,14 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                   </div>
                 ) : (
                   <div className="mt-4 rounded-xl border border-dashed px-4 py-5 text-center text-sm text-muted-foreground">
-                    Mailing을 수신할 knox_id를 1명 이상 등록하세요.
+                    Register at least one knox_id to receive Mailing reports.
                   </div>
                 )}
               </section>
               <section className="border-t p-5 sm:p-6 lg:border-l lg:border-t-0" aria-labelledby="mailing-selection-title">
-                <h2 id="mailing-selection-title" className="text-base font-semibold">등록 예정 조건</h2>
+                <h2 id="mailing-selection-title" className="text-base font-semibold">Filters to Register</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  priority는 정책에 따라 A, B, D, M, N으로 고정됩니다.
+                  priority is fixed to A, B, D, M, and N by policy.
                 </p>
                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                   <SelectionItem
@@ -557,9 +557,9 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
           {!embedded ? (
             <section className="flex flex-col items-stretch justify-between gap-4 rounded-2xl border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:p-6">
             <div>
-              <h2 className="text-sm font-semibold">등록할 Mailing 조건을 확인하세요.</h2>
+              <h2 className="text-sm font-semibold">Review the Mailing filters to register.</h2>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                SDWT와 Grade는 각각 JSON list 형식으로 email 테이블의 VARCHAR 컬럼에 저장됩니다.
+                SDWT and Grade are stored as JSON lists in VARCHAR columns of the email table.
               </p>
             </div>
             <Button
@@ -574,7 +574,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
               ) : (
                 <Send className="size-5" aria-hidden="true" />
               )}
-              {registrationMutation.isPending ? "등록 중…" : "Mailing 기능 등록"}
+              {registrationMutation.isPending ? "Registering…" : "Register Mailing Feature"}
             </Button>
             </section>
           ) : null}
@@ -582,25 +582,25 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
           <section className="grid gap-3" aria-labelledby="registered-mailing-title">
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <h2 id="registered-mailing-title" className="text-base font-semibold">등록된 Mailing 조건</h2>
+                <h2 id="registered-mailing-title" className="text-base font-semibold">Registered Mailing Filters</h2>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {validLookupKnoxId || "현재 knox_id"} 기준으로 Line, SDWT, Grade를 각각 분리한 결과입니다.
+                  Line, SDWT, and Grade values registered for {validLookupKnoxId || "current knox_id"}.
                 </p>
               </div>
-              <Badge variant="secondary">{registrationRows.length.toLocaleString()}건</Badge>
+              <Badge variant="secondary">{registrationRows.length.toLocaleString()} records</Badge>
             </div>
 
             {!validLookupKnoxId ? (
               <Card className="grid min-h-28 place-items-center px-5 py-6 text-center text-sm text-muted-foreground">
-                조회할 knox_id를 입력하세요.
+                Enter a knox_id to search.
               </Card>
             ) : registrationsQuery.isLoading ? (
               <Card className="grid min-h-28 place-items-center py-6 text-sm text-muted-foreground">
-                <Loader2 className="size-5 animate-spin" aria-label="등록 조건 로딩 중" />
+                <Loader2 className="size-5 animate-spin" aria-label="Loading registered filters" />
               </Card>
             ) : registrationsQuery.isError ? (
               <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                등록 조건 조회 오류: {registrationsQuery.error.message}
+                Failed to load registered filters: {registrationsQuery.error.message}
               </div>
             ) : registrationRows.length ? (
               <Card className="gap-0 overflow-hidden py-0">
@@ -612,7 +612,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                         <TableHead>Line Name</TableHead>
                         <TableHead>SDWT</TableHead>
                         <TableHead>Grade</TableHead>
-                        <TableHead className="w-64 text-right">관리</TableHead>
+                        <TableHead className="w-64 text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -622,7 +622,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                             {index + 1}
                           </TableCell>
                           <TableCell className="font-medium">
-                            {row.line ? formatLineDisplayName(row.line) : "매핑 미확인"}
+                            {row.line ? formatLineDisplayName(row.line) : "Mapping unavailable"}
                           </TableCell>
                           <TableCell>{row.sdwt}</TableCell>
                           <TableCell><Badge variant="outline">{row.grade}</Badge></TableCell>
@@ -636,7 +636,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                                 onClick={() => showUrl(row)}
                               >
                                 <Link2 className="size-3.5" aria-hidden="true" />
-                                링크확인
+                                Check Link
                               </Button>
                               {lineDeleteGroups.get(row.line)?.firstRowId === row.id ? (
                                 <Button
@@ -654,7 +654,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
                                   }}
                                 >
                                   <Trash2 className="size-3.5" aria-hidden="true" />
-                                  Line 삭제
+                                  Delete Line
                                 </Button>
                               ) : null}
                             </div>
@@ -667,7 +667,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
               </Card>
             ) : (
               <Card className="grid min-h-28 place-items-center px-5 py-6 text-center text-sm text-muted-foreground">
-                {validLookupKnoxId}에 등록된 Mailing 조건이 없습니다.
+                No Mailing filters are registered for {validLookupKnoxId}.
               </Card>
             )}
           </section>
@@ -677,9 +677,9 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
       <Dialog open={Boolean(urlTarget)} onOpenChange={(open) => !open && setUrlTarget(null)}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>실제 호출 URL</DialogTitle>
+            <DialogTitle>Request URL</DialogTitle>
             <DialogDescription>
-              선택한 Line, SDWT, Grade 한 건만 쿼리 파라미터에 반영됩니다.
+              Only the selected Line, SDWT, and Grade are included in the query parameters.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
@@ -693,11 +693,11 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
             </code>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setUrlTarget(null)}>닫기</Button>
+            <Button type="button" variant="outline" onClick={() => setUrlTarget(null)}>Close</Button>
             <Button type="button" asChild>
               <a href={urlTarget?.url} target="_blank" rel="noreferrer">
                 <ExternalLink className="size-4" aria-hidden="true" />
-                URL 열기
+                Open URL
               </a>
             </Button>
           </DialogFooter>
@@ -712,15 +712,15 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{formatLineDisplayName(deleteTarget?.line)} Line을 삭제할까요?</DialogTitle>
+            <DialogTitle>Delete {formatLineDisplayName(deleteTarget?.line)} Line?</DialogTitle>
             <DialogDescription>
-              {deleteTarget?.knoxId}에 등록된 해당 Line의 SDWT
-              {deleteTarget?.sdwts?.length ? ` ${deleteTarget.sdwts.length}개` : ""}와 Grade
-              {deleteTarget?.grades?.length ? ` ${deleteTarget.grades.length}개` : ""}가 모두 DB에서 삭제됩니다.
+              All SDWTs
+              {deleteTarget?.sdwts?.length ? ` (${deleteTarget.sdwts.length})` : ""} and Grades
+              {deleteTarget?.grades?.length ? ` (${deleteTarget.grades.length})` : ""} for this Line registered to {deleteTarget?.knoxId} will be deleted from the DB.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-lg border bg-destructive/5 px-4 py-3 text-sm">
-            <p className="font-semibold">삭제 Line: {formatLineDisplayName(deleteTarget?.line)}</p>
+            <p className="font-semibold">Line to delete: {formatLineDisplayName(deleteTarget?.line)}</p>
             <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
               SDWT: {deleteTarget?.sdwts?.join(", ") || "-"}
             </p>
@@ -732,7 +732,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
               disabled={deleteMutation.isPending}
               onClick={() => setDeleteTarget(null)}
             >
-              취소
+              Cancel
             </Button>
             <Button
               type="button"
@@ -749,7 +749,7 @@ export const MailingRegistrationPage = forwardRef(function MailingRegistrationPa
               ) : (
                 <Trash2 className="size-4" aria-hidden="true" />
               )}
-              DB에서 Line 삭제
+              Delete Line from DB
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,47 +1,47 @@
-# SPIDER 사용자 메뉴얼
+# SPIDER User Manual
 
-> 기준일: 2026-08-30
-> 현재 제공 기능: Dashboard, 자설비 이상감지, 동일성 이상감지, 사용자 메뉴얼
+> Baseline date: 2026-08-30
+> Currently available: Dashboard, Equipment Anomaly Detection, Similarity Anomaly Detection, User Manual
 
-## 목차
+## Contents
 
-1. [서비스 접속과 기능 상태](#1-서비스-접속과-기능-상태)
-2. [Dashboard 사용법](#2-dashboard-사용법)
-3. [자설비 이상감지](#3-자설비-이상감지)
-4. [동일성 이상감지](#4-동일성-이상감지)
-5. [개발예정 기능](#5-개발예정-기능)
-6. [문제 해결과 주의사항](#6-문제-해결과-주의사항)
+1. [Access and Feature Status](#1-access-and-feature-status)
+2. [Using the Dashboard](#2-using-the-dashboard)
+3. [Equipment Anomaly Detection](#3-equipment-anomaly-detection)
+4. [Similarity Anomaly Detection](#4-similarity-anomaly-detection)
+5. [Planned Features](#5-planned-features)
+6. [Troubleshooting and Precautions](#6-troubleshooting-and-precautions)
 
-## 1. 서비스 접속과 기능 상태
+## 1. Access and Feature Status
 
-SPIDER 메인 화면에서 기능 카드를 선택합니다. 카드 오른쪽 위 상태가 `운영중`인 기능만 현재 정상 사용자 기능입니다.
+Select a feature card on the SPIDER home screen. Only cards marked `Live` are currently available to users.
 
-| 상태 | 기능 |
+| Status | Features |
 |---|---|
-| 운영중 | 자설비 이상감지, 동일성 이상감지, 사용자 메뉴얼 |
-| 개발예정 | 공통부 이상감지, 공통부 동일성 이상감지, FDC Hard Limit추천, MY EQP 등록, Defect SPIDER, L1 SPIDER, L3 SPIDER |
+| Live | Equipment Anomaly Detection, Similarity Anomaly Detection, User Manual |
+| Planned | Common Area Anomaly Detection, Common Area Similarity Detection, FDC Hard Limit Recommendations, MY EQP Registration, Defect SPIDER, L1 SPIDER, L3 SPIDER |
 
-메인 화면 아래의 `라인별 이상 현황 Dashboard`는 운영중입니다. `개발예정` 카드를 누르면 기능 화면 대신 준비 중 안내가 표시됩니다.
+The `Line Anomaly Dashboard` below the home screen is live. Selecting a `Planned` card opens a preparation notice instead of a feature screen.
 
-## 2. Dashboard 사용법
+## 2. Using the Dashboard
 
-Dashboard에서는 Line별 이상 현황과 최근 추이를 확인합니다.
+The Dashboard shows anomaly status and recent trends by Line.
 
-1. 조회 시작일과 종료일을 선택합니다.
-2. 필요한 Line을 선택합니다. 선택하지 않으면 전체 Line을 조회합니다.
-3. `조회`를 누릅니다.
-4. KPI 카드에서 모니터링 센서 총합, 전체 이상 건수, Grade별 건수와 전일 대비를 확인합니다.
-5. `라인별 이상 건수`, `라인별 일자별 이상 건수 추이`, `라인별 상세 현황`을 확인합니다.
+1. Select the query start and end dates.
+2. Select the required Lines. If none are selected, all Lines are queried.
+3. Select `Search`.
+4. Review total monitored sensors, total anomalies, Grade counts, and the previous-day comparison on the KPI cards.
+5. Review `Anomalies by Line`, `Daily Anomaly Trend by Line`, and `Line Details`.
 
-`초기화`는 조회 조건을 기본값으로 되돌립니다. `다시 조회`는 같은 조건으로 서버 데이터를 다시 불러옵니다. 상세 표의 열 제목을 누르면 정렬할 수 있습니다.
+`Reset` restores the default filters. `Retry` reloads server data using the current filters. Select a column header in the details table to sort it.
 
-메인 상단의 `마지막 알고리즘 수행 시간`이 `확인 불가`이면 새로고침만 반복하지 말고 운영자에게 데이터 상태 확인을 요청합니다.
+If `Last algorithm run time` at the top of the home screen shows `Unavailable`, contact the operator to check the data status instead of repeatedly refreshing.
 
-## 3. 자설비 이상감지
+## 3. Equipment Anomaly Detection
 
-### 3.1 조회 순서
+### 3.1 Filter Order
 
-필터는 왼쪽에서 오른쪽 순서로 선택합니다.
+Select filters from left to right.
 
 1. `Line Name`
 2. `SDWT`
@@ -51,69 +51,69 @@ Dashboard에서는 Line별 이상 현황과 최근 추이를 확인합니다.
 6. `sensor`
 7. `ch_step`
 
-앞 단계 선택에 따라 다음 목록이 달라집니다. 원하는 값이 없으면 앞 단계 조건, 데이터 기준일 또는 Sensor 제외 설정을 확인합니다. `다시 조회`는 현재 조건의 데이터를 새로 불러옵니다.
+Each selection changes the options in the next filter. If the expected value is missing, check the preceding filters, data date, or Sensor exclusion settings. `Retry` reloads data using the current filters.
 
-### 3.2 차트 확인
+### 3.2 Reviewing Charts
 
-필터 선택이 완료되면 `Scatter chart` 영역에 EQP별 차트가 표시됩니다.
+After all filters are selected, charts are displayed by EQP in the `Scatter chart` area.
 
-- `ch_step 모아보기`: 같은 EQP의 여러 `ch_step`을 한 영역에서 봅니다.
-- `ch_step 전체보기`: 모아보기 상태를 원래 개별 표시로 되돌립니다.
-- `동일성 차트`: 선택 EQP의 동일성 데이터를 별도 창에서 봅니다.
-- `3일치 동일성 차트 같이 보기`: 모아보기 오른쪽에 최근 72시간 동일성 차트를 함께 표시합니다.
-- `변경점이력`: EQP 작업 이력과 연결 가능한 LINK를 확인합니다.
+- `Group ch_steps`: View multiple `ch_step` values for the same EQP in one area.
+- `Show All ch_steps`: Return the grouped view to individual charts.
+- `Similarity Chart`: Open similarity data for the selected EQP in a separate window.
+- `Show 3-Day Similarity Chart`: Display the last 72 hours similarity chart next to the grouped view.
+- `Change History`: Review EQP work history and any available LINK.
 
-차트 데이터가 없다는 안내는 조회 자체가 실패했다는 뜻이 아닐 수 있습니다. 선택 조건에 맞는 원천 데이터가 없는지 먼저 확인합니다.
+A no-data message does not always mean the query failed. First check whether source data exists for the selected filters.
 
-### 3.3 SKIP 작업
+### 3.3 SKIP Actions
 
-`SKIP`, `EQP ALL SKIP`, `SKIP해제`는 DB capability가 활성이고 사용자 정보가 준비된 경우에만 사용할 수 있습니다.
+`SKIP`, `EQP ALL SKIP`, and `Remove SKIP` are available only when DB capability is enabled and user information is ready.
 
-- `SKIP`: 현재 이상감지 건을 제외합니다.
-- `EQP ALL SKIP`: 선택 EQP·Sensor의 여러 `ch_step`을 일괄 제외합니다.
-- `SKIP LIST`: 해당 Line에서 제외된 항목을 일반 자설비와 같은 `PRC_Group` 필터 순서로 확인합니다.
-- `SKIP해제`: 제외 상태를 되돌립니다.
+- `SKIP`: Exclude the current anomaly record.
+- `EQP ALL SKIP`: Exclude multiple `ch_step` values for the selected EQP and Sensor.
+- `SKIP LIST`: Review excluded records for the Line using the same `PRC_Group` filter order as the standard equipment view.
+- `Remove SKIP`: Restore an excluded record.
 
-작업 전 대상 EQP, Sensor와 범위를 다시 확인합니다. 운영 DB에서 시험 목적으로 SKIP을 생성하지 않습니다.
+Before running an action, verify the target EQP, Sensor, and scope. Do not create test SKIP records in the production DB.
 
-## 4. 동일성 이상감지
+## 4. Similarity Anomaly Detection
 
-1. 메인에서 `동일성 이상감지`를 선택합니다.
-2. `Line Name`을 선택합니다.
-3. `SDWT`를 선택합니다.
-4. `STEP`을 선택합니다.
-5. `Sensor`와 `ch_step`을 선택합니다.
-6. 결과 영역의 동일성 그래프를 확인합니다.
+1. Select `Similarity Anomaly Detection` from the home screen.
+2. Select `Line Name`.
+3. Select `SDWT`.
+4. Select `STEP`.
+5. Select `Sensor` and `ch_step`.
+6. Review the similarity graphs in the results area.
 
-`ch_step`의 `ALL`은 현재 선택 조건의 여러 결과를 모아보는 화면 선택값입니다. 과거 MY EQP의 `step=ALL` 메일 링크와는 다른 개념입니다.
+`ALL` for `ch_step` is a screen selection that groups multiple results for the current filters. It is different from the legacy MY EQP mailing link value `step=ALL`.
 
-결과가 많으면 페이지 버튼으로 이동합니다. `다시 조회`는 최신 경로와 현재 조건을 다시 확인합니다.
+Use the page buttons when there are many results. `Retry` reloads the latest path using the current filters.
 
-## 5. 개발예정 기능
+## 5. Planned Features
 
-다음 기능은 메인에 보이지만 현재 사용할 수 없습니다.
+The following features appear on the home screen but are not currently available.
 
-- 공통부 이상감지
-- 공통부 동일성 이상감지
-- FDC Hard Limit추천
-- MY EQP 등록
+- Common Area Anomaly Detection
+- Common Area Similarity Detection
+- FDC Hard Limit Recommendations
+- MY EQP Registration
 - Defect SPIDER, L1 SPIDER, L3 SPIDER
 
-MY EQP 등록 route 또는 과거 화면 주소를 알고 있더라도 현재 등록·조회·메일 발송 기능이 제공되는 것은 아닙니다. Mailing Report의 실제 생성·예약 발송 기능도 현재 제공 범위가 아닙니다.
+Knowing the MY EQP Registration route or a legacy screen address does not mean registration, queries, or email delivery are currently supported. Mailing Report generation and scheduled delivery are also outside the current service scope.
 
-## 6. 문제 해결과 주의사항
+## 6. Troubleshooting and Precautions
 
-| 화면 메시지·증상 | 확인할 내용 |
+| Screen Message or Symptom | What to Check |
 |---|---|
-| `조회 조건에 해당하는 데이터가 없습니다.` | 앞 단계 필터와 데이터 기준일을 확인합니다. |
-| 데이터를 불러오지 못함 | 잠시 후 `다시 조회`하고 계속되면 URL·시각·선택 조건을 운영자에게 전달합니다. |
-| DB capability 비활성 안내 | 조회는 가능할 수 있으나 SKIP·이력 작업은 사용할 수 없습니다. |
-| 마지막 수행 시간 `확인 불가` | Dashboard 최신 데이터 또는 연결 상태 확인을 요청합니다. |
-| 개발예정 안내 | 오류가 아니라 아직 제공되지 않는 기능입니다. |
+| `No data matches the selected filters.` | Check the preceding filters and the data date. |
+| Unable to load data | Select `Retry` after a short wait. If the issue continues, provide the URL, time, and selected filters to the operator. |
+| DB capability disabled | Queries may remain available, but SKIP and history actions cannot be used. |
+| Last run time shows `Unavailable` | Ask the operator to check the latest Dashboard data or connection status. |
+| Planned notice | This is not an error; the feature is not yet available. |
 
-주의사항:
+Precautions:
 
-- 브라우저 주소의 query를 임의로 바꿔 권한이나 데이터를 우회하려 하지 않습니다.
-- 화면에 표시된 내부 경로나 사용자 정보를 외부에 공유하지 않습니다.
-- 오류 재현을 위해 운영 데이터, DB 또는 Sensor 설정을 직접 변경하지 않습니다.
-- 문제를 전달할 때 실제 비밀번호, token, credential을 포함하지 않습니다.
+- Do not modify browser query parameters to bypass permissions or data restrictions.
+- Do not share internal paths or user information shown on the screen outside the organization.
+- Do not directly modify production data, the DB, or Sensor settings to reproduce an error.
+- Do not include real passwords, tokens, or credentials when reporting an issue.

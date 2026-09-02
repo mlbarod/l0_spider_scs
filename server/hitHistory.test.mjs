@@ -122,11 +122,11 @@ test("공통부 동일성 이상감지 img.png 경로를 기존 hit_history 구�
 test("허용된 App root 안에서도 결과 이미지 형식이 아니면 거부한다", () => {
   assert.throws(
     () => parseHitHistoryPath("/appdata/abnormal_trend/pic/common/2026-08-21/SDWT-2/ETCH/A/PRESSURE/20/data.parquet"),
-    /HIT 이력 정보를 찾지 못했습니다/,
+    /HIT history information was not found/,
   )
   assert.throws(
     () => parseHitHistoryPath("/tmp/2026-08-21/SDWT-2/result.png"),
-    /허용되지 않은 ERD 차트 경로입니다/,
+    /ERD chart path is not allowed/,
   )
 })
 
@@ -181,7 +181,7 @@ test("세 신규 App 경로의 빈 segment를 원문 단계에서 거부한다",
   ]
 
   invalidPaths.forEach((filePath) => {
-    assert.throws(() => parseHitHistoryPath(filePath), /빈 segment/)
+    assert.throws(() => parseHitHistoryPath(filePath), /empty segment/)
   })
 })
 
@@ -195,6 +195,6 @@ test("App별 날짜와 결과 이미지 이름 계약을 검증한다", () => {
   ]
 
   invalidPaths.forEach((filePath) => {
-    assert.throws(() => parseHitHistoryPath(filePath), /HIT 이력 정보를 찾지 못했습니다/)
+    assert.throws(() => parseHitHistoryPath(filePath), /HIT history information was not found/)
   })
 })

@@ -62,17 +62,17 @@ export function UserManualPage() {
           <div className="min-w-0">
             <div className="mb-2 flex items-center gap-2">
               <BookOpen className="size-6 text-primary" aria-hidden="true" />
-              <h1 className="truncate text-2xl font-semibold tracking-tight">사용자 메뉴얼</h1>
+              <h1 className="truncate text-2xl font-semibold tracking-tight">User Manual</h1>
               <Badge variant="outline">PC Manual</Badge>
             </div>
             <p className="text-sm text-muted-foreground">
-              SPIDER의 메뉴, 조회 조건, 차트와 작업 버튼 사용 방법을 확인합니다.
+              Learn how to use SPIDER menus, filters, charts, and action buttons.
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" asChild>
             <Link to="/">
               <ArrowLeft className="size-4" aria-hidden="true" />
-              SPIDER 메인
+              SPIDER Home
             </Link>
           </Button>
         </div>

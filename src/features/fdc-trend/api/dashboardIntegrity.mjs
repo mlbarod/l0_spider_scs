@@ -1,7 +1,7 @@
 export const DASHBOARD_INTEGRITY_ERROR_CODE = "DASHBOARD_RESPONSE_INTEGRITY_ERROR"
 
 function failIntegrityCheck() {
-  const error = new Error("대시보드 응답 데이터 정합성 오류가 발생했습니다.")
+  const error = new Error("Dashboard response integrity validation failed.")
   error.code = DASHBOARD_INTEGRITY_ERROR_CODE
   throw error
 }

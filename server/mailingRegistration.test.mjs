@@ -85,11 +85,11 @@ test("DB 조회 결과를 화면용 등록 조건으로 정규화한다", () => 
 test("SDWT 미선택과 잘못된 knox_id는 거부한다", () => {
   assert.throws(
     () => buildMailingRegistrationPayload({ knoxId: "user01", sdwts: [] }),
-    /SDWT는 1개 이상/,
+    /Select between 1 and/,
   )
   assert.throws(
     () => buildMailingRegistrationPayload({ knoxId: "user 01", sdwts: ["DREAMS P1D"] }),
-    /knox_id 형식/,
+    /knox_id has an invalid format/,
   )
 })
 

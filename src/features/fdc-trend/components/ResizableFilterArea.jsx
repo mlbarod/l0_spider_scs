@@ -13,7 +13,7 @@ export function ResizableFilterArea({
   defaultHeight = 320,
   minHeight = 160,
   maxHeight = 720,
-  label = "필터 영역 높이 조절",
+  label = "Resize filter area",
 }) {
   const [height, setHeight] = useState(() => clampHeight(defaultHeight, minHeight, maxHeight))
   const dragRef = useRef(null)

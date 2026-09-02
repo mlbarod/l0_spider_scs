@@ -29,18 +29,18 @@ export function SpiderComingSoonPage({ appId: configuredAppId = "" }) {
           </h1>
           <p className="mt-4 text-lg font-medium text-foreground">{app.title}</p>
           <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
-            해당 App은 현재 개발 대기중입니다. 개발이 완료되면 이 화면에서 서비스를 이용할 수 있습니다.
+            This app is awaiting development. The service will be available here when development is complete.
           </p>
 
           <div className="mx-auto mt-7 flex max-w-md items-center justify-center gap-3 rounded-xl bg-muted/60 px-4 py-3 text-sm text-muted-foreground">
             <CalendarClock className="size-4 shrink-0" aria-hidden="true" />
-            <span>서비스 제공 일정은 추후 안내될 예정입니다.</span>
+            <span>The service schedule will be announced later.</span>
           </div>
 
           <Button type="button" variant="outline" className="mt-8" asChild>
             <Link to="/">
               <ArrowLeft className="size-4" aria-hidden="true" />
-              SPIDER 메인
+              SPIDER Home
             </Link>
           </Button>
         </section>

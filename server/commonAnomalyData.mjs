@@ -213,7 +213,7 @@ function rowMatchesEqp(row, eqpMatch) {
 
 function assertPathSegment(name, value) {
   if (!value || value.includes("/") || value.includes("\\") || value.includes("..")) {
-    throw new Error(`${name} 값이 올바르지 않습니다.`)
+    throw new Error(`${name} is invalid.`)
   }
 }
 
@@ -295,12 +295,12 @@ export function resolveCommonAnomalyDataPath(imagePath) {
     ? normalizedImagePath.replace(/\/[^/]+\.png$/i, "/data.parquet")
     : ""
   if (!dataPath) {
-    throw new Error("공통부 경로의 마지막 파일명이 .png 또는 data.parquet이 아닙니다.")
+    throw new Error("The final file in the common-area path is not .png or data.parquet.")
   }
 
   const filePath = resolve(dataPath)
   if (!filePath.startsWith(`${COMMON_DATA_ROOT}${sep}`)) {
-    throw new Error("허용되지 않은 공통부 이상감지 경로입니다.")
+    throw new Error("This common-area anomaly path is not allowed.")
   }
   return filePath
 }
@@ -390,7 +390,7 @@ export async function handleCommonAnomalyDataRequest(req, res, url) {
   try {
     const filters = readFilters(url)
     if (!filters.line || !filters.pathSdwt || !filters.sdwt) {
-      sendJson(res, 400, { ok: false, error: "line, pathSdwt, sdwt 조건이 필요합니다." })
+      sendJson(res, 400, { ok: false, error: "line, pathSdwt, and sdwt are required." })
       return
     }
     const dbConnectionsEnabled = areDbConnectionsEnabled()
@@ -421,7 +421,7 @@ export async function handleCommonAnomalyDataRequest(req, res, url) {
   } catch {
     sendJson(res, 500, createSafeApiError({
       code: "COMMON_ANOMALY_DATA_LOAD_FAILED",
-      message: "공통부 이상감지 경로 데이터를 불러오지 못했습니다.",
+      message: "Unable to load common-area anomaly path data.",
       scope: "common-anomaly-data",
     }))
   }
@@ -436,13 +436,13 @@ export function handleCommonAnomalyImageRequest(req, res, url) {
   const requestedPath = normalizeCommonAnomalyFilePath(url.searchParams.get("path"))
   const filePath = resolve(requestedPath)
   if (!filePath.startsWith(`${COMMON_DATA_ROOT}${sep}`) || !filePath.toLowerCase().endsWith(".png")) {
-    sendJson(res, 403, { ok: false, error: "허용되지 않은 공통부 이상감지 이미지 경로입니다." })
+    sendJson(res, 403, { ok: false, error: "This common-area anomaly image path is not allowed." })
     return
   }
   if (!existsSync(filePath) || !statSync(filePath).isFile()) {
     sendJson(res, 404, createSafeApiError({
       code: "COMMON_ANOMALY_IMAGE_NOT_FOUND",
-      message: "공통부 이상감지 이미지 파일이 없습니다.",
+      message: "The common-area anomaly image file does not exist.",
       scope: "common-anomaly-image",
     }))
     return
@@ -625,7 +625,7 @@ export async function handleCommonAnomalyScatterRequest(req, res, url) {
     const chStep = normalizeText(url.searchParams.get("chStep"))
     const mode = normalizeText(url.searchParams.get("mode")) || "scatter"
     if (!imagePath || !eqp || !sensor || !chStep) {
-      sendJson(res, 400, { ok: false, error: "path, eqp, sensor, chStep 조건이 필요합니다." })
+      sendJson(res, 400, { ok: false, error: "path, eqp, sensor, and chStep are required." })
       return
     }
     assertPathSegment("eqp", normalizeEqp(eqp))
@@ -654,7 +654,7 @@ export async function handleCommonAnomalyScatterRequest(req, res, url) {
   } catch {
     sendJson(res, 500, createSafeApiError({
       code: "COMMON_ANOMALY_SCATTER_LOAD_FAILED",
-      message: "공통부 이상감지 데이터를 불러오지 못했습니다.",
+      message: "Unable to load common-area anomaly data.",
       scope: "common-anomaly-scatter",
     }))
   }

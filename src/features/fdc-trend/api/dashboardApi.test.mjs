@@ -104,7 +104,7 @@ test("Dashboard API client rejects a summary/detail mismatch", async () => {
   await withMockFetch(payload, async () => {
     await assert.rejects(
       fetchDashboardSummary(),
-      /대시보드 응답 데이터 정합성 오류/,
+      /Dashboard response integrity validation failed/,
     )
   })
 })
@@ -117,7 +117,7 @@ test("Dashboard API client rejects a Line outside the requested scope", async ()
   await withMockFetch(payload, async (getRequestedUrl) => {
     await assert.rejects(
       fetchDashboardSummary({ lines: ["TEST_LINE"] }),
-      /대시보드 응답 데이터 정합성 오류/,
+      /Dashboard response integrity validation failed/,
     )
     assert.equal(getRequestedUrl(), "/api/dashboard-data?line=TEST_LINE")
   })

@@ -54,7 +54,7 @@ export async function getLatestCommonCommonalityPath(rootPath = commonCommonalit
 
   if (!latestDate) {
     const error = new Error(
-      `공통부 동일성 최신날짜를 찾지 못했습니다: ${normalizedRootPath} 바로 아래에 YYYY-MM-DD 형식의 디렉터리가 없습니다.`,
+      `Unable to find the latest common-area similarity date: no YYYY-MM-DD directory exists directly under ${normalizedRootPath}.`,
     )
     error.code = "COMMONALITY_DATE_DIRECTORY_NOT_FOUND"
     throw error

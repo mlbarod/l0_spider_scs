@@ -35,7 +35,7 @@ function formatList(values) {
 
 function formatCategory(values, alwaysList = false) {
   const unique = uniqueValues(values)
-  if (!unique.length) throw new Error("클릭이력 카테고리 값을 찾지 못했습니다.")
+  if (!unique.length) throw new Error("Unable to determine the click-history category value.")
   if (unique.length === 1 && unique[0] === ALL_VALUES) return ALL_VALUES
   return alwaysList || unique.length > 1 ? formatList(unique) : unique[0]
 }
@@ -44,11 +44,11 @@ function parseCommonPath(filePath) {
   const normalizedPath = normalizeText(filePath).replaceAll("pic_server2", "pic")
   const resolvedPath = resolve(normalizedPath)
   if (!resolvedPath.startsWith(`${COMMON_FILE_ROOT}${sep}`)) {
-    throw new Error("허용되지 않은 공통부 Drawing 경로입니다.")
+    throw new Error("This common-area Drawing path is not allowed.")
   }
   const segments = relative(COMMON_FILE_ROOT, resolvedPath).split(sep)
   if (segments.length !== 7 || segments.at(-1) !== "data.parquet") {
-    throw new Error("공통부 Drawing 경로 형식이 올바르지 않습니다.")
+    throw new Error("The common-area Drawing path format is invalid.")
   }
   const [, sdwt, , grade, sensor] = segments
   return { sdwt, grade, sensor }
@@ -62,22 +62,22 @@ export function parseCommonalityPath(
   if (resolvedPath.startsWith(`${commonCommonalityFileRoot}${sep}`)) {
     const segments = relative(commonCommonalityFileRoot, resolvedPath).split(sep)
     if (segments.length !== 6 || segments.at(-1) !== "img.png") {
-      throw new Error("공통부 동일성 Drawing 경로 형식이 올바르지 않습니다.")
+      throw new Error("The common-area similarity Drawing path format is invalid.")
     }
     const [, sdwt, , grade, sensorChStep] = segments
     const delimiterIndex = sensorChStep.indexOf("@")
-    if (delimiterIndex <= 0) throw new Error("공통부 동일성 Drawing 경로에서 sensor를 찾지 못했습니다.")
+    if (delimiterIndex <= 0) throw new Error("No sensor was found in the common-area similarity Drawing path.")
     return { sdwt, grade, sensor: sensorChStep.slice(0, delimiterIndex) }
   }
 
   const segments = resolvedPath.split(sep).filter(Boolean)
   if (segments.length < 8 || segments.at(-1) !== "img.png") {
-    throw new Error("동일성 Drawing 경로 형식이 올바르지 않습니다.")
+    throw new Error("The similarity Drawing path format is invalid.")
   }
   const [sdwt, grade, , , ppid, duplicatePpid, sensorChStep] = segments.slice(-8, -1)
-  if (ppid !== duplicatePpid) throw new Error("동일성 Drawing 경로의 PPID가 올바르지 않습니다.")
+  if (ppid !== duplicatePpid) throw new Error("The PPID in the similarity Drawing path is invalid.")
   const delimiterIndex = sensorChStep.lastIndexOf("_")
-  if (delimiterIndex <= 0) throw new Error("동일성 Drawing 경로에서 sensor를 찾지 못했습니다.")
+  if (delimiterIndex <= 0) throw new Error("No sensor was found in the similarity Drawing path.")
   return { sdwt, grade, sensor: sensorChStep.slice(0, delimiterIndex) }
 }
 
@@ -91,7 +91,7 @@ function parseDrawingPath(app, filePath) {
 
 function normalizeDbUpdateDate(value, now = new Date()) {
   const date = normalizeText(value) ? new Date(value) : now
-  if (Number.isNaN(date.getTime())) throw new Error("클릭 시각이 올바르지 않습니다.")
+  if (Number.isNaN(date.getTime())) throw new Error("The click time is invalid.")
   const pad = (number) => String(number).padStart(2, "0")
   return [
     `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
@@ -126,9 +126,9 @@ export function buildClickedCategoryHistoryRecord({
   const normalizedSelectedSdwt = normalizeText(selectedSdwt)
   const normalizedSelectedSensor = normalizeText(selectedSensor)
   const isAllSensorSelection = normalizedSelectedSensor === ALL_VALUES
-  if (!SUPPORTED_APPS.has(normalizedApp)) throw new Error("클릭이력 App 구분값이 올바르지 않습니다.")
-  if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
-  if (!paths.length) throw new Error("Chart Drawing 경로가 필요합니다.")
+  if (!SUPPORTED_APPS.has(normalizedApp)) throw new Error("The click-history app value is invalid.")
+  if (!normalizedLineId) throw new Error("Line Name is required.")
+  if (!paths.length) throw new Error("A Chart Drawing path is required.")
 
   const useExplicitSelection = (normalizedApp === "self" || normalizedApp === "commonality")
     && normalizedSelectedSdwt
@@ -170,13 +170,13 @@ async function readJsonBody(req) {
   let body = ""
   for await (const chunk of req) {
     body += chunk
-    if (body.length > 2 * 1024 * 1024) throw new Error("요청 데이터가 너무 큽니다.")
+    if (body.length > 2 * 1024 * 1024) throw new Error("The request payload is too large.")
   }
   if (!body.trim()) return {}
   try {
     return JSON.parse(body)
   } catch {
-    throw new Error("요청 JSON이 올바르지 않습니다.")
+    throw new Error("The request JSON is invalid.")
   }
 }
 
@@ -202,18 +202,18 @@ function runHelper(payload) {
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        reject(new Error("클릭이력 DB 처리 시간이 초과되었습니다."))
+        reject(new Error("Click-history DB processing timed out."))
         return
       }
       let result
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        reject(new Error("클릭이력 응답을 해석하지 못했습니다."))
+        reject(new Error("Unable to parse the click-history response."))
         return
       }
       if (!result.ok) {
-        reject(new Error(result.error || "클릭이력을 저장하지 못했습니다."))
+        reject(new Error(result.error || "Unable to save click history."))
         return
       }
       resolvePromise(result)
@@ -230,20 +230,20 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
   try {
     const remoteIp = getRemoteIp(req)
     if (!remoteIp) {
-      sendJson(res, 400, { ok: false, error: "접속자 IP를 확인하지 못했습니다." })
+      sendJson(res, 400, { ok: false, error: "Unable to determine the client IP." })
       return
     }
     const [body, currentUser] = await Promise.all([readJsonBody(req), resolveCurrentUser(remoteIp)])
     const record = buildClickedCategoryHistoryRecord({ ...body, knoxId: currentUser.knoxId })
     const result = await runHelper(record)
     if (Number(result.affectedRows) < 1) {
-      throw new Error("클릭이력이 DB에 반영되지 않았습니다.")
+      throw new Error("Click history was not written to the DB.")
     }
     sendJson(res, 200, result)
   } catch {
     const errorPayload = createSafeApiError({
       code: "CLICKED_CATEGORY_HISTORY_REQUEST_FAILED",
-      message: "클릭이력 요청을 처리하지 못했습니다.",
+      message: "Unable to process the click-history request.",
       scope: "clicked-category-history",
     })
     sendJson(res, 500, errorPayload)

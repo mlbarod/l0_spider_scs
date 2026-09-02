@@ -39,7 +39,7 @@ function normalizeDbDate(value) {
 
 function normalizeDbDateTime(value, now = new Date()) {
   const date = normalizeText(value) ? new Date(value) : now
-  if (Number.isNaN(date.getTime())) throw new Error("PASS 이력 실행 시각이 올바르지 않습니다.")
+  if (Number.isNaN(date.getTime())) throw new Error("The PASS history execution time is invalid.")
   const pad = (number) => String(number).padStart(2, "0")
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
@@ -132,11 +132,11 @@ export function buildPassHistoryErdImagePath(record) {
     `${normalizeEqp(record.eqp)}.png`,
   ].map(normalizeText)
   if (segments.some((value, index) => index !== 3 && !value)) {
-    throw new Error("PASS 이력에서 ERD 차트 경로를 복원하지 못했습니다.")
+    throw new Error("Unable to restore the ERD chart path from PASS history.")
   }
   if (!segments[3]) return ""
   if (segments.some((value) => value.includes("/") || value.includes("\\") || value.includes(".."))) {
-    throw new Error("PASS 이력에서 ERD 차트 경로를 복원하지 못했습니다.")
+    throw new Error("Unable to restore the ERD chart path from PASS history.")
   }
 
   return `${ERD_FILE_ROOT}/${segments.join("/")}`
@@ -152,7 +152,7 @@ function buildCommonDataPath(record) {
     record.step,
   ].map(normalizeText)
   if (segments.some((value) => !value || value.includes("/") || value.includes("\\") || value.includes(".."))) {
-    throw new Error("PASS 이력에서 공통부 이상감지 경로를 복원하지 못했습니다.")
+    throw new Error("Unable to restore the common-area anomaly path from PASS history.")
   }
   return `${COMMON_FILE_ROOT}/${segments.join("/")}/data.parquet`
 }
@@ -387,17 +387,17 @@ export function parsePassHistoryPath(filePath) {
   const normalizedPath = normalizeText(filePath).replaceAll("/pic_server2/", "/pic/")
   const resolvedPath = resolve(normalizedPath)
   if (!resolvedPath.startsWith(`${ERD_FILE_ROOT}/`)) {
-    throw new Error("허용되지 않은 ERD 차트 경로입니다.")
+    throw new Error("This ERD chart path is not allowed.")
   }
 
   const segments = relative(ERD_FILE_ROOT, resolvedPath).split(sep)
-  if (segments.length < 9) throw new Error("ERD 차트 경로에서 PASS 이력 정보를 찾지 못했습니다.")
+  if (segments.length < 9) throw new Error("PASS history information was not found in the ERD chart path.")
 
   const [updateDate, sdwt, desc, ver, recipeId, priority, sensor, step] = segments
   const eqp = normalizeEqp(segments.at(-1))
   const required = { updateDate, sdwt, desc, ver, recipeId, priority, sensor, step, eqp }
   if (Object.values(required).some((value) => !value)) {
-    throw new Error("ERD 차트 경로의 PASS 이력 정보가 올바르지 않습니다.")
+    throw new Error("The PASS history information in the ERD chart path is invalid.")
   }
 
   return required
@@ -407,12 +407,12 @@ export function parseCommonPassHistoryPath(filePath, { eqp, prcGroup }) {
   const normalizedPath = normalizeText(filePath).replaceAll("/pic_server2/", "/pic/")
   const resolvedPath = resolve(normalizedPath)
   if (!resolvedPath.startsWith(`${COMMON_FILE_ROOT}/`)) {
-    throw new Error("허용되지 않은 공통부 이상감지 데이터 경로입니다.")
+    throw new Error("This common-area anomaly data path is not allowed.")
   }
 
   const segments = relative(COMMON_FILE_ROOT, resolvedPath).split(sep)
   if (segments.length !== 7 || segments.at(-1) !== "data.parquet") {
-    throw new Error("공통부 이상감지 경로에서 PASS 이력 정보를 찾지 못했습니다.")
+    throw new Error("PASS history information was not found in the common-area anomaly path.")
   }
 
   const [updateDate, sdwt, desc, priority, sensor, step] = segments
@@ -428,7 +428,7 @@ export function parseCommonPassHistoryPath(filePath, { eqp, prcGroup }) {
     eqp: normalizeEqp(eqp),
   }
   if (Object.values(required).some((value) => !value)) {
-    throw new Error("공통부 이상감지 PASS 이력 정보가 올바르지 않습니다.")
+    throw new Error("The common-area anomaly PASS history information is invalid.")
   }
   return required
 }
@@ -437,13 +437,13 @@ async function readJsonBody(req) {
   let body = ""
   for await (const chunk of req) {
     body += chunk
-    if (body.length > 512 * 1024) throw new Error("요청 데이터가 너무 큽니다.")
+    if (body.length > 512 * 1024) throw new Error("The request payload is too large.")
   }
   if (!body.trim()) return {}
   try {
     return JSON.parse(body)
   } catch {
-    throw new Error("요청 JSON이 올바르지 않습니다.")
+    throw new Error("The request JSON is invalid.")
   }
 }
 
@@ -485,7 +485,7 @@ function runPassHistoryHelper(action, payload) {
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        reject(new Error("PASS 이력 처리 시간이 초과되었습니다."))
+        reject(new Error("PASS history processing timed out."))
         return
       }
 
@@ -493,11 +493,11 @@ function runPassHistoryHelper(action, payload) {
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        reject(new Error("PASS 이력 응답을 해석하지 못했습니다."))
+        reject(new Error("Unable to parse the PASS history response."))
         return
       }
       if (!result.ok) {
-        reject(new Error(result.error || "PASS 이력을 처리하지 못했습니다."))
+        reject(new Error(result.error || "Unable to process PASS history."))
         return
       }
       resolvePromise(result)
@@ -534,7 +534,7 @@ export function buildPassHistoryRecord({
   execDate = "",
 }, { allowMissingSelfVersion = false } = {}) {
   const normalizedLineId = normalizeText(lineId)
-  if (!normalizedLineId) throw new Error("Line Name이 필요합니다.")
+  if (!normalizedLineId) throw new Error("Line Name is required.")
 
   const selectedValues = {
     updateDate: normalizeText(updateDate),
@@ -558,7 +558,7 @@ export function buildPassHistoryRecord({
     selectedValues.eqp,
   ].every(Boolean)
   if (!normalizeText(filePath) && !(allowMissingSelfVersion && hasSelfSelection)) {
-    throw new Error("Chart Drawing 경로가 필요합니다.")
+    throw new Error("A Chart Drawing path is required.")
   }
   const normalizedPath = normalizeText(filePath).replaceAll("/pic_server2/", "/pic/")
   const pathValues = hasSelfSelection
@@ -567,7 +567,7 @@ export function buildPassHistoryRecord({
     ? parseCommonPassHistoryPath(normalizedPath, { eqp, prcGroup })
     : parsePassHistoryPath(normalizedPath)
   if (hasSelfSelection && !pathValues.ver && !allowMissingSelfVersion) {
-    throw new Error("자설비 SKIP ver 정보를 확인하지 못했습니다.")
+    throw new Error("Unable to determine the equipment SKIP ver value.")
   }
 
   return {
@@ -584,7 +584,7 @@ export async function handlePassHistoryRequest(req, res, url) {
     if (req.method === "GET") {
       const lineId = normalizeText(url.searchParams.get("lineId"))
       if (!lineId) {
-        sendJson(res, 400, { ok: false, error: "Line Name이 필요합니다." })
+        sendJson(res, 400, { ok: false, error: "Line Name is required." })
         return
       }
       const view = normalizeText(url.searchParams.get("view"))
@@ -628,14 +628,14 @@ export async function handlePassHistoryRequest(req, res, url) {
     if (req.method === "POST" || req.method === "DELETE") {
       const remoteIp = getRemoteIp(req)
       if (!remoteIp) {
-        sendJson(res, 400, { ok: false, error: "접속자 IP를 확인하지 못했습니다." })
+        sendJson(res, 400, { ok: false, error: "Unable to determine the client IP." })
         return
       }
       const currentUser = await resolveCurrentUser(remoteIp)
       const body = await readJsonBody(req)
       if (req.method === "POST" && Array.isArray(body.records)) {
         if (!body.records.length || body.records.length > 500) {
-          sendJson(res, 400, { ok: false, error: "일괄 SKIP 대상은 1건 이상 500건 이하여야 합니다." })
+          sendJson(res, 400, { ok: false, error: "Bulk SKIP requires between 1 and 500 targets." })
           return
         }
         const records = body.records.map((item) => buildPassHistoryRecord({
@@ -661,7 +661,7 @@ export async function handlePassHistoryRequest(req, res, url) {
   } catch {
     const errorPayload = createSafeApiError({
       code: "PASS_HISTORY_REQUEST_FAILED",
-      message: "PASS 이력 요청을 처리하지 못했습니다.",
+      message: "Unable to process the PASS history request.",
       scope: "pass-history",
     })
     sendJson(res, 500, errorPayload)

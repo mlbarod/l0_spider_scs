@@ -24,8 +24,8 @@ export function getLowestChStepRows(rows) {
 export function getLowestChStepRowsByPpid(rows) {
   const rowsBySensorAndPpid = new Map()
   rows.forEach((row) => {
-    const sensor = String(row.sensor ?? "").trim() || "sensor 미지정"
-    const ppid = String(row.recipe_id ?? "").trim() || "PPID 미지정"
+    const sensor = String(row.sensor ?? "").trim() || "Unspecified sensor"
+    const ppid = String(row.recipe_id ?? "").trim() || "Unspecified PPID"
     const groupKey = JSON.stringify([sensor, ppid])
     const groupRows = rowsBySensorAndPpid.get(groupKey) ?? []
     groupRows.push(row)

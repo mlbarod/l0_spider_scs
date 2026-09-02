@@ -189,7 +189,7 @@ function FilterCard({
             {title}
           </CardTitle>
           {isLoading ? (
-            <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-label="로딩 중" />
+            <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-label="Loading" />
           ) : badge != null ? (
             <Badge variant={isActive ? "default" : "secondary"} className="shrink-0 text-[11px]">
               {badge}
@@ -201,7 +201,7 @@ function FilterCard({
         <Input
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="검색…"
+          placeholder="Search…"
           className="h-7 text-xs"
           disabled={disabled}
         />
@@ -326,7 +326,7 @@ function hideZoomOverlay(element) {
 function ChangeHistoryLabel({ viewBox, history }) {
   if (!viewBox || !history) return null
 
-  const label = history.workType || "변경점"
+  const label = history.workType || "Change"
   const details = [history.date, history.description, history.ctttmUrl].filter(Boolean).join(" · ")
   const url = safeHistoryUrl(history.ctttmUrl)
   const text = (
@@ -476,7 +476,7 @@ function ChartLoadingSurface({ active, label }) {
 function ChartLoadError({ error }) {
   return (
     <div className="px-4 text-center text-sm text-destructive">
-      <p>{error?.message ?? "차트 데이터를 불러오지 못했습니다."}</p>
+      <p>{error?.message ?? "Unable to load chart data."}</p>
     </div>
   )
 }
@@ -628,41 +628,41 @@ export function IdentityChartDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="h-9 px-[0.9rem] text-sm">동일성 차트</Button>
+        <Button type="button" variant="outline" size="sm" className="h-9 px-[0.9rem] text-sm">Similarity Chart</Button>
       </DialogTrigger>
       <DialogContent className="h-[88vh] w-[96vw] max-w-[96vw] grid-rows-[auto_minmax(0,1fr)] overflow-hidden sm:max-w-[96vw]">
         <DialogHeader>
           <div className="flex flex-wrap items-center justify-between gap-3 pr-8">
-            <DialogTitle>{eqp || "EQP 미지정"} 동일성 차트</DialogTitle>
+            <DialogTitle>{eqp || "Unspecified EQP"} Similarity Chart</DialogTitle>
             <Button
               type="button"
               size="sm"
               variant={referenceLineMode ? "default" : "outline"}
               onClick={handleReferenceLineMode}
             >
-              기준선 긋기
+              Draw Reference Lines
             </Button>
           </div>
           <DialogDescription className="grid gap-1">
             <span className="font-medium text-foreground">
-              {row.recipe_id || "PPID 미지정"} / {row.sensor || "sensor 미지정"} / {row.step || "ch_step 미지정"}
+              {row.recipe_id || "Unspecified PPID"} / {row.sensor || "Unspecified sensor"} / {row.step || "Unspecified ch_step"}
             </span>
             <span>
               {identityQuery.data
-                ? `${identityQuery.data.groupCount.toLocaleString()}개 EQP · ${identityQuery.data.pointCount.toLocaleString()} points`
-                : "동일한 데이터 파일의 전체 eqp_cb를 비교합니다."}
+                ? `${identityQuery.data.groupCount.toLocaleString()} EQPs · ${identityQuery.data.pointCount.toLocaleString()} points`
+                : "Compare all eqp_cb values in the same data file."}
             </span>
           </DialogDescription>
           <p className="rounded-md border bg-muted/40 px-3 py-2 text-xs leading-5 text-muted-foreground">
-            마우스 오버: 상세정보 · 좌클릭 드래그: 영역 확대 · 더블클릭: 확대 초기화 ·
-            기준선 긋기 후 좌클릭 2회: 기준 구간 표시 · 우클릭: 기준선 삭제
+            Hover: details · Left-drag: zoom area · Double-click: reset zoom ·
+            After enabling reference lines, click twice: mark range · Right-click: remove lines
           </p>
         </DialogHeader>
         {identityQuery.isLoading ? (
           <div className="grid min-h-80 place-items-center text-sm text-muted-foreground">
             <span className="flex items-center gap-2">
               <Loader2 className="size-5 animate-spin" aria-hidden="true" />
-              동일성 차트 데이터를 불러오는 중입니다.
+              Loading similarity chart data.
             </span>
           </div>
         ) : identityQuery.isError ? (
@@ -757,7 +757,7 @@ export function IdentityChartDialog({
           </div>
         ) : (
           <div className="grid min-h-80 place-items-center text-sm text-muted-foreground">
-            표시할 eqp_cb 데이터가 없습니다.
+            No eqp_cb data to display.
           </div>
         )}
       </DialogContent>
@@ -834,9 +834,9 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
       <header className="border-b border-primary/20 bg-primary/5 px-3 py-2">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold">최근 3일 동일성 차트</h3>
+            <h3 className="truncate text-sm font-semibold">Last 3 Days Similarity Chart</h3>
             <p className="truncate text-[11px] text-muted-foreground">
-              {row.recipe_id || "PPID 미지정"} · {row.sensor || "sensor 미지정"} · {row.step || "ch_step 미지정"}
+              {row.recipe_id || "Unspecified PPID"} · {row.sensor || "Unspecified sensor"} · {row.step || "Unspecified ch_step"}
             </p>
           </div>
           {identityQuery.data ? (
@@ -853,7 +853,7 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
         {!isNearViewport || identityQuery.isLoading ? (
           <ChartLoadingSurface
             active={isNearViewport && identityQuery.isLoading}
-            label="최근 3일 동일성 차트를 준비 중입니다."
+            label="Preparing the last 3 days similarity chart."
           />
         ) : identityQuery.isError ? (
           <ChartLoadError error={identityQuery.error} />
@@ -908,7 +908,7 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
           </div>
         ) : (
           <div className="px-4 text-center text-sm text-muted-foreground">
-            최근 3일 범위에 표시할 동일성 데이터가 없습니다.
+            No similarity data is available for the last 3 days.
           </div>
         )}
       </div>
@@ -943,7 +943,7 @@ export const SkipChartDialog = memo(function SkipChartDialog({
       setSkipComment("")
       setSkipClickedAt("")
       await refreshPassHistory()
-      toast.success("SKIP완료")
+      toast.success("SKIP completed")
     },
     onError: (error) => toast.error(error.message),
   })
@@ -977,9 +977,9 @@ export const SkipChartDialog = memo(function SkipChartDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{eqp || "EQP 미지정"} 이상감지 SKIP</DialogTitle>
+          <DialogTitle>{eqp || "Unspecified EQP"} Anomaly SKIP</DialogTitle>
           <DialogDescription>
-            SKIP 사유를 한 줄로 입력할 수 있습니다. comment는 입력하지 않아도 됩니다.
+            You can enter a one-line reason for SKIP. The comment is optional.
           </DialogDescription>
         </DialogHeader>
         <Input
@@ -991,7 +991,7 @@ export const SkipChartDialog = memo(function SkipChartDialog({
               handleSkipConfirm()
             }
           }}
-          placeholder="comment 입력 (선택)"
+          placeholder="Enter comment (optional)"
           aria-label="SKIP comment"
           autoFocus
         />
@@ -1002,7 +1002,7 @@ export const SkipChartDialog = memo(function SkipChartDialog({
             onClick={() => handleSkipDialogChange(false)}
             disabled={createSkipMutation.isPending}
           >
-            취소
+            Cancel
           </Button>
           <Button type="button" onClick={handleSkipConfirm} disabled={createSkipMutation.isPending}>
             {createSkipMutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
@@ -1039,7 +1039,7 @@ export const EqpAllSkipDialog = memo(function EqpAllSkipDialog({
         [target.filePath, target.eqp, target.prcGroup].join("\u0000"),
         { lineId, ...target },
       ])).values())
-      if (!uniqueTargets.length) throw new Error("일괄 SKIP할 ch_step 데이터가 없습니다.")
+      if (!uniqueTargets.length) throw new Error("No ch_step data is available for bulk SKIP.")
       return createPassHistoryBatch({
         records: uniqueTargets,
         comment,
@@ -1051,7 +1051,7 @@ export const EqpAllSkipDialog = memo(function EqpAllSkipDialog({
       setComment("")
       setClickedAt("")
       await refreshPassHistory()
-      toast.success(`EQP ALL SKIP 완료 (${result.requestedRows?.toLocaleString() ?? 0}건)`)
+      toast.success(`EQP ALL SKIP completed (${result.requestedRows?.toLocaleString() ?? 0} rows)`)
     },
     onError: (error) => toast.error(error.message),
   })
@@ -1076,22 +1076,22 @@ export const EqpAllSkipDialog = memo(function EqpAllSkipDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {eqp || "EQP 미지정"} / {sensor || "sensor 미지정"} ALL SKIP
+            {eqp || "Unspecified EQP"} / {sensor || "Unspecified sensor"} ALL SKIP
           </DialogTitle>
           <DialogDescription>
-            이 EQP의 해당 sensor에 속한 모든 ch_step을 각각 PASS 이력에 등록합니다.
+            Register every ch_step for this EQP and sensor in PASS history.
           </DialogDescription>
         </DialogHeader>
         <Input
           value={comment}
           onChange={(event) => setComment(event.target.value)}
-          placeholder="comment 입력 (선택)"
+          placeholder="Enter comment (optional)"
           aria-label="EQP ALL SKIP comment"
           autoFocus
         />
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={createAllSkipMutation.isPending}>
-            취소
+            Cancel
           </Button>
           <Button type="button" onClick={() => createAllSkipMutation.mutate()} disabled={createAllSkipMutation.isPending}>
             {createAllSkipMutation.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : null}
@@ -1132,7 +1132,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
     mutationFn: deletePassHistory,
     onSuccess: async () => {
       await refreshPassHistory()
-      toast.success("SKIP해제 완료")
+      toast.success("SKIP removed")
     },
     onError: (error) => toast.error(error.message),
   })
@@ -1141,7 +1141,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
   }
   const saveHitHistoryMutation = useMutation({
     mutationFn: createHitHistory,
-    onSuccess: () => toast.success("이력저장 완료"),
+    onSuccess: () => toast.success("History saved"),
     onError: (error) => toast.error(error.message),
   })
   const handleHistorySave = () => {
@@ -1273,30 +1273,30 @@ const ErdScatterCard = memo(function ErdScatterCard({
       <header className="border-b bg-muted/50 px-3 py-2">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <h3 className="shrink-0 text-sm font-semibold">{eqp || "EQP 미지정"}</h3>
+            <h3 className="shrink-0 text-sm font-semibold">{eqp || "Unspecified EQP"}</h3>
             <p className="truncate text-[11px] text-muted-foreground">
-              {row.recipe_id || "PPID 미지정"} · {row.sensor || "sensor 미지정"} · {row.step || "ch_step 미지정"}
+              {row.recipe_id || "Unspecified PPID"} · {row.sensor || "Unspecified sensor"} · {row.step || "Unspecified ch_step"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {isSkipped ? <Badge variant="destructive">이상감지 SKIP 건</Badge> : null}
+            {isSkipped ? <Badge variant="destructive">Anomaly SKIP</Badge> : null}
             {chartQuery.data ? (
-              <Badge variant="secondary">{points.length.toLocaleString()} 매</Badge>
+              <Badge variant="secondary">{points.length.toLocaleString()} points</Badge>
             ) : null}
-            <Badge variant="outline">{row.priority ? `${row.priority}등급` : "등급 미지정"}</Badge>
+            <Badge variant="outline">{row.priority ? `${row.priority} Grade` : "Unspecified Grade"}</Badge>
           </div>
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-red-500" /> 이상감지 data
+            <span className="size-2 rounded-full bg-red-500" /> Anomaly data
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-gray-400" /> 이전 데이터
+            <span className="size-2 rounded-full bg-gray-400" /> Previous data
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t border-dashed border-green-600" /> 변경점 이력
+            <span className="w-4 border-t border-dashed border-green-600" /> Change history
           </span>
-          <span>드래그 확대 · 더블클릭 원복</span>
+          <span>Drag to zoom · Double-click to reset</span>
         </div>
       </header>
       <div
@@ -1306,7 +1306,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
         {!isNearViewport || chartQuery.isLoading ? (
           <ChartLoadingSurface
             active={isNearViewport && chartQuery.isLoading}
-            label="Scatter chart를 준비 중입니다."
+            label="Preparing scatter chart."
           />
         ) : chartQuery.isError ? (
           <ChartLoadError error={chartQuery.error} />
@@ -1387,7 +1387,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
           </div>
         ) : (
           <div className="px-4 text-center text-sm text-muted-foreground">
-            {eqp}에 해당하는 유효한 scatter 데이터가 없습니다.
+            No valid scatter data is available for {eqp}.
           </div>
         )}
       </div>
@@ -1421,7 +1421,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               disabled={deleteSkipMutation.isPending}
             >
               {deleteSkipMutation.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
-              SKIP해제
+              Remove SKIP
             </Button>
           ) : null}
         </div>
@@ -1429,20 +1429,20 @@ const ErdScatterCard = memo(function ErdScatterCard({
           <IdentityChartDialog row={row} eqp={eqp} />
           <Dialog>
             <DialogTrigger asChild>
-              <Button type="button" variant="outline" size="sm" className="h-9 px-[0.9rem] text-sm">변경점이력</Button>
+              <Button type="button" variant="outline" size="sm" className="h-9 px-[0.9rem] text-sm">Change History</Button>
             </DialogTrigger>
             <DialogContent className="max-h-[85vh] sm:max-w-5xl">
             <DialogHeader>
-              <DialogTitle>{eqp || "EQP 미지정"} 변경점 이력</DialogTitle>
+              <DialogTitle>{eqp || "Unspecified EQP"} Change History</DialogTitle>
               <DialogDescription>
-                총 {changeHistory.length.toLocaleString()}건의 변경점 이력입니다.
+                {changeHistory.length.toLocaleString()} change history records.
               </DialogDescription>
             </DialogHeader>
             {chartQuery.isLoading ? (
               <div className="grid min-h-32 place-items-center rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">
                 <span className="flex items-center gap-2">
                   <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                  변경점 이력을 불러오는 중입니다.
+                  Loading change history.
                 </span>
               </div>
             ) : changeHistory.length ? (
@@ -1483,7 +1483,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               </div>
             ) : (
               <div className="grid min-h-32 place-items-center rounded-md border bg-muted/30 p-6 text-sm text-muted-foreground">
-                {chartQuery.data?.historyError || "표시할 변경점 이력이 없습니다."}
+                {chartQuery.data?.historyError || "No change history to display."}
               </div>
             )}
             </DialogContent>
@@ -1500,7 +1500,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               {saveHitHistoryMutation.isPending
                 ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
                 : null}
-              이력저장
+              Save History
             </Button>
           ) : null}
         </div>
@@ -1684,7 +1684,7 @@ export function FdcTrendPage() {
     const groups = new Map()
 
     chartRows.forEach((row) => {
-      const eqp = stripPngExtension(row.eqp) || "EQP 미지정"
+      const eqp = stripPngExtension(row.eqp) || "Unspecified EQP"
       const groupRows = groups.get(eqp) ?? []
       groupRows.push(row)
       groups.set(eqp, groupRows)
@@ -1773,7 +1773,7 @@ export function FdcTrendPage() {
     steps.map((item) => ({
       value: item.prcGroup,
       label: item.prcGroup,
-      meta: `${item.rowCount.toLocaleString()}건 · ${item.equipmentCount.toLocaleString()} eqp`,
+      meta: `${item.rowCount.toLocaleString()} rows · ${item.equipmentCount.toLocaleString()} eqp`,
     })),
     queries.step,
   )
@@ -1782,12 +1782,12 @@ export function FdcTrendPage() {
       {
         value: ALL_EQP_CHANNELS,
         label: "ALL",
-        meta: `${eqpChannels.reduce((total, item) => total + item.rowCount, 0).toLocaleString()}건`,
+        meta: `${eqpChannels.reduce((total, item) => total + item.rowCount, 0).toLocaleString()} rows`,
       },
       ...eqpChannels.map((item) => ({
         value: item.eqpCh,
         label: stripPngExtension(item.eqpCh),
-        meta: `${item.rowCount.toLocaleString()}건`,
+        meta: `${item.rowCount.toLocaleString()} rows`,
       })),
     ] : [],
     queries.eqpCh,
@@ -1797,12 +1797,12 @@ export function FdcTrendPage() {
       {
         value: ALL_SENSORS,
         label: "ALL",
-        meta: `${sensors.reduce((total, item) => total + item.rowCount, 0).toLocaleString()}건`,
+        meta: `${sensors.reduce((total, item) => total + item.rowCount, 0).toLocaleString()} rows`,
       },
       ...sensors.map((item) => ({
         value: item.sensor,
         label: item.sensor,
-        meta: `${item.rowCount.toLocaleString()}건`,
+        meta: `${item.rowCount.toLocaleString()} rows`,
       })),
     ] : [],
     queries.sensor,
@@ -1812,12 +1812,12 @@ export function FdcTrendPage() {
       {
         value: ALL_CH_STEPS,
         label: "ALL",
-        meta: `${chSteps.reduce((total, item) => total + item.rowCount, 0).toLocaleString()}건`,
+        meta: `${chSteps.reduce((total, item) => total + item.rowCount, 0).toLocaleString()} rows`,
       },
       ...(selectedSensor === ALL_SENSORS ? [] : chSteps.map((item) => ({
         value: item.step,
         label: item.step.split("@")[0],
-        meta: `${item.rowCount.toLocaleString()}건 · ${item.equipmentCount.toLocaleString()} eqp`,
+        meta: `${item.rowCount.toLocaleString()} rows · ${item.equipmentCount.toLocaleString()} eqp`,
       }))),
     ] : [],
     queries.chStep,
@@ -1884,7 +1884,7 @@ export function FdcTrendPage() {
       })
       const filePaths = getSelfEquipmentHistoryFilePaths(payload.rows)
       if (!filePaths.length) {
-        throw new Error("클릭이력에 사용할 file_path가 없습니다.")
+        throw new Error("No file_path is available for click history.")
       }
       await createClickedCategoryHistory({
         app: "self",
@@ -1896,7 +1896,7 @@ export function FdcTrendPage() {
         clickedAt,
       })
     } catch (error) {
-      toast.error(`클릭이력 저장 실패: ${error.message}`)
+      toast.error(`Failed to save click history: ${error.message}`)
     }
   }
   const toggleGatheredChSteps = (eqp) => {
@@ -1914,26 +1914,26 @@ export function FdcTrendPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold tracking-tight">자설비 이상감지</h1>
+              <h1 className="text-lg font-semibold tracking-tight">Equipment Anomaly Detection</h1>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              라인, 분임조, 센서 등급과 PRC_Group, eqp_ch, sensor, ch_step을 선택해 ERD 결과를 조회합니다.
+              Select a line, team, sensor grade, PRC_Group, eqp_ch, sensor, and ch_step to view ERD results.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
-                ? `접속 IP: ${currentUserQuery.data.knoxId}`
+                ? `Client IP: ${currentUserQuery.data.knoxId}`
                 : !dbConnectionsEnabled
-                ? "DB 기능 연결 전입니다."
+                ? "DB features are not connected."
                 : currentUserQuery.isLoading
-                ? "접속 IP 확인 중…"
-                : "접속 IP를 확인할 수 없습니다."}
+                ? "Checking client IP…"
+                : "Unable to determine client IP."}
             </p>
             <Button type="button" variant="outline" size="sm" asChild>
               <Link to="/">
                 <ArrowLeft className="size-4" aria-hidden="true" />
-                SPIDER 메인
+                SPIDER Home
               </Link>
             </Button>
           </div>
@@ -1961,12 +1961,12 @@ export function FdcTrendPage() {
               )} />
             </span>
             <span>
-              <span className="block text-sm font-medium text-foreground">3일치 동일성 차트 같이 보기</span>
+              <span className="block text-sm font-medium text-foreground">Show 3-Day Similarity Chart</span>
               <span className="mt-0.5 block text-xs text-muted-foreground">
-                ch_step 모아보기에서 기존 차트 오른쪽에 최근 72시간 동일성 차트를 표시합니다.
+                In grouped ch_step view, show the last 72 hours similarity chart to the right.
               </span>
             </span>
-            <span className="sr-only">{showThreeDayIdentity ? "켜짐" : "꺼짐"}</span>
+            <span className="sr-only">{showThreeDayIdentity ? "On" : "Off"}</span>
           </button>
         </div>
       </section>
@@ -1979,7 +1979,7 @@ export function FdcTrendPage() {
               title="Line Name"
               badge={lines.length ? `${lines.length}` : null}
               disabled={lines.length === 0}
-              placeholder="선택 가능한 Line이 없습니다."
+              placeholder="No lines are available."
               isActive={Boolean(activeLine)}
               isLoading={mappingQuery.isFetching && lines.length === 0}
               query={queries.line}
@@ -1998,7 +1998,7 @@ export function FdcTrendPage() {
               title="SDWT"
               badge={teamOptions.length ? `${teamOptions.length}` : null}
               disabled={!activeLine}
-              placeholder="Line Name을 먼저 선택하세요"
+              placeholder="Select Line Name first"
               isActive={Boolean(activeTeam)}
               query={queries.team}
               onQueryChange={(value) => setQuery("team", value)}
@@ -2017,12 +2017,12 @@ export function FdcTrendPage() {
               badge={`${gradeOptions.length}`}
               disabled={!activeTeam}
               placeholder={!activeTeam
-                ? "SDWT를 먼저 선택하세요"
+                ? "Select SDWT first"
                 : dataQuery.isLoading
-                ? "로딩 중…"
+                ? "Loading…"
                 : isSkipList
-                ? "SKIP된 차트가 없습니다."
-                : "선택 가능한 Sensor Grade가 없습니다."}
+                ? "No skipped charts are available."
+                : "No Sensor Grades are available."}
               isActive={selectedGrades.length > 0}
               query={queries.grade}
               onQueryChange={(value) => setQuery("grade", value)}
@@ -2042,8 +2042,8 @@ export function FdcTrendPage() {
               badge={steps.length ? `${steps.length}` : null}
               disabled={!activeTeam || dataQuery.isLoading}
               placeholder={dataQuery.isLoading
-                ? "로딩 중…"
-                : "선택 조건에 해당하는 PRC_Group이 없습니다."}
+                ? "Loading…"
+                : "No PRC_Group matches the selected filters."}
               isActive={Boolean(activeDesc)}
               isLoading={dataQuery.isFetching && !selectedDesc}
               query={queries.step}
@@ -2073,8 +2073,8 @@ export function FdcTrendPage() {
               badge={eqpChannels.length ? `${eqpChannels.length}` : null}
               disabled={!activeDesc || dataQuery.isLoading}
               placeholder={activeDesc
-                ? "선택 PRC_Group에 해당하는 eqp_ch가 없습니다."
-                : "PRC_Group을 먼저 선택하세요"}
+                ? "No eqp_ch matches the selected PRC_Group."
+                : "Select PRC_Group first"}
               isActive={Boolean(activeEqpCh)}
               isLoading={dataQuery.isFetching && Boolean(activeDesc) && !selectedEqpCh}
               query={queries.eqpCh}
@@ -2100,7 +2100,7 @@ export function FdcTrendPage() {
               title="sensor"
               badge={sensors.length ? `${sensors.length}` : null}
               disabled={!selectedEqpCh || dataQuery.isLoading}
-              placeholder={selectedEqpCh ? "선택 eqp_ch에 해당하는 sensor가 없습니다." : "eqp_ch를 먼저 선택하세요"}
+              placeholder={selectedEqpCh ? "No sensor matches the selected eqp_ch." : "Select eqp_ch first"}
               isActive={Boolean(activeSensor)}
               isLoading={dataQuery.isFetching && Boolean(selectedEqpCh)}
               query={queries.sensor}
@@ -2124,7 +2124,7 @@ export function FdcTrendPage() {
               title="ch_step"
               badge={chSteps.length ? `${chSteps.length}` : null}
               disabled={!selectedSensor || dataQuery.isLoading}
-              placeholder={selectedSensor ? "선택 sensor에 해당하는 ch_step이 없습니다." : "sensor를 먼저 선택하세요"}
+              placeholder={selectedSensor ? "No ch_step matches the selected sensor." : "Select sensor first"}
               isActive={Boolean(activeChStep)}
               isLoading={dataQuery.isFetching && Boolean(selectedSensor)}
               query={queries.chStep}
@@ -2145,7 +2145,7 @@ export function FdcTrendPage() {
         </ResizableFilterArea>
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive">
-            <span>기준정보 매핑 오류: {mappingQuery.error.message}</span>
+            <span>Reference mapping error: {mappingQuery.error.message}</span>
             <Button
               type="button"
               size="sm"
@@ -2153,7 +2153,7 @@ export function FdcTrendPage() {
               disabled={mappingQuery.isFetching}
               onClick={() => mappingQuery.refetch()}
             >
-              다시 조회
+              Retry
             </Button>
           </div>
         ) : null}
@@ -2162,8 +2162,8 @@ export function FdcTrendPage() {
       <main className="grid min-w-0 gap-4 p-4">
         {selfEquipmentFileReadEnabled && !selfEquipmentDbEnabled ? (
           <div className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-800 dark:text-sky-200">
-            현재 서버가 DB capability를 비활성으로 응답했습니다. SKIP, 클릭이력과 이력저장 요청은
-            실행되지만 서버 DB gate에서 거부될 수 있습니다.
+            The server reports that DB capability is disabled. SKIP, click history, and save-history requests
+            may be rejected by the server DB gate.
           </div>
         ) : null}
         {dataQuery.isError ? (
@@ -2173,7 +2173,7 @@ export function FdcTrendPage() {
         ) : null}
         {!isSkipList && passHistoryQuery.isError ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            PASS 이력을 불러오지 못했습니다: {passHistoryQuery.error.message}
+            Unable to load PASS history: {passHistoryQuery.error.message}
           </div>
         ) : null}
 
@@ -2182,7 +2182,7 @@ export function FdcTrendPage() {
             <div>
               <h2 className="text-base font-semibold">Scatter chart</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                ch_step을 선택하면 최신 ERD 이상감지 데이터의 act_time과 실제 sensor/ch_step 컬럼 값을 표시합니다.
+                Select ch_step to display act_time and the actual sensor/ch_step values from the latest ERD anomaly data.
               </p>
             </div>
             {chStepIsSelected ? (
@@ -2195,7 +2195,7 @@ export function FdcTrendPage() {
           {chStepIsSelected && chartPageCount > 1 ? (
             <nav
               className="flex flex-wrap items-center justify-center gap-1 rounded-lg border bg-card px-3 py-2"
-              aria-label="차트 페이지"
+              aria-label="Chart pages"
             >
               {Array.from({ length: chartPageCount }, (_, index) => {
                 const page = index + 1
@@ -2206,7 +2206,7 @@ export function FdcTrendPage() {
                     variant={activeChartPage === page ? "default" : "outline"}
                     size="sm"
                     className="size-8 p-0"
-                    aria-label={`${page}페이지`}
+                    aria-label={`Page ${page}`}
                     aria-current={activeChartPage === page ? "page" : undefined}
                     onClick={() => setChartPage(page)}
                   >
@@ -2218,7 +2218,7 @@ export function FdcTrendPage() {
           ) : null}
           {!chStepIsSelected ? (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-              PRC_Group, eqp_ch, sensor와 ch_step을 선택하면 scatter chart가 표시됩니다.
+              Select PRC_Group, eqp_ch, sensor, and ch_step to display the scatter chart.
             </div>
           ) : chartGroups.length ? (
             <div className="grid min-w-0 gap-5">
@@ -2236,7 +2236,7 @@ export function FdcTrendPage() {
                         aria-pressed={group.gathered}
                         onClick={() => toggleGatheredChSteps(group.eqp)}
                       >
-                        {group.gathered ? "ch_step 전체보기" : "ch_step 모아보기"}
+                        {group.gathered ? "Show All ch_steps" : "Group ch_steps"}
                       </Button>
                     </div>
                     <Badge variant="secondary">
@@ -2279,7 +2279,7 @@ export function FdcTrendPage() {
             </div>
           ) : (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card text-sm text-muted-foreground">
-              {dataQuery.isLoading ? "데이터를 불러오는 중입니다." : "표시할 file_path 데이터가 없습니다."}
+              {dataQuery.isLoading ? "Loading data." : "No file_path data to display."}
             </div>
           )}
         </section>
@@ -2289,7 +2289,7 @@ export function FdcTrendPage() {
         type="button"
         size="icon"
         className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg"
-        aria-label="화면 맨 위로 이동"
+        aria-label="Back to top"
         onClick={() => pageRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
       >
         <ArrowUp className="size-4" aria-hidden="true" />

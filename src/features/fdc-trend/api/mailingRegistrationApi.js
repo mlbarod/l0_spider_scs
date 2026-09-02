@@ -19,7 +19,7 @@ export async function createMailingRegistration({ knoxId, knoxIds, sdwts }) {
   const payload = await readPayload(response)
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "Mailing 기준정보를 저장하지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to save Mailing reference data."))
   }
   return payload
 }
@@ -33,7 +33,7 @@ export async function deleteMailingRegistrationLine({ knoxId, line, sdwts }) {
   const payload = await readPayload(response)
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "Mailing Line 조건을 삭제하지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to delete the Mailing Line filters."))
   }
   return payload
 }
@@ -46,7 +46,7 @@ export async function fetchMailingRegistrations({ knoxId }) {
   const payload = await readPayload(response)
 
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "Mailing 등록 조건을 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load registered Mailing filters."))
   }
   return Array.isArray(payload.registrations) ? payload.registrations : []
 }

@@ -80,7 +80,7 @@ function sendJson(res, statusCode, payload) {
 
 function assertPathSegment(name, value) {
   if (!value || value.includes("/") || value.includes("\\") || value.includes("..")) {
-    throw new Error(`${name} 값이 올바르지 않습니다.`)
+    throw new Error(`${name} is invalid.`)
   }
 }
 
@@ -477,7 +477,7 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
   try {
     const filters = readFilters(url)
     if (!filters.line || !filters.pathSdwt || !filters.sdwt) {
-      sendJson(res, 400, { ok: false, error: "line, pathSdwt, sdwt 조건이 필요합니다." })
+      sendJson(res, 400, { ok: false, error: "line, pathSdwt, and sdwt are required." })
       return
     }
 
@@ -527,14 +527,14 @@ export async function handleSelfEquipmentDataRequest(req, res, url) {
     if (error?.dataSource === "eqp-reference") {
       sendJson(res, 500, createSafeApiError({
         code: "EQP_REFERENCE_LOAD_FAILED",
-        message: "eqp 기준정보 파일을 불러오지 못했습니다. 파일 경로와 main, prc_group 컬럼을 확인해 주세요.",
+        message: "Unable to load the eqp reference file. Check the file path and the main and prc_group columns.",
         scope: "self-equipment-eqp-reference",
       }))
       return
     }
     sendJson(res, 500, createSafeApiError({
       code: "SELF_EQUIPMENT_DATA_LOAD_FAILED",
-      message: "분임조별 ERD 이상감지 경로 데이터를 불러오지 못했습니다.",
+      message: "Unable to load team ERD anomaly path data.",
       scope: "self-equipment-data",
     }))
   }
@@ -550,7 +550,7 @@ export function resolveErdDataFilePath(dataDirectoryPath) {
   )
 
   if (!isPicPath || isBackupPath) {
-    throw new Error("허용되지 않은 ERD 데이터 경로입니다.")
+    throw new Error("This ERD data path is not allowed.")
   }
 
   const pathSegments = relative(PIC_FILE_ROOT, resolvedInputPath).split(sep)
@@ -588,17 +588,17 @@ export function resolveErdScatterProjection(schemaColumns, {
 }) {
   const availableColumns = new Set(schemaColumns)
   if (!availableColumns.has("act_time")) {
-    throw new Error("ERD scatter act_time 컬럼이 없습니다.")
+    throw new Error("The ERD scatter data does not contain an act_time column.")
   }
 
   const axisColumn = [`${sensor}_${chStep}`, `${sensor}*${chStep}`]
     .find((column) => availableColumns.has(column))
   if (!axisColumn) {
-    throw new Error("ERD scatter sensor/ch_step 컬럼이 없습니다.")
+    throw new Error("The ERD scatter data does not contain a sensor/ch_step column.")
   }
 
   if (identity && !availableColumns.has("eqp_cb")) {
-    throw new Error("ERD identity eqp_cb 컬럼이 없습니다.")
+    throw new Error("The ERD identity data does not contain an eqp_cb column.")
   }
   const equipmentColumn = availableColumns.has("eqp")
     ? "eqp"
@@ -606,7 +606,7 @@ export function resolveErdScatterProjection(schemaColumns, {
     ? "eqp_cb"
     : ""
   if (!identity && !equipmentColumn) {
-    throw new Error("ERD scatter EQP 식별 컬럼이 없습니다.")
+    throw new Error("The ERD scatter data does not contain an EQP identifier column.")
   }
 
   const columns = Array.from(new Set([
@@ -936,7 +936,7 @@ export async function handleErdScatterDataRequest(req, res, url, {
     const eqp = url.searchParams.get("eqp")?.trim() ?? ""
     const mode = url.searchParams.get("mode")?.trim() ?? "scatter"
     if (!imagePath || !eqp) {
-      sendJson(res, 400, { ok: false, error: "path와 eqp 조건이 필요합니다." })
+      sendJson(res, 400, { ok: false, error: "path and eqp are required." })
       return
     }
 
@@ -955,11 +955,11 @@ export async function handleErdScatterDataRequest(req, res, url, {
       chStep: pathChStep,
     } = resolveErdDataFilePath(imagePath)
     if (requestedLatestDate && !SELF_EQUIPMENT_DATE_PATTERN.test(requestedLatestDate)) {
-      sendJson(res, 400, { ok: false, error: "latestDate 형식이 올바르지 않습니다." })
+      sendJson(res, 400, { ok: false, error: "latestDate has an invalid format." })
       return
     }
     if (!isSkipList && (!requestedLine || !requestedPathSdwt || !requestedSensor || !requestedChStep || !requestedVer)) {
-      sendJson(res, 400, { ok: false, error: "line, pathSdwt, sensor, chStep과 ver 조건이 필요합니다." })
+      sendJson(res, 400, { ok: false, error: "line, pathSdwt, sensor, chStep, and ver are required." })
       return
     }
     const authorized = isSkipList
@@ -975,7 +975,7 @@ export async function handleErdScatterDataRequest(req, res, url, {
           ver: requestedVer,
         })
     if (!authorized) {
-      sendJson(res, 403, { ok: false, error: "허용되지 않은 자설비 데이터 경로입니다." })
+      sendJson(res, 403, { ok: false, error: "This equipment data path is not allowed." })
       return
     }
     const latestDate = requestedLatestDate || pathLatestDate
@@ -987,7 +987,7 @@ export async function handleErdScatterDataRequest(req, res, url, {
     if (mode === "identity") {
       const windowDays = requestedDays ? Number(requestedDays) : 0
       if (!Number.isInteger(windowDays) || windowDays < 0 || windowDays > 30) {
-        sendJson(res, 400, { ok: false, error: "동일성 차트 조회 기간은 0~30일 정수여야 합니다." })
+        sendJson(res, 400, { ok: false, error: "The similarity chart period must be an integer from 0 to 30 days." })
         return
       }
       const source = await readScatterData(filePath, { sensor, chStep, identity: true })
@@ -1008,7 +1008,7 @@ export async function handleErdScatterDataRequest(req, res, url, {
     try {
       historyRows = await readHistoryData(historyPath)
     } catch {
-      historyError = "변경점 이력을 불러오지 못했습니다."
+      historyError = "Unable to load change history."
     }
     sendJson(res, 200, buildErdScatterPayload(source.rows, {
       eqp,
@@ -1024,7 +1024,7 @@ export async function handleErdScatterDataRequest(req, res, url, {
   } catch {
     sendJson(res, 500, createSafeApiError({
       code: "ERD_SCATTER_LOAD_FAILED",
-      message: "ERD 이상감지 데이터를 불러오지 못했습니다.",
+      message: "Unable to load ERD anomaly data.",
       scope: "erd-scatter",
     }))
   }
@@ -1041,12 +1041,12 @@ export function handleErdFileRequest(req, res, url) {
   const extension = filePath.slice(filePath.lastIndexOf(".")).toLowerCase()
 
   if (!filePath.startsWith(`${ERD_FILE_ROOT}/`) || !imageMimeTypes[extension]) {
-    sendJson(res, 403, { ok: false, error: "허용되지 않은 ERD 이미지 경로입니다." })
+    sendJson(res, 403, { ok: false, error: "This ERD image path is not allowed." })
     return
   }
 
   if (!existsSync(filePath) || !statSync(filePath).isFile()) {
-    sendJson(res, 404, { ok: false, error: "ERD 이미지 파일이 없습니다." })
+    sendJson(res, 404, { ok: false, error: "The ERD image file does not exist." })
     return
   }
 

@@ -7,13 +7,13 @@ import {
 } from "../../src/features/fdc-trend/utils/underConstructionApps.mjs"
 
 const EXPECTED_APPS = [
-  ["common-anomaly", "공통부 이상감지"],
-  ["common-commonality", "공통부 동일성 이상감지"],
-  ["fdc-hard-limit", "FDC Hard Limit추천"],
+  ["common-anomaly", "Common Area Anomaly Detection"],
+  ["common-commonality", "Common Area Similarity Detection"],
+  ["fdc-hard-limit", "FDC Hard Limit Recommendations"],
   ["defect-spider", "Defect SPIDER"],
   ["l1-spider", "L1 SPIDER"],
   ["l3-spider", "L3 SPIDER"],
-  ["my-eqp-registration", "MY EQP 등록"],
+  ["my-eqp-registration", "MY EQP Registration"],
 ]
 
 test("개발 예정 App은 내부 Under Construction 경로와 표시 정보를 제공한다", () => {

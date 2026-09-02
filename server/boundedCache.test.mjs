@@ -16,5 +16,5 @@ test("LRU 캐시는 상한을 넘으면 가장 오래 사용하지 않은 항목
 })
 
 test("LRU 캐시는 유효하지 않은 상한을 거부한다", () => {
-  assert.throws(() => setLruEntry(new Map(), "key", "value", 0), /1 이상의 정수/)
+  assert.throws(() => setLruEntry(new Map(), "key", "value", 0), /integer greater than or equal to 1/)
 })

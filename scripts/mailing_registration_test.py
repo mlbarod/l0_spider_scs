@@ -13,7 +13,7 @@ class MailingRegistrationStorageTest(unittest.TestCase):
         self.assertGreater(len(chunks), 1)
 
     def test_single_sdwt_larger_than_column_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "값 1개도 저장할 수 없습니다"):
+        with self.assertRaisesRegex(ValueError, "cannot store even one value"):
             split_list_for_column(["DREAMS P1D"], 5, "sdwt")
 
     def test_priority_list_is_split_to_fit_varchar_length(self):

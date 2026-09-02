@@ -59,6 +59,6 @@ test("빈 line mapping과 잘못된 value type을 거부한다", () => {
   }), false)
   assert.throws(
     () => validateLineMappingPayload({ line_mapping: {}, sdwt_mapping: {} }),
-    /line_mapping이 비어 있습니다/,
+    /line_mapping reference mapping is empty/,
   )
 })

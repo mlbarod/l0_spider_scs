@@ -78,7 +78,7 @@ def main():
         write_json({"ok": True, "affectedRows": affected_rows})
     except Exception as error:
         print(f"clicked category history operation failed: {error}", file=sys.stderr)
-        write_json({"ok": False, "error": "클릭이력 DB 작업에 실패했습니다."})
+        write_json({"ok": False, "error": "The click-history DB operation failed."})
 
 
 if __name__ == "__main__":

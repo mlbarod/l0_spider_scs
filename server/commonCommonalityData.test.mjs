@@ -146,14 +146,14 @@ test("최신날짜 없음과 선택 SDWT 없음 404를 구분한다", async (con
   const noLatest = await requestCommonCommonalityData(noLatestRoot)
   assert.equal(noLatest.response.statusCode, 404)
   assert.equal(noLatest.payload.code, "COMMON_COMMONALITY_LATEST_DATE_NOT_FOUND")
-  assert.equal(noLatest.payload.error, "공통부 동일성 최신날짜 폴더를 찾지 못했습니다.")
+  assert.equal(noLatest.payload.error, "Unable to find the latest common-area similarity folder.")
 
   const noSdwtRoot = join(fixtureRoot, "no-sdwt")
   await mkdir(join(noSdwtRoot, "2026-08-20"), { recursive: true })
   const noSdwt = await requestCommonCommonalityData(noSdwtRoot, "SDWT-MISSING")
   assert.equal(noSdwt.response.statusCode, 404)
   assert.equal(noSdwt.payload.code, "COMMON_COMMONALITY_SDWT_NOT_FOUND")
-  assert.equal(noSdwt.payload.error, "선택한 SDWT의 공통부 동일성 폴더를 찾지 못했습니다.")
+  assert.equal(noSdwt.payload.error, "Unable to find a common-area similarity folder for the selected SDWT.")
 })
 
 test("공통부 동일성 root는 날짜·시간이 아닌 최신 YYYY-MM-DD 디렉터리를 선택한다", async (context) => {

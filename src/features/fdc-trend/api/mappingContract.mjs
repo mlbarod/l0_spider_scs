@@ -2,19 +2,19 @@ function validateMappingDictionary(config, mappingName, { requireEntries = false
   const mapping = config?.[mappingName]
 
   if (!mapping || typeof mapping !== "object" || Array.isArray(mapping)) {
-    throw new Error(`기준정보의 ${mappingName} 형식이 올바르지 않습니다.`)
+    throw new Error(`The ${mappingName} reference mapping has an invalid format.`)
   }
 
   const entries = Object.entries(mapping)
   if (requireEntries && entries.length === 0) {
-    throw new Error(`기준정보의 ${mappingName}이 비어 있습니다.`)
+    throw new Error(`The ${mappingName} reference mapping is empty.`)
   }
 
   const hasInvalidEntry = entries.some(
     ([key, value]) => !key.trim() || typeof value !== "string" || !value.trim(),
   )
   if (hasInvalidEntry) {
-    throw new Error(`기준정보의 ${mappingName} 항목이 올바르지 않습니다.`)
+    throw new Error(`The ${mappingName} reference mapping contains an invalid entry.`)
   }
 
   return mapping

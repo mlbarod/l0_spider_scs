@@ -8,7 +8,7 @@ export function getLruEntry(cache, key) {
 
 export function setLruEntry(cache, key, value, maxEntries) {
   if (!Number.isInteger(maxEntries) || maxEntries < 1) {
-    throw new Error("maxEntries는 1 이상의 정수여야 합니다.")
+    throw new Error("maxEntries must be an integer greater than or equal to 1.")
   }
 
   cache.delete(key)

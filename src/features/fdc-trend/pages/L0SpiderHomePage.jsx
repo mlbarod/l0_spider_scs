@@ -12,48 +12,48 @@ import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
 const spiderApps = [
   {
     icon: Activity,
-    title: "자설비 이상감지",
-    subtitle: "STEP과 FDC 센서를 기준으로 설비별 이상 Trend를 확인합니다.",
+    title: "Equipment Anomaly Detection",
+    subtitle: "Review anomaly trends by equipment using STEP and FDC sensors.",
     category: "FDC Trend",
     href: "/self-equipment",
     active: true,
-    status: "운영중",
+    status: "Live",
   },
   {
     icon: ChartNoAxesCombined,
-    title: "동일성 이상감지",
-    subtitle: "동일 조건 간 신호 분포 차이를 비교해 이상 패턴을 찾습니다.",
+    title: "Similarity Anomaly Detection",
+    subtitle: "Compare signal distributions under identical conditions to find anomalous patterns.",
     category: "Matching",
     href: "/matching-anomaly",
     active: true,
-    status: "운영중",
+    status: "Live",
   },
   {
     icon: Network,
-    title: "공통부 이상감지",
-    subtitle: "공통 설비와 공정 구간의 이상 징후를 통합 관점으로 봅니다.",
+    title: "Common Area Anomaly Detection",
+    subtitle: "Review anomalies across shared equipment and process sections in one view.",
     category: "Common",
     href: getUnderConstructionPath("common-anomaly"),
     active: true,
-    status: "개발예정",
+    status: "Planned",
   },
   {
     icon: GitCompareArrows,
-    title: "공통부 동일성 이상감지",
-    subtitle: "공통부 EQP Model별 신호 분포 차이를 비교해 이상 패턴을 찾습니다.",
+    title: "Common Area Similarity Detection",
+    subtitle: "Compare signal distributions by common-area EQP Model to find anomalous patterns.",
     category: "Common Matching",
     href: getUnderConstructionPath("common-commonality"),
     active: true,
-    status: "개발 예정",
+    status: "Planned",
   },
   {
     icon: Gauge,
-    title: "FDC Hard Limit추천",
-    subtitle: "FDC 분포 기반 Hard Limit 후보를 추천합니다.",
+    title: "FDC Hard Limit Recommendations",
+    subtitle: "Recommend Hard Limit candidates based on FDC distributions.",
     category: "Limit",
     href: getUnderConstructionPath("fdc-hard-limit"),
     active: true,
-    status: "개발 예정",
+    status: "Planned",
     gridClassName: "2xl:col-start-1 2xl:row-start-2",
   },
   {
@@ -62,21 +62,21 @@ const spiderApps = [
   },
   {
     icon: Mail,
-    title: "MY EQP 등록",
-    subtitle: "사용자별 MY EQP 대상 설비를 등록합니다.",
+    title: "MY EQP Registration",
+    subtitle: "Register MY EQP equipment for each user.",
     category: "Registration",
     href: getUnderConstructionPath("my-eqp-registration"),
     active: true,
-    status: "개발예정",
+    status: "Planned",
   },
   {
     icon: BookOpen,
-    title: "사용자 메뉴얼",
-    subtitle: "SPIDER의 메뉴와 기능별 상세 사용 방법을 확인합니다.",
+    title: "User Manual",
+    subtitle: "Learn how to use SPIDER menus and features.",
     category: "Manual",
     href: "/manual",
     active: true,
-    status: "운영중",
+    status: "Live",
   },
 ]
 
@@ -84,34 +84,34 @@ const spiderSuites = [
   {
     icon: ScanSearch,
     title: "Defect SPIDER",
-    subtitle: "Defect 신호 기반 이상 패턴을 탐색합니다.",
+    subtitle: "Explore anomalous patterns based on defect signals.",
     category: "Defect",
     href: getUnderConstructionPath("defect-spider"),
     active: true,
-    status: "개발 예정",
+    status: "Planned",
   },
   {
     icon: Radar,
     title: "L1 SPIDER",
-    subtitle: "L1 설비/공정 신호를 추적합니다.",
+    subtitle: "Track L1 equipment and process signals.",
     category: "Level 1",
     href: getUnderConstructionPath("l1-spider"),
     active: true,
-    status: "개발 예정",
+    status: "Planned",
   },
   {
     icon: Network,
     title: "L3 SPIDER",
-    subtitle: "L3 연계 지표와 이상 흐름을 확인합니다.",
+    subtitle: "Review L3-linked metrics and anomaly flows.",
     category: "Level 3",
     href: getUnderConstructionPath("l3-spider"),
     active: true,
-    status: "개발 예정",
+    status: "Planned",
   },
 ]
 
 function SpiderAppCard({ app, animationIndex = 0 }) {
-  const isOperating = app.status === "운영중"
+  const isOperating = app.status === "Live"
   const animationStyle = {
     "--spider-app-enter-delay": `${animationIndex * 55}ms`,
   }
@@ -131,7 +131,7 @@ function SpiderAppCard({ app, animationIndex = 0 }) {
           ? "border-[#0066cc]/20 bg-[#0066cc]/8 text-[#0066cc]"
           : "border-[#d2d2d7] bg-[#f5f5f7] text-[#7a7a7a]",
       )}>
-        {app.status ?? "개발중"}
+        {app.status ?? "In Development"}
       </Badge>
 
       <div className={cn(
@@ -190,18 +190,18 @@ function LatestDataCard() {
   const latestDate = dashboardQuery.data?.latestDate ?? ""
   const displayDateTime = latestDate
     ? `${latestDate.slice(0, 10).replaceAll("-", ".")} ${latestDate.slice(11)}`
-    : dashboardQuery.isPending ? "조회 중" : "확인 불가"
+    : dashboardQuery.isPending ? "Loading" : "Unavailable"
 
   return (
     <aside
       className="flex min-h-11 items-center gap-3 rounded-full bg-[#fafafc] px-4 py-2"
-      aria-label="마지막 알고리즘 수행 시간"
+      aria-label="Last algorithm run time"
     >
       <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#d2d2d7]/55 text-[#0066cc]">
         <CalendarClock className="size-4" aria-hidden="true" />
       </span>
       <div className="min-w-0">
-        <p className="text-[10px] font-normal tracking-[-0.08px] text-[#7a7a7a]">마지막 알고리즘 수행 시간</p>
+        <p className="text-[10px] font-normal tracking-[-0.08px] text-[#7a7a7a]">Last algorithm run time</p>
         <p className="whitespace-nowrap text-xs font-semibold tabular-nums text-[#1d1d1f]">
           {displayDateTime}
         </p>
@@ -213,13 +213,13 @@ function LatestDataCard() {
 export function L0SpiderHomePage() {
   return (
     <div className="spider-home h-full min-h-0 min-w-0 overflow-y-auto bg-[#f5f5f7] text-[#1d1d1f]">
-      <nav className="sticky top-0 z-40 h-11 bg-black text-white" aria-label="전역 탐색">
+      <nav className="sticky top-0 z-40 h-11 bg-black text-white" aria-label="Global navigation">
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-5 sm:px-8">
           <Link to="/" className="text-xs font-semibold tracking-[0.08em]">SPIDER</Link>
           <div className="flex items-center gap-6 text-xs text-white/75">
             <a href="#spider-apps" className="hidden transition-colors hover:text-white sm:inline">Applications</a>
             <a href="#line-dashboard" className="hidden transition-colors hover:text-white sm:inline">Dashboard</a>
-            <Link to="/manual" className="transition-colors hover:text-white">사용자 메뉴얼</Link>
+            <Link to="/manual" className="transition-colors hover:text-white">User Manual</Link>
           </div>
         </div>
       </nav>
@@ -228,7 +228,7 @@ export function L0SpiderHomePage() {
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-5 sm:px-8">
           <strong className="text-[17px] font-semibold tracking-[-0.37px]">SCS ETCH SPIDER</strong>
           <a href="#spider-apps" className="rounded-full bg-[#0066cc] px-4 py-2 text-xs text-white transition-transform active:scale-95">
-            시작하기
+            Get Started
           </a>
         </div>
       </div>
@@ -240,28 +240,28 @@ export function L0SpiderHomePage() {
             SCS ETCH SPIDER
           </h1>
           <p className="mt-5 max-w-2xl text-[21px] font-normal leading-[1.4] tracking-[-0.23px] text-[#333333] sm:text-[24px]">
-            L0 공정 이상감지와 Hard Limit 추천 기능을 한 화면에서 시작합니다.
+            Start L0 process anomaly detection and Hard Limit recommendations from one screen.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <a href="#spider-apps" className="rounded-full bg-[#0066cc] px-[22px] py-[11px] text-[17px] text-white transition-colors active:scale-95 hover:bg-[#0071e3]">
-              앱 둘러보기
+              Explore Apps
             </a>
             <a href="#line-dashboard" className="rounded-full border border-[#0066cc] bg-white px-[22px] py-[10px] text-[17px] text-[#0066cc] transition-colors active:scale-95 hover:bg-[#f5f5f7]">
-              Dashboard 보기
+              View Dashboard
             </a>
           </div>
           <div className="mt-10 flex flex-col items-stretch justify-center gap-3 sm:flex-row">
             <LatestDataCard />
             <aside
               className="flex min-h-11 items-center gap-3 rounded-full bg-[#fafafc] px-4 py-2"
-              aria-label="개발 및 운영 담당자"
+              aria-label="Development and operations contacts"
             >
               <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#d2d2d7]/55 text-[#0066cc]">
                 <Users className="size-4" aria-hidden="true" />
               </span>
               <div className="min-w-0 text-left">
-                <p className="text-[10px] font-normal tracking-[-0.08px] text-[#7a7a7a]">개발 · 운영</p>
-                <p className="whitespace-nowrap text-xs font-semibold text-[#1d1d1f]">담당자 : 최상현, 강태환</p>
+                <p className="text-[10px] font-normal tracking-[-0.08px] text-[#7a7a7a]">Development · Operations</p>
+                <p className="whitespace-nowrap text-xs font-semibold text-[#1d1d1f]">Contacts: Sanghyeon Choi, Taehwan Kang</p>
               </div>
             </aside>
           </div>
@@ -273,9 +273,9 @@ export function L0SpiderHomePage() {
           <div className="mx-auto max-w-[1440px]">
             <div className="mb-10 max-w-3xl">
               <p className="mb-3 text-sm font-semibold text-[#0066cc]">L0 SPIDER</p>
-              <h2 className="text-[34px] font-semibold leading-[1.15] tracking-[-0.37px] sm:text-[40px]">이상 징후를 발견하는 모든 도구.</h2>
+              <h2 className="text-[34px] font-semibold leading-[1.15] tracking-[-0.37px] sm:text-[40px]">Every tool you need to detect anomalies.</h2>
               <p className="mt-4 text-[17px] leading-[1.47] tracking-[-0.37px] text-[#55555a]">
-                L0 Spider 기반 이상감지와 Hard Limit 추천 기능입니다.
+                Anomaly detection and Hard Limit recommendations powered by L0 Spider.
               </p>
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -292,8 +292,8 @@ export function L0SpiderHomePage() {
           <div className="mx-auto max-w-[1440px]">
             <div className="mb-10 max-w-3xl">
               <p className="mb-3 text-sm font-semibold text-[#2997ff]">EXPAND THE VIEW</p>
-              <h2 className="text-[34px] font-semibold leading-[1.15] tracking-[-0.37px] sm:text-[40px]">더 넓은 공정으로 연결됩니다.</h2>
-              <p className="mt-4 text-[17px] leading-[1.47] tracking-[-0.37px] text-[#cccccc]">L1과 L3 데이터를 활용한 이상감지 App입니다.</p>
+              <h2 className="text-[34px] font-semibold leading-[1.15] tracking-[-0.37px] sm:text-[40px]">Connected to broader processes.</h2>
+              <p className="mt-4 text-[17px] leading-[1.47] tracking-[-0.37px] text-[#cccccc]">Anomaly detection apps powered by L1 and L3 data.</p>
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {spiderSuites.map((app, index) => (
@@ -329,7 +329,7 @@ export function L0SpiderHomePage() {
       <footer className="bg-[#f5f5f7] px-5 py-12 text-xs text-[#7a7a7a] sm:px-8">
         <div className="mx-auto flex max-w-[1440px] flex-col gap-3 border-t border-[#d2d2d7] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <span>SCS ETCH SPIDER</span>
-          <span>공정 이상감지 통합 서비스</span>
+          <span>Integrated Process Anomaly Detection Service</span>
         </div>
       </footer>
     </div>

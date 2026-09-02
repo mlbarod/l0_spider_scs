@@ -53,5 +53,5 @@ test("최신 시각 API는 유효한 세부파일이 없으면 안전한 404를 
   assert.equal(response.statusCode, 404)
   assert.equal(payload.ok, false)
   assert.equal(payload.code, "DASHBOARD_LATEST_DATE_NOT_FOUND")
-  assert.equal(payload.error, "대시보드 최신 데이터 기준일을 찾지 못했습니다.")
+  assert.equal(payload.error, "Unable to find the latest dashboard data date.")
 })

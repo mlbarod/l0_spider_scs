@@ -100,17 +100,17 @@ function compareValues(left, right, key) {
   return String(leftValue ?? "").localeCompare(String(rightValue ?? ""), "ko", { numeric: true })
 }
 
-function ChangeText({ value, emptyText = "비교 데이터 없음", className }) {
+function ChangeText({ value, emptyText = "No comparison data", className }) {
   if (value === null || value === undefined) {
     return <span className={cn("text-muted-foreground", className)}>{emptyText}</span>
   }
   if (value > 0) {
-    return <span className={cn("text-amber-600 dark:text-amber-400", className)}>▲ {formatCount(value)}건</span>
+    return <span className={cn("text-amber-600 dark:text-amber-400", className)}>▲ {formatCount(value)}</span>
   }
   if (value < 0) {
-    return <span className={cn("text-emerald-600 dark:text-emerald-400", className)}>▼ {formatCount(Math.abs(value))}건</span>
+    return <span className={cn("text-emerald-600 dark:text-emerald-400", className)}>▼ {formatCount(Math.abs(value))}</span>
   }
-  return <span className={cn("text-muted-foreground", className)}>변동 없음</span>
+  return <span className={cn("text-muted-foreground", className)}>No change</span>
 }
 
 function KpiCard({ label, value, unit, description, valueClassName }) {
@@ -135,7 +135,7 @@ function DashboardTooltip({ active, payload, label, type }) {
     return (
       <div className="rounded-lg border bg-background px-3 py-2 text-xs">
         <p className="font-semibold">{formatLineDisplayName(row?.lineId)}</p>
-        <p className="mt-1 text-muted-foreground">이상 건수 <strong className="text-foreground">{formatCount(row?.totalCount)}건</strong></p>
+        <p className="mt-1 text-muted-foreground">Anomalies <strong className="text-foreground">{formatCount(row?.totalCount)}</strong></p>
       </div>
     )
   }
@@ -150,7 +150,7 @@ function DashboardTooltip({ active, payload, label, type }) {
               <span className="size-2 rounded-full" style={{ backgroundColor: entry.color }} />
               {entry.name}
             </span>
-            <strong className="tabular-nums text-foreground">{formatCount(entry.value)}건</strong>
+            <strong className="tabular-nums text-foreground">{formatCount(entry.value)}</strong>
           </div>
         ))}
       </div>
@@ -158,7 +158,7 @@ function DashboardTooltip({ active, payload, label, type }) {
   )
 }
 
-function EmptyChart({ message = "조회 조건에 해당하는 데이터가 없습니다." }) {
+function EmptyChart({ message = "No data matches the selected filters." }) {
   return (
     <div className="grid h-[310px] place-items-center rounded-lg border border-dashed bg-muted/20 text-sm text-muted-foreground">
       {message}
@@ -186,18 +186,18 @@ function LineMultiSelect({ lines, selectedLines, onChange, disabled }) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className="w-full justify-between px-3" disabled={disabled}>
-          <span className="truncate">{isAllSelected ? "전체 라인" : `${selectedLines.length}개 라인 선택`}</span>
+          <span className="truncate">{isAllSelected ? "All lines" : `${selectedLines.length} lines selected`}</span>
           <ChevronDown className="size-4 text-muted-foreground" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-h-72 w-64 overflow-y-auto">
-        <DropdownMenuLabel>라인 선택</DropdownMenuLabel>
+        <DropdownMenuLabel>Select Lines</DropdownMenuLabel>
         <DropdownMenuCheckboxItem
           checked={isAllSelected}
           onCheckedChange={() => onChange([])}
           onSelect={(event) => event.preventDefault()}
         >
-          전체 라인
+          All lines
         </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
         {lines.map((line) => (
@@ -256,8 +256,8 @@ function LineSummaryTable({ rows }) {
     <section className="overflow-hidden rounded-[18px] border bg-card">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
         <div>
-          <h3 className="text-sm font-semibold">라인별 상세 현황</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">전체 이상 건수 내림차순 · 라인 선택 시 상세 화면 이동</p>
+          <h3 className="text-sm font-semibold">Line Details</h3>
+          <p className="mt-0.5 text-xs text-muted-foreground">Sorted by total anomalies · Select a line to view details</p>
         </div>
         <label className="relative w-64">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -267,7 +267,7 @@ function LineSummaryTable({ rows }) {
               setSearch(event.target.value)
               setPage(1)
             }}
-            placeholder="라인명 검색"
+            placeholder="Search line name"
             className="pl-9"
           />
         </label>
@@ -276,30 +276,30 @@ function LineSummaryTable({ rows }) {
         <Table>
           <TableHeader className="sticky top-0 z-10 bg-card">
             <TableRow className="bg-muted/40">
-              <TableHead><SortButton column="lineId" label="라인" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
-              <TableHead className="text-right"><SortButton column="totalCount" label="전체 이상 건수" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
-              <TableHead className="text-right"><SortButton column="abGradeCount" label="A/B Grade 이상건수" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
-              <TableHead className="text-right"><SortButton column="latestDateCount" label="최신일 이상 건수" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
-              <TableHead className="text-right"><SortButton column="changeCount" label="전일 대비" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
-              <TableHead><SortButton column="lastAbnormalDate" label="최근 이상 발생일" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
-              <TableHead className="text-right"><SortButton column="ratio" label="전체 대비 비율" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
-              <TableHead className="w-28 text-center">상세 보기</TableHead>
+              <TableHead><SortButton column="lineId" label="Line" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
+              <TableHead className="text-right"><SortButton column="totalCount" label="Total Anomalies" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
+              <TableHead className="text-right"><SortButton column="abGradeCount" label="A/B Grade Anomalies" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
+              <TableHead className="text-right"><SortButton column="latestDateCount" label="Latest-Day Anomalies" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
+              <TableHead className="text-right"><SortButton column="changeCount" label="vs. Previous Day" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
+              <TableHead><SortButton column="lastAbnormalDate" label="Latest Anomaly Date" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
+              <TableHead className="text-right"><SortButton column="ratio" label="Share of Total" sortConfig={sortConfig} onSort={handleSort} /></TableHead>
+              <TableHead className="w-28 text-center">Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {visibleRows.length ? visibleRows.map((row) => (
               <TableRow key={row.lineId}>
                 <TableCell className="font-semibold">{formatLineDisplayName(row.lineId)}</TableCell>
-                <TableCell className="text-right tabular-nums">{formatCount(row.totalCount)}건</TableCell>
-                <TableCell className="text-right tabular-nums">{formatCount(row.abGradeCount)}건</TableCell>
-                <TableCell className="text-right tabular-nums">{formatCount(row.latestDateCount)}건</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCount(row.totalCount)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCount(row.abGradeCount)}</TableCell>
+                <TableCell className="text-right tabular-nums">{formatCount(row.latestDateCount)}</TableCell>
                 <TableCell className="text-right"><ChangeText value={row.changeCount} className="text-xs font-medium" /></TableCell>
                 <TableCell>{formatDisplayDate(row.lastAbnormalDate)}</TableCell>
                 <TableCell className="text-right tabular-nums">{row.ratio.toLocaleString("ko-KR", { maximumFractionDigits: 2 })}%</TableCell>
                 <TableCell className="text-center">
                   <Button variant="ghost" size="sm" asChild>
                     <Link to={buildSelfEquipmentDetailUrl(row)}>
-                      상세 <ExternalLink className="size-3.5" />
+                      Details <ExternalLink className="size-3.5" />
                     </Link>
                   </Button>
                 </TableCell>
@@ -307,7 +307,7 @@ function LineSummaryTable({ rows }) {
             )) : (
               <TableRow>
                 <TableCell colSpan={8} className="h-28 text-center text-muted-foreground">
-                  {search ? "검색 결과가 없습니다." : "조회 조건에 해당하는 라인 데이터가 없습니다."}
+                  {search ? "No search results." : "No line data matches the selected filters."}
                 </TableCell>
               </TableRow>
             )}
@@ -315,11 +315,11 @@ function LineSummaryTable({ rows }) {
         </Table>
       </div>
       <div className="flex items-center justify-between border-t px-4 py-2.5 text-xs text-muted-foreground">
-        <span>총 {formatCount(sortedRows.length)}개 라인</span>
+        <span>{formatCount(sortedRows.length)} lines total</span>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={activePage <= 1}>이전</Button>
+          <Button variant="outline" size="sm" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={activePage <= 1}>Previous</Button>
           <span className="min-w-16 text-center tabular-nums">{activePage} / {pageCount}</span>
-          <Button variant="outline" size="sm" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={activePage >= pageCount}>다음</Button>
+          <Button variant="outline" size="sm" onClick={() => setPage((value) => Math.min(pageCount, value + 1))} disabled={activePage >= pageCount}>Next</Button>
         </div>
       </div>
     </section>
@@ -397,7 +397,7 @@ export function LineAnomalyDashboard() {
     return (
       <section className="grid min-h-[420px] place-items-center">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="size-5 animate-spin" /> 라인별 대시보드를 불러오는 중입니다.
+          <Loader2 className="size-5 animate-spin" /> Loading line dashboard.
         </div>
       </section>
     )
@@ -406,16 +406,16 @@ export function LineAnomalyDashboard() {
   if (dashboardQuery.isError && !dashboard) {
     return (
       <section className="grid gap-4">
-        <h2 className="text-[34px] font-semibold leading-tight tracking-[-0.37px] sm:text-[40px]">라인별 이상 현황 Dashboard</h2>
+        <h2 className="text-[34px] font-semibold leading-tight tracking-[-0.37px] sm:text-[40px]">Line Anomaly Dashboard</h2>
         <div className="grid justify-items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-5 text-sm text-destructive">
           <span>{dashboardQuery.error.message}</span>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={() => dashboardQuery.refetch()}>
-              <RotateCcw className="size-4" /> 다시 조회
+              <RotateCcw className="size-4" /> Retry
             </Button>
             {(appliedFilters.lines ?? []).length ? (
               <Button type="button" variant="outline" onClick={resetFilters}>
-                전체 Line으로 초기화
+                Reset to All Lines
               </Button>
             ) : null}
           </div>
@@ -430,19 +430,19 @@ export function LineAnomalyDashboard() {
   const trendLineRows = trendDashboard?.lineSummary ?? []
   const trendRangeLabel = trendDashboard
     ? `${formatDisplayDate(trendDashboard.filters.startDate)} ~ ${formatDisplayDate(trendDashboard.filters.endDate)}`
-    : "추이 조회 중"
+    : "Loading trend"
   return (
     <section className="relative grid gap-6" aria-busy={dashboardQuery.isFetching}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="mb-3 text-sm font-semibold text-primary">LIVE DATA</p>
-          <h2 className="text-[34px] font-semibold leading-tight tracking-[-0.37px] sm:text-[40px]">라인별 이상 현황 Dashboard</h2>
+          <h2 className="text-[34px] font-semibold leading-tight tracking-[-0.37px] sm:text-[40px]">Line Anomaly Dashboard</h2>
           <p className="mt-4 text-[17px] leading-[1.47] tracking-[-0.37px] text-muted-foreground">
-            SDWT 기준정보를 라인으로 매핑한 뒤 5개 식별값으로 중복 제거한 일자별 이상건수입니다.
+            Daily anomaly counts deduplicated by five identifiers after mapping SDWT reference data to lines.
           </p>
         </div>
         <Badge variant="outline" className="h-7 px-3">
-          최신 데이터 {summary.latestDateTime ? formatDisplayDateTime(summary.latestDateTime) : "없음"}
+          Latest data {summary.latestDateTime ? formatDisplayDateTime(summary.latestDateTime) : "None"}
         </Badge>
       </div>
 
@@ -454,15 +454,15 @@ export function LineAnomalyDashboard() {
         }}
       >
         <div className="grid gap-1.5 text-xs font-medium text-muted-foreground">
-          라인 선택
+          Select Lines
           <LineMultiSelect lines={options.lines} selectedLines={draftLines} onChange={setDraftLines} disabled={!options.lines.length} />
         </div>
         <Button type="submit" disabled={dashboardQuery.isFetching}>
           {dashboardQuery.isFetching ? <Loader2 className="size-4 animate-spin" /> : <Search className="size-4" />}
-          조회
+          Search
         </Button>
         <Button type="button" variant="outline" onClick={resetFilters} disabled={dashboardQuery.isFetching}>
-          <RotateCcw className="size-4" /> 초기화
+          <RotateCcw className="size-4" /> Reset
         </Button>
       </form>
 
@@ -470,32 +470,32 @@ export function LineAnomalyDashboard() {
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
           <span>{dashboardQuery.error.message}</span>
           <Button type="button" size="sm" variant="outline" onClick={() => dashboardQuery.refetch()}>
-            <RotateCcw className="size-4" /> 다시 조회
+            <RotateCcw className="size-4" /> Retry
           </Button>
         </div>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-        <KpiCard label="모니터링 센서 총합" value={formatCount(summary.monitoringSensorTotal)} unit="개" description="조회 최신 시각 · TL total 합계" />
-        <KpiCard label="전체 이상 건수" value={formatCount(summary.totalAbnormalCount)} unit="건" description={`${formatDisplayDate(dashboard.filters.startDate)} ~ ${formatDisplayDate(dashboard.filters.endDate)}`} />
-        <KpiCard label="A/B Grade" value={formatCount(summary.abGradeCount)} unit="건" description="A · B Grade 고유건수" />
-        <KpiCard label="D Grade" value={formatCount(summary.dGradeCount)} unit="건" description="D Grade 고유건수" />
-        <KpiCard label="N Grade" value={formatCount(summary.nGradeCount)} unit="건" description="N Grade 고유건수" />
-        <KpiCard label="M Grade" value={formatCount(summary.mGradeCount)} unit="건" description="M Grade 고유건수" />
+        <KpiCard label="Monitored Sensors" value={formatCount(summary.monitoringSensorTotal)} unit="" description="Latest query time · Sum of TL totals" />
+        <KpiCard label="Total Anomalies" value={formatCount(summary.totalAbnormalCount)} unit="" description={`${formatDisplayDate(dashboard.filters.startDate)} ~ ${formatDisplayDate(dashboard.filters.endDate)}`} />
+        <KpiCard label="A/B Grade" value={formatCount(summary.abGradeCount)} unit="" description="Unique A · B Grade count" />
+        <KpiCard label="D Grade" value={formatCount(summary.dGradeCount)} unit="" description="Unique D Grade count" />
+        <KpiCard label="N Grade" value={formatCount(summary.nGradeCount)} unit="" description="Unique N Grade count" />
+        <KpiCard label="M Grade" value={formatCount(summary.mGradeCount)} unit="" description="Unique M Grade count" />
         <KpiCard
-          label="전일 대비"
+          label="vs. Previous Day"
           value={<ChangeText value={summary.changeFromPreviousDay} className="text-xl xl:text-2xl" />}
           description={summary.previousDateTime
-            ? `${formatDisplayDateTime(summary.previousDateTime)} 대비`
-            : "동일 시각 비교 데이터 없음"}
+            ? `Compared with ${formatDisplayDateTime(summary.previousDateTime)}`
+            : "No same-time comparison data"}
         />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.35fr)]">
         <section className="overflow-hidden rounded-[18px] border bg-card">
           <div className="border-b px-4 py-3">
-            <h3 className="text-sm font-semibold">라인별 이상 건수</h3>
-            <p className="mt-0.5 text-xs text-muted-foreground">선택 기간 누적 · 라인명 내림차순 · 막대 끝 건수 표시</p>
+            <h3 className="text-sm font-semibold">Anomalies by Line</h3>
+            <p className="mt-0.5 text-xs text-muted-foreground">Selected-period total · Line name descending · Values shown at bar ends</p>
           </div>
           <div className="h-[330px] overflow-y-auto p-3">
             {barRows.length ? (
@@ -508,7 +508,7 @@ export function LineAnomalyDashboard() {
                     <Tooltip content={<DashboardTooltip type="bar" />} cursor={{ fill: "var(--muted)", opacity: 0.45 }} />
                     <Bar
                       dataKey="totalCount"
-                      name="이상 건수"
+                      name="Anomaly Count"
                       fill="var(--primary)"
                       radius={[0, 4, 4, 0]}
                       maxBarSize={22}
@@ -519,7 +519,7 @@ export function LineAnomalyDashboard() {
                       <LabelList
                         dataKey="totalCount"
                         position="right"
-                        formatter={(value) => `${formatCount(value)}건`}
+                        formatter={(value) => formatCount(value)}
                         style={{ fill: "var(--foreground)", fontSize: 11, fontWeight: 600 }}
                       />
                     </Bar>
@@ -533,9 +533,9 @@ export function LineAnomalyDashboard() {
         <section className="overflow-hidden rounded-[18px] border bg-card">
           <div className="flex items-start justify-between gap-3 border-b px-4 py-3">
             <div>
-              <h3 className="text-sm font-semibold">라인별 일자별 이상 건수 추이</h3>
+              <h3 className="text-sm font-semibold">Daily Anomaly Trend by Line</h3>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {trendRangeLabel} · {trendLineRows.length > MAX_TREND_LINES ? `상위 ${MAX_TREND_LINES}개 라인 표시` : "범례 클릭으로 표시 전환"}
+                {trendRangeLabel} · {trendLineRows.length > MAX_TREND_LINES ? `Showing top ${MAX_TREND_LINES} lines` : "Click the legend to toggle lines"}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
@@ -556,7 +556,7 @@ export function LineAnomalyDashboard() {
                   {trendQuery.isFetching && trendPeriodDays === days
                     ? <Loader2 className="size-3.5 animate-spin" />
                     : <CalendarDays className="size-3.5" />}
-                  {days}일
+                  {days} days
                 </Button>
               ))}
             </div>
@@ -564,14 +564,14 @@ export function LineAnomalyDashboard() {
           <div className="h-[330px] p-3">
             {trendQuery.isPending && !trendDashboard ? (
               <div className="grid h-[310px] place-items-center text-sm text-muted-foreground">
-                <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> 과거 추이를 불러오는 중입니다.</span>
+                <span className="flex items-center gap-2"><Loader2 className="size-4 animate-spin" /> Loading historical trend.</span>
               </div>
             ) : trendQuery.isError ? (
               <div className="grid h-[310px] place-items-center text-sm text-muted-foreground">
                 <div className="grid justify-items-center gap-3">
                   <span>{trendQuery.error.message}</span>
                   <Button type="button" size="sm" variant="outline" onClick={() => trendQuery.refetch()}>
-                    <RotateCcw className="size-4" /> 다시 조회
+                    <RotateCcw className="size-4" /> Retry
                   </Button>
                 </div>
               </div>
@@ -627,7 +627,7 @@ export function LineAnomalyDashboard() {
       {dashboardQuery.isFetching ? (
         <div className="pointer-events-none absolute inset-x-0 top-[82px] z-20 flex justify-center">
           <div className="flex items-center gap-2 rounded-full border bg-background/95 px-4 py-2 text-xs font-medium">
-            <Loader2 className="size-4 animate-spin" /> 기존 화면을 유지하면서 조회 중입니다.
+            <Loader2 className="size-4 animate-spin" /> Refreshing while keeping the current view.
           </div>
         </div>
       ) : null}

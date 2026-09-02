@@ -32,7 +32,7 @@ function normalizeText(value) {
 export function resolveEqpReferenceProjection(schemaColumns) {
   const availableColumns = new Set(schemaColumns)
   if (!availableColumns.has("main") || !availableColumns.has("prc_group")) {
-    throw new Error("eqp 기준정보에 main, prc_group 컬럼이 필요합니다.")
+    throw new Error("The eqp reference data requires main and prc_group columns.")
   }
   return {
     joinColumn: "main",

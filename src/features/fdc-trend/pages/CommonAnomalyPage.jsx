@@ -76,7 +76,7 @@ function FilterCard({
             {title}
           </CardTitle>
           {isLoading
-            ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label="로딩 중" />
+            ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label="Loading" />
             : badge != null
             ? <Badge variant={isActive ? "default" : "secondary"} className="text-[11px]">{badge}</Badge>
             : null}
@@ -86,7 +86,7 @@ function FilterCard({
         <Input
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="검색…"
+          placeholder="Search…"
           className="h-7 text-xs"
           disabled={disabled}
         />
@@ -187,7 +187,7 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
     mutationFn: deletePassHistory,
     onSuccess: async () => {
       await refreshPassHistory()
-      toast.success("SKIP해제 완료")
+      toast.success("SKIP removed")
     },
     onError: (error) => toast.error(error.message),
   })
@@ -201,7 +201,7 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
   }
   const saveHitHistoryMutation = useMutation({
     mutationFn: createHitHistory,
-    onSuccess: () => toast.success("이력저장 완료"),
+    onSuccess: () => toast.success("History saved"),
     onError: (error) => toast.error(error.message),
   })
   const handleHistorySave = () => {
@@ -217,14 +217,14 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
       <header className="border-b bg-muted/50 px-3 py-2">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <h3 className="shrink-0 text-sm font-semibold">{eqp || "EQP 미지정"}</h3>
+            <h3 className="shrink-0 text-sm font-semibold">{eqp || "Unspecified EQP"}</h3>
             <p className="truncate text-[11px] text-muted-foreground">
-              {row.date || "date 미지정"} · {row.prc_group || "prc_group 미지정"} · {row.sensor || "sensor 미지정"} · {row.step || "step 미지정"}
+              {row.date || "Unspecified date"} · {row.prc_group || "Unspecified prc_group"} · {row.sensor || "Unspecified sensor"} · {row.step || "Unspecified step"}
             </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            {isSkipped ? <Badge variant="destructive">이상감지 SKIP 건</Badge> : null}
-            <Badge variant="outline">{row.priority ? `${row.priority}등급` : "등급 미지정"}</Badge>
+            {isSkipped ? <Badge variant="destructive">Anomaly SKIP</Badge> : null}
+            <Badge variant="outline">{row.priority ? `${row.priority} Grade` : "Unspecified Grade"}</Badge>
           </div>
         </div>
       </header>
@@ -232,12 +232,12 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
         {imageFailed ? (
           <div className="grid max-w-full justify-items-center gap-3 px-4 text-center text-sm text-muted-foreground">
             <ImageOff className="size-8 text-destructive" aria-hidden="true" />
-            <p className="font-medium text-destructive">공통부 이상감지 이미지를 불러오지 못했습니다.</p>
+            <p className="font-medium text-destructive">Unable to load common-area anomaly image.</p>
           </div>
         ) : (
           <img
             src={imageUrl}
-            alt={`${eqp} 공통부 이상감지`}
+            alt={`${eqp} common-area anomaly`}
             className="max-h-[520px] w-full object-contain"
             loading="lazy"
             onError={() => setImageFailed(true)}
@@ -263,7 +263,7 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
               disabled={deleteSkipMutation.isPending}
             >
               {deleteSkipMutation.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : null}
-              SKIP해제
+              Remove SKIP
             </Button>
           ) : null}
         </div>
@@ -286,7 +286,7 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
             {saveHitHistoryMutation.isPending
               ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
               : null}
-            이력저장
+            Save History
           </Button>
         </div>
       </footer>
@@ -394,7 +394,7 @@ export function CommonAnomalyPage() {
   const chartGroups = useMemo(() => {
     const groups = new Map()
     chartRows.forEach((row) => {
-      const eqp = stripPngExtension(row.eqp) || "EQP 미지정"
+      const eqp = stripPngExtension(row.eqp) || "Unspecified EQP"
       const groupRows = groups.get(eqp) ?? []
       groupRows.push(row)
       groups.set(eqp, groupRows)
@@ -446,7 +446,7 @@ export function CommonAnomalyPage() {
         clickedAt,
       })
     } catch (error) {
-      toast.error(`클릭이력 저장 실패: ${error.message}`)
+      toast.error(`Failed to save click history: ${error.message}`)
     }
   }
   const filteredLines = filterItems(
@@ -457,24 +457,24 @@ export function CommonAnomalyPage() {
   const filteredPrcGroups = filterItems(prcGroups.map((item) => ({
     value: item.value,
     label: item.value,
-    meta: `${item.rowCount.toLocaleString()}건`,
+    meta: `${item.rowCount.toLocaleString()} rows`,
   })), queries.prcGroup)
   const filteredEqps = filterItems(eqps.length ? [
     {
       value: ALL_EQPS,
       label: "ALL",
-      meta: `${eqps.reduce((total, item) => total + item.rowCount, 0).toLocaleString()}건`,
+      meta: `${eqps.reduce((total, item) => total + item.rowCount, 0).toLocaleString()} rows`,
     },
     ...eqps.map((item) => ({
       value: item.value,
       label: stripPngExtension(item.value),
-      meta: `${item.rowCount.toLocaleString()}건`,
+      meta: `${item.rowCount.toLocaleString()} rows`,
     })),
   ] : [], queries.eqp)
   const filteredSensors = filterItems(sensors.map((item) => ({
     value: item.value,
     label: item.value,
-    meta: `${item.rowCount.toLocaleString()}건`,
+    meta: `${item.rowCount.toLocaleString()} rows`,
   })), queries.sensor)
 
   return (
@@ -482,21 +482,21 @@ export function CommonAnomalyPage() {
       <header className="shrink-0 border-b bg-card px-6 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">공통부 이상감지</h1>
+            <h1 className="text-lg font-semibold tracking-tight">Common Area Anomaly Detection</h1>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Line Name, SDWT, prc_group, eqp, sensor를 선택해 공통부 이상감지 결과를 조회합니다.
+              Select Line Name, SDWT, prc_group, eqp, and sensor to view common-area anomaly results.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
-                ? `접속 IP: ${currentUserQuery.data.knoxId}`
+                ? `Client IP: ${currentUserQuery.data.knoxId}`
                 : currentUserQuery.isLoading
-                ? "접속 IP 확인 중…"
-                : "접속 IP를 확인할 수 없습니다."}
+                ? "Checking client IP…"
+                : "Unable to determine client IP."}
             </p>
             <Button type="button" variant="outline" size="sm" asChild>
-              <Link to="/"><ArrowLeft className="size-4" aria-hidden="true" />SPIDER 메인</Link>
+              <Link to="/"><ArrowLeft className="size-4" aria-hidden="true" />SPIDER Home</Link>
             </Button>
           </div>
         </div>
@@ -510,7 +510,7 @@ export function CommonAnomalyPage() {
               title="Line Name"
               badge={lines.length || null}
               disabled={mappingQuery.isLoading || !lines.length}
-              placeholder={mappingQuery.isLoading ? "로딩 중…" : "선택 가능한 Line이 없습니다."}
+              placeholder={mappingQuery.isLoading ? "Loading…" : "No lines are available."}
               isActive={Boolean(activeLine)}
               isLoading={mappingQuery.isFetching}
               query={queries.line}
@@ -529,7 +529,7 @@ export function CommonAnomalyPage() {
               title="SDWT"
               badge={teamOptions.length || null}
               disabled={!activeLine}
-              placeholder="Line Name을 먼저 선택하세요"
+              placeholder="Select Line Name first"
               isActive={Boolean(activeTeam)}
               query={queries.team}
               onQueryChange={(value) => setQuery("team", value)}
@@ -545,7 +545,7 @@ export function CommonAnomalyPage() {
               title="prc_group"
               badge={prcGroups.length || null}
               disabled={!activeTeam || dataQuery.isLoading}
-              placeholder={dataQuery.isLoading ? "로딩 중…" : "선택 조건에 해당하는 prc_group이 없습니다."}
+              placeholder={dataQuery.isLoading ? "Loading…" : "No prc_group matches the selected filters."}
               isActive={Boolean(activePrcGroup)}
               isLoading={dataQuery.isFetching && !selectedPrcGroup}
               query={queries.prcGroup}
@@ -565,7 +565,7 @@ export function CommonAnomalyPage() {
               title="eqp"
               badge={eqps.length || null}
               disabled={!selectedPrcGroup || dataQuery.isLoading}
-              placeholder={selectedPrcGroup ? "선택 prc_group에 해당하는 eqp가 없습니다." : "prc_group을 먼저 선택하세요"}
+              placeholder={selectedPrcGroup ? "No eqp matches the selected prc_group." : "Select prc_group first"}
               isActive={Boolean(activeEqp)}
               isLoading={dataQuery.isFetching && Boolean(selectedPrcGroup) && !selectedEqp}
               query={queries.eqp}
@@ -583,7 +583,7 @@ export function CommonAnomalyPage() {
               title="sensor"
               badge={sensors.length || null}
               disabled={!selectedEqp || dataQuery.isLoading}
-              placeholder={selectedEqp ? "선택 eqp에 해당하는 sensor가 없습니다." : "eqp를 먼저 선택하세요"}
+              placeholder={selectedEqp ? "No sensor matches the selected eqp." : "Select eqp first"}
               isActive={Boolean(activeSensor)}
               isLoading={dataQuery.isFetching && Boolean(selectedEqp)}
               query={queries.sensor}
@@ -600,7 +600,7 @@ export function CommonAnomalyPage() {
         </ResizableFilterArea>
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive">
-            <span>기준정보 매핑 오류: {mappingQuery.error.message}</span>
+            <span>Reference mapping error: {mappingQuery.error.message}</span>
             <Button
               type="button"
               size="sm"
@@ -608,7 +608,7 @@ export function CommonAnomalyPage() {
               disabled={mappingQuery.isFetching}
               onClick={() => mappingQuery.refetch()}
             >
-              다시 조회
+              Retry
             </Button>
           </div>
         ) : null}
@@ -622,13 +622,13 @@ export function CommonAnomalyPage() {
         ) : null}
         {passHistoryQuery.isError ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            PASS 이력을 불러오지 못했습니다: {passHistoryQuery.error.message}
+            Unable to load PASS history: {passHistoryQuery.error.message}
           </div>
         ) : null}
         <section className="grid min-w-0 gap-3">
           {!sensorIsSelected ? (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-              prc_group, eqp와 sensor를 선택하면 이상감지 이미지가 표시됩니다.
+              Select prc_group, eqp, and sensor to display anomaly images.
             </div>
           ) : chartGroups.length ? (
             <div className="grid min-w-0 gap-5">
@@ -658,13 +658,13 @@ export function CommonAnomalyPage() {
             </div>
           ) : (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card text-sm text-muted-foreground">
-              {dataQuery.isLoading ? "데이터를 불러오는 중입니다." : "표시할 file_path 데이터가 없습니다."}
+              {dataQuery.isLoading ? "Loading data." : "No file_path data to display."}
             </div>
           )}
         </section>
       </main>
 
-      <Button type="button" size="icon" className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg" aria-label="화면 맨 위로 이동" onClick={() => pageRef.current?.scrollTo({ top: 0, behavior: "smooth" })}>
+      <Button type="button" size="icon" className="fixed bottom-6 right-6 z-40 rounded-full shadow-lg" aria-label="Back to top" onClick={() => pageRef.current?.scrollTo({ top: 0, behavior: "smooth" })}>
         <ArrowUp className="size-4" aria-hidden="true" />
       </Button>
     </div>

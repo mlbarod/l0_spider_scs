@@ -27,7 +27,7 @@ function normalizeText(value) {
 
 function assertPathSegment(name, value) {
   if (!value || value.includes("/") || value.includes("\\") || value.includes("..")) {
-    throw new Error(`${name} 값이 올바르지 않습니다.`)
+    throw new Error(`${name} is invalid.`)
   }
 }
 
@@ -120,7 +120,7 @@ async function resolveSdwtPath(latestPath, pathSdwt, displaySdwt) {
   }
 
   const error = new Error(
-    `선택한 SDWT의 공통부 동일성 이상감지 폴더를 찾지 못했습니다: ${candidates.join(" 또는 ")}`,
+    `Unable to find a common-area similarity anomaly folder for the selected SDWT: ${candidates.join(" or ")}`,
   )
   error.code = "COMMON_COMMONALITY_SDWT_DIRECTORY_NOT_FOUND"
   throw error
@@ -232,7 +232,7 @@ export async function handleCommonCommonalityDataRequest(req, res, url, options 
       chStep: normalizeText(url.searchParams.get("chStep")),
     }
     if (!filters.line || !filters.pathSdwt || !filters.sdwt) {
-      sendJson(res, 400, { ok: false, error: "line, pathSdwt, sdwt 조건이 필요합니다." })
+      sendJson(res, 400, { ok: false, error: "line, pathSdwt, and sdwt are required." })
       return
     }
 
@@ -268,10 +268,10 @@ export async function handleCommonCommonalityDataRequest(req, res, url, options 
         ? "COMMON_COMMONALITY_SDWT_NOT_FOUND"
         : "COMMON_COMMONALITY_DATA_LOAD_FAILED",
       message: latestDateNotFound
-        ? "공통부 동일성 최신날짜 폴더를 찾지 못했습니다."
+        ? "Unable to find the latest common-area similarity folder."
         : sdwtNotFound
-        ? "선택한 SDWT의 공통부 동일성 폴더를 찾지 못했습니다."
-        : "공통부 동일성 데이터를 불러오지 못했습니다.",
+        ? "Unable to find a common-area similarity folder for the selected SDWT."
+        : "Unable to load common-area similarity data.",
       scope: "common-commonality-data",
     }))
   }
@@ -288,13 +288,13 @@ export async function handleCommonCommonalityImageRequest(req, res, url) {
     const latestPath = await getLatestCommonCommonalityPath()
     const resolvedPath = resolve(requestedPath)
     if (!resolvedPath.startsWith(`${latestPath.path}${sep}`) || !resolvedPath.endsWith(`${sep}img.png`)) {
-      sendJson(res, 403, { ok: false, error: "허용되지 않은 공통부 동일성 이미지 경로입니다." })
+      sendJson(res, 403, { ok: false, error: "This common-area similarity image path is not allowed." })
       return
     }
     if (!await isRegularFile(resolvedPath)) {
       sendJson(res, 404, createSafeApiError({
         code: "COMMON_COMMONALITY_IMAGE_NOT_FOUND",
-        message: "공통부 동일성 이미지 파일을 찾지 못했습니다.",
+        message: "Unable to find the common-area similarity image file.",
         scope: "common-commonality-image",
       }))
       return
@@ -312,7 +312,7 @@ export async function handleCommonCommonalityImageRequest(req, res, url) {
   } catch {
     sendJson(res, 500, createSafeApiError({
       code: "COMMON_COMMONALITY_IMAGE_LOAD_FAILED",
-      message: "공통부 동일성 이미지를 불러오지 못했습니다.",
+      message: "Unable to load the common-area similarity image.",
       scope: "common-commonality-image",
     }))
   }

@@ -30,8 +30,8 @@ export const SPIDER_DASHBOARD_COLUMNS = Object.freeze({
 })
 
 export const SPIDER_DATA_PATH_NAMES = Object.freeze({
-  latestCommonality: "동일성 최신날짜",
-  latestCommonCommonality: "공통부 동일성 최신날짜",
+  latestCommonality: "Latest similarity date",
+  latestCommonCommonality: "Latest common-area similarity date",
 })
 
 export const LATEST_DATE_FILE_PATTERN = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/

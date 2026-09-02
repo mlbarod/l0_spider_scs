@@ -52,44 +52,44 @@ import { ResizableFilterArea } from "../components/ResizableFilterArea"
 
 const PAGE_META = {
   matching: {
-    title: "동일성 이상감지",
+    title: "Similarity Anomaly Detection",
     category: "Matching",
-    description: "동일 조건의 설비별 FDC 분포 차이를 센서와 step 기준으로 조회합니다.",
+    description: "Compare equipment FDC distributions under identical conditions by sensor and step.",
   },
   common: {
-    title: "공통부 이상감지",
+    title: "Common Area Anomaly Detection",
     category: "Common",
-    description: "공통부 이상 step과 ch_step 이미지를 센서 단위로 조회합니다.",
+    description: "View common-area anomalous step and ch_step images by sensor.",
   },
   hardSpec: {
-    title: "FDC Hard Limit추천",
+    title: "FDC Hard Limit Recommendations",
     category: "Limit",
-    description: "HDFS 통계와 기존 HARD_LIMIT 기준으로 추천 Spec 후보를 조회합니다.",
+    description: "View recommended Spec candidates using HDFS statistics and existing HARD_LIMIT values.",
   },
   yieldSpec: {
-    title: "수율기반 Hard Limit추천",
+    title: "Yield-Based Hard Limit Recommendations",
     category: "Yield",
-    description: "P1F 수율 상/하위 그룹의 FDC 분포 차이로 Spec 후보를 조회합니다.",
+    description: "View Spec candidates from FDC distribution differences between high- and low-yield P1F groups.",
   },
   recipients: {
-    title: "이상감지 Mailing Report 수신인 등록",
+    title: "Anomaly Mailing Report Recipients",
     category: "Recipients",
-    description: "이상감지 메일 수신 대상과 sdwt, priority 조건을 등록하거나 제거합니다.",
+    description: "Register or remove anomaly email recipients and sdwt/priority filters.",
   },
   defect: {
     title: "Defect SPIDER",
     category: "Defect",
-    description: "Defect 신호 기반 이상 패턴을 공통부 조회 형식으로 탐색합니다.",
+    description: "Explore defect-signal anomaly patterns in the common-area query format.",
   },
   l1: {
     title: "L1 SPIDER",
     category: "Level 1",
-    description: "L1 설비/공정 신호를 센서와 step 기준으로 조회합니다.",
+    description: "View L1 equipment and process signals by sensor and step.",
   },
   l3: {
     title: "L3 SPIDER",
     category: "Level 3",
-    description: "L3 연계 지표와 이상 흐름을 공통부 조회 형식으로 확인합니다.",
+    description: "Review L3-linked metrics and anomaly flows in the common-area query format.",
   },
 }
 
@@ -119,7 +119,7 @@ function PageShell({ children, description, title, category }) {
           <Button type="button" variant="outline" size="sm" asChild>
             <Link to="/">
               <ArrowLeft className="size-4" aria-hidden="true" />
-              SPIDER 메인
+              SPIDER Home
             </Link>
           </Button>
         </div>
@@ -137,7 +137,7 @@ function SourcePathBar({ paths }) {
     <section className="rounded-lg border bg-card p-4">
       <div className="mb-3 flex items-center gap-2">
         <FileImage className="size-4 text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-sm font-semibold">SPIDER 데이터 기준 경로</h2>
+        <h2 className="text-sm font-semibold">SPIDER Data Paths</h2>
       </div>
       <div className="grid gap-2">
         {paths.map((path) => (
@@ -179,7 +179,7 @@ function SimpleTable({ columns, rows, selectedId, onSelectRow }) {
           ) : (
             <TableRow>
               <TableCell colSpan={columns.length} className="py-10 text-center text-sm text-muted-foreground">
-                조회결과가 없습니다.
+                No results found.
               </TableCell>
             </TableRow>
           )}
@@ -194,9 +194,9 @@ function MetricGrid() {
   const totalNg = lineRows.reduce((sum, row) => sum + row.NG, 0)
   const totalOk = lineRows.reduce((sum, row) => sum + row.OK, 0)
   const metrics = [
-    ["모니터링 센서총합", totalOk + totalNg],
-    ["감지 PPID 갯수", 42],
-    ["전체 이상건수", totalNg],
+    ["Total Monitored Sensors", totalOk + totalNg],
+    ["Detected PPID Count", 42],
+    ["Total Anomalies", totalNg],
     ["A/B Grade", lineRows.reduce((sum, row) => sum + row["A등급"] + row["B등급"], 0)],
     ["D Grade", lineRows.reduce((sum, row) => sum + row["D등급"], 0)],
     ["N Grade", lineRows.reduce((sum, row) => sum + row["N등급"], 0)],
@@ -214,8 +214,8 @@ function MetricGrid() {
         ))}
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <SummaryTable title="라인별 전체 Monitoring 건수" rows={lineRows} firstColumn="line_id" />
-        <SummaryTable title="SDWT별 전체 Monitoring 건수" rows={sdwtRows} firstColumn="sdwt" />
+        <SummaryTable title="Total Monitoring Count by Line" rows={lineRows} firstColumn="line_id" />
+        <SummaryTable title="Total Monitoring Count by SDWT" rows={sdwtRows} firstColumn="sdwt" />
       </div>
     </section>
   )
@@ -230,14 +230,14 @@ function SummaryTable({ title, rows, firstColumn }) {
         ? formatLineDisplayName(row[firstColumn])
         : row[firstColumn],
     },
-    { key: "A등급", label: "A등급" },
-    { key: "B등급", label: "B등급" },
-    { key: "D등급", label: "D등급" },
-    { key: "M등급", label: "M등급" },
-    { key: "N등급", label: "N등급" },
+    { key: "A등급", label: "A Grade" },
+    { key: "B등급", label: "B Grade" },
+    { key: "D등급", label: "D Grade" },
+    { key: "M등급", label: "M Grade" },
+    { key: "N등급", label: "N Grade" },
     { key: "OK", label: "OK" },
     { key: "NG", label: "NG" },
-    { key: "NG비율", label: "NG비율" },
+    { key: "NG비율", label: "NG Ratio" },
   ]
 
   return (
@@ -300,11 +300,11 @@ function MatchingPage({ common = false }) {
         { key: "ch_step", label: "ch_step" },
       ]
     : [
-        { key: "grade", label: "센서 등급" },
+        { key: "grade", label: "Sensor Grade" },
         { key: "desc", label: "STEP", cellClassName: "font-medium" },
         { key: "sensor", label: "sensor" },
         { key: "eqp", label: "eqp" },
-        { key: "abnormalCount", label: "이상 건수", cellClassName: "text-right tabular-nums" },
+        { key: "abnormalCount", label: "Anomaly Count", cellClassName: "text-right tabular-nums" },
       ]
 
   return (
@@ -319,25 +319,25 @@ function MatchingPage({ common = false }) {
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
         <section className="grid gap-3">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold">조회결과</h2>
-            <Badge variant="secondary">총 {filteredRows.length}건</Badge>
+            <h2 className="text-sm font-semibold">Results</h2>
+            <Badge variant="secondary">{filteredRows.length} total</Badge>
           </div>
           <SimpleTable columns={columns} rows={filteredRows} selectedId={selectedRow?.id} onSelectRow={(row) => setSelectedId(row.id)} />
         </section>
         <section className="grid content-start gap-3">
           <div className="rounded-lg border bg-card p-4">
-            <h2 className="text-sm font-semibold">{common ? "공통부 이미지 정보" : "동일성차트"}</h2>
+            <h2 className="text-sm font-semibold">{common ? "Common Area Image Information" : "Similarity Chart"}</h2>
             <p className="mt-1 truncate text-xs text-muted-foreground">{selectedRow?.file_path}</p>
           </div>
           <TrendPreviewChart row={selectedRow} />
           <div className="grid grid-cols-2 gap-2">
             <Button type="button" variant="outline" size="sm">
               <LineChart className="size-4" aria-hidden="true" />
-              동일성차트
+              Similarity Chart
             </Button>
             <Button type="button" variant="outline" size="sm">
               <Search className="size-4" aria-hidden="true" />
-              변경점 리스트
+              Change List
             </Button>
           </div>
         </section>
@@ -351,10 +351,10 @@ function FilterBar({ line, sdwt, sdwtOptions = getSdwtOptionsByLine(line), onLin
   return (
     <ResizableFilterArea defaultHeight={132} minHeight={104} maxHeight={480}>
       <section className="grid h-full content-start gap-3 overflow-auto rounded-lg border bg-card p-4">
-        <h2 className="text-sm font-semibold">조회조건 설정</h2>
+        <h2 className="text-sm font-semibold">Query Filters</h2>
         <div className="flex flex-wrap items-center gap-3">
           <div className="grid gap-1.5">
-            <Label className="text-xs">라인 선택</Label>
+            <Label className="text-xs">Select Line</Label>
             <Tabs value={line} onValueChange={onLineChange}>
               <TabsList>
                 {FDC_LINES.map((lineId) => (
@@ -364,7 +364,7 @@ function FilterBar({ line, sdwt, sdwtOptions = getSdwtOptionsByLine(line), onLin
             </Tabs>
           </div>
           <div className="grid gap-1.5">
-            <Label className="text-xs">분임조 선택</Label>
+            <Label className="text-xs">Select Team</Label>
             <Tabs value={sdwt} onValueChange={onSdwtChange}>
               <TabsList>
                 {sdwtOptions.map((option) => (
@@ -485,7 +485,7 @@ function HardSpecPage() {
         <section className="grid h-full content-start gap-4 overflow-auto rounded-lg border bg-card p-4">
           <div className="flex flex-wrap items-end gap-3">
           <Select value={line} onValueChange={handleLineChange}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="라인ID 선택해주세요" /></SelectTrigger>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Line ID" /></SelectTrigger>
             <SelectContent>
               {(meta?.lineIds ?? [HARD_SPEC_DEFAULT_LINE]).map((lineId) => (
                 <SelectItem key={lineId} value={lineId}>{formatLineDisplayName(lineId)}</SelectItem>
@@ -493,24 +493,24 @@ function HardSpecPage() {
             </SelectContent>
           </Select>
           <Select value={stepSeq} onValueChange={handleStepChange}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="step_seq 선택해주세요" /></SelectTrigger>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select step_seq" /></SelectTrigger>
             <SelectContent>{stepOptions.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={recipeId} onValueChange={handleRecipeChange}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="RecipeID 선택해주세요" /></SelectTrigger>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select Recipe ID" /></SelectTrigger>
             <SelectContent>{recipeOptions.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
           </Select>
           <Select value={fdcModel} onValueChange={setFdcModel}>
-            <SelectTrigger className="w-[180px]"><SelectValue placeholder="FDC Model 선택해주세요" /></SelectTrigger>
+            <SelectTrigger className="w-[180px]"><SelectValue placeholder="Select FDC Model" /></SelectTrigger>
             <SelectContent>{fdcModelOptions.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
           </Select>
           <Button type="button" onClick={searchRows} disabled={!line || !stepSeq || !recipeId || !fdcModel || recommendationQuery.isFetching}>
             <Search className="size-4" aria-hidden="true" />
-            추천SPEC 조회
+            View Recommended SPEC
           </Button>
           <Button type="button" variant="outline" onClick={downloadRows} disabled={!rows.length}>
             <Download className="size-4" aria-hidden="true" />
-            엑셀 다운로드
+            Download Excel
           </Button>
           </div>
           {warningMessages.length ? (
@@ -526,24 +526,24 @@ function HardSpecPage() {
           {
             key: "select",
             label: "",
-            render: (row) => <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => toggleRow(row)} aria-label={`${row.sensor_name} 선택`} />,
+            render: (row) => <Checkbox checked={selectedRows.has(row.id)} onCheckedChange={() => toggleRow(row)} aria-label={`Select ${row.sensor_name}`} />,
           },
           { key: "priority", label: "priority" },
           { key: "sensor_name", label: "sensor_name", cellClassName: "font-medium" },
           { key: "ch_step", label: "ch_step" },
-          { key: "추천Spec(Lower)", label: "추천Spec(Lower)", cellClassName: "text-right tabular-nums" },
-          { key: "추천Spec(Upper)", label: "추천Spec(Upper)", cellClassName: "text-right tabular-nums" },
-          { key: "기존Spec(Lower)", label: "기존Spec(Lower)", cellClassName: "text-right tabular-nums" },
-          { key: "기존Spec(Upper)", label: "기존Spec(Upper)", cellClassName: "text-right tabular-nums" },
-          { key: "Spec격차", label: "Spec격차", cellClassName: "text-right tabular-nums" },
+          { key: "추천Spec(Lower)", label: "Recommended Spec (Lower)", cellClassName: "text-right tabular-nums" },
+          { key: "추천Spec(Upper)", label: "Recommended Spec (Upper)", cellClassName: "text-right tabular-nums" },
+          { key: "기존Spec(Lower)", label: "Existing Spec (Lower)", cellClassName: "text-right tabular-nums" },
+          { key: "기존Spec(Upper)", label: "Existing Spec (Upper)", cellClassName: "text-right tabular-nums" },
+          { key: "Spec격차", label: "Spec Gap", cellClassName: "text-right tabular-nums" },
         ]}
         rows={rows}
       />
 
       <section className="rounded-lg border bg-card p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-sm font-semibold">그래프 그리기</h2>
-          <Badge variant="secondary">선택 {chartRows.length}개</Badge>
+          <h2 className="text-sm font-semibold">Draw Graph</h2>
+          <Badge variant="secondary">{chartRows.length} selected</Badge>
         </div>
         <div className="h-[340px]">
           <ResponsiveContainer width="100%" height="100%">
@@ -578,7 +578,7 @@ function YieldSpecPage() {
         <section className="grid h-full content-start gap-4 overflow-auto rounded-lg border bg-card p-4">
           <div className="flex flex-wrap items-end gap-3">
           <Select value={stepSeq} onValueChange={setStepSeq}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Step seq 를 선택해주세요." /></SelectTrigger>
+            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Select Step seq." /></SelectTrigger>
             <SelectContent>{STEP_SEQ_OPTIONS.map((option) => <SelectItem key={option} value={option}>{option}</SelectItem>)}</SelectContent>
           </Select>
           <Select defaultValue={rows[0]?.recipe_id}>
@@ -587,10 +587,10 @@ function YieldSpecPage() {
           </Select>
           <Button type="button">
             <Search className="size-4" aria-hidden="true" />
-            조회
+            Search
           </Button>
           </div>
-          <p className="text-xs text-muted-foreground">g_min, g_max : 수율 상위 50% 물량의 MIN MAX / b_min, b_max : 수율 하위 50% 물량의 MIN MAX</p>
+          <p className="text-xs text-muted-foreground">g_min, g_max: MIN/MAX of the top 50% yield group / b_min, b_max: MIN/MAX of the bottom 50% yield group</p>
         </section>
       </ResizableFilterArea>
       <SimpleTable
@@ -643,7 +643,7 @@ function RecipientsPage() {
         <section className="grid h-full content-start gap-4 overflow-auto rounded-lg border bg-card p-4">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)_minmax(0,1fr)_auto]">
           <div className="grid gap-1.5">
-            <Label htmlFor="recipient-email">이메일</Label>
+            <Label htmlFor="recipient-email">Email</Label>
             <Input id="recipient-email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="t1232.kang" />
           </div>
           <OptionChecklist title="sdwt" options={SDWT_OPTIONS} selected={selectedSdwt} onToggle={(value) => toggleSet(setSelectedSdwt, value)} />
@@ -651,9 +651,9 @@ function RecipientsPage() {
           <div className="flex items-end gap-2">
             <Button type="button" onClick={register}>
               <MailPlus className="size-4" aria-hidden="true" />
-              등록
+              Register
             </Button>
-            <Button type="button" variant="outline" onClick={remove}>제거</Button>
+            <Button type="button" variant="outline" onClick={remove}>Remove</Button>
           </div>
           </div>
         </section>

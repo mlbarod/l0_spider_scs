@@ -355,7 +355,7 @@ export function getHardSpecRows() {
       "추천Spec(Upper)": Number(upper.toFixed(2)),
       "기존Spec(Lower)": Number(hardLower.toFixed(2)),
       "기존Spec(Upper)": Number(hardUpper.toFixed(2)),
-      "Spec격차": `${ratio.toFixed(1)}배`,
+      "Spec격차": `${ratio.toFixed(1)}x`,
       source_path: `${SPIDER_FILE_PATHS.hardSpecRoot}/Dreams_H1L/${1200 + index * 7}/PPID-${720 + index}/${row.recipe_id}/2026-05-29`,
     }
   })

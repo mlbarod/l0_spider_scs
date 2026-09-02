@@ -89,7 +89,7 @@ test("자설비 SKIP은 file_path의 ver를 추정하지 않고 요청 row의 ve
     step: "10@MAIN",
     eqp: "EQP-1",
     knoxId: "10.0.0.1",
-  }), /자설비 SKIP ver 정보를 확인하지 못했습니다/)
+  }), /Unable to determine the equipment SKIP ver value/)
 })
 
 test("자설비 SKIP은 선택 row의 ver가 비어 있으면 저장을 거부한다", () => {
@@ -109,7 +109,7 @@ test("자설비 SKIP은 선택 row의 ver가 비어 있으면 저장을 거부�
 
   assert.throws(
     () => buildPassHistoryRecord(input),
-    /자설비 SKIP ver 정보를 확인하지 못했습니다/,
+    /Unable to determine the equipment SKIP ver value/,
   )
   assert.equal(
     buildPassHistoryRecord(

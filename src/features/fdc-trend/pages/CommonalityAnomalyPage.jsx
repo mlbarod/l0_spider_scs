@@ -34,37 +34,37 @@ const IMAGES_PER_PAGE = 18
 const PAGE_VARIANTS = Object.freeze({
   matching: Object.freeze({
     queryKey: "commonality-data",
-    title: "동일성 이상감지",
+    title: "Similarity Anomaly Detection",
     badge: "Matching",
-    description: "동일성 최신날짜의 그래프를 Line, SDWT, STEP, Sensor, ch_step 기준으로 조회합니다.",
+    description: "View the latest similarity graphs by Line, SDWT, STEP, Sensor, and ch_step.",
     categoryLabel: "STEP",
     categoryOptionKey: "stepSeqs",
     categoryFilterKey: "stepSeq",
     categoryRowKey: "stepSeq",
     categoryQueryKey: "stepSeq",
-    latestLoadingText: "동일성 경로를 탐색하는 중입니다.",
-    resultTitle: "동일성 기준 이상감지 그래프",
-    resultDescription: "최종 필터 선택 결과를 step_seq 기준으로 분류합니다.",
+    latestLoadingText: "Searching similarity paths.",
+    resultTitle: "Similarity-Based Anomaly Graphs",
+    resultDescription: "Group the final filtered results by step_seq.",
     resultCategoryName: "STEP categories",
-    emptySelectionText: "Line Name, SDWT, STEP, Sensor와 ch_step을 선택하면 동일성 그래프가 표시됩니다.",
+    emptySelectionText: "Select Line Name, SDWT, STEP, Sensor, and ch_step to display similarity graphs.",
     fetchData: fetchCommonalityData,
     buildImageUrl: buildCommonalityImageUrl,
   }),
   commonCommonality: Object.freeze({
     queryKey: "common-commonality-data",
-    title: "공통부 동일성 이상감지",
+    title: "Common Area Similarity Detection",
     badge: "Common Matching",
-    description: "공통부 동일성 최신날짜의 그래프를 Line, SDWT, EQP_MODEL, Sensor, ch_step 기준으로 조회합니다.",
+    description: "View the latest common-area similarity graphs by Line, SDWT, EQP_MODEL, Sensor, and ch_step.",
     categoryLabel: "EQP_MODEL",
     categoryOptionKey: "eqpModels",
     categoryFilterKey: "eqpModel",
     categoryRowKey: "eqpModel",
     categoryQueryKey: "eqpModel",
-    latestLoadingText: "공통부 동일성 경로를 탐색하는 중입니다.",
-    resultTitle: "공통부 동일성 기준 이상감지 그래프",
-    resultDescription: "최종 필터 선택 결과를 EQP_MODEL 기준으로 분류합니다.",
+    latestLoadingText: "Searching common-area similarity paths.",
+    resultTitle: "Common Area Similarity Anomaly Graphs",
+    resultDescription: "Group the final filtered results by EQP_MODEL.",
     resultCategoryName: "EQP_MODEL categories",
-    emptySelectionText: "Line Name, SDWT, EQP_MODEL, Sensor와 ch_step을 선택하면 공통부 동일성 그래프가 표시됩니다.",
+    emptySelectionText: "Select Line Name, SDWT, EQP_MODEL, Sensor, and ch_step to display common-area similarity graphs.",
     fetchData: fetchCommonCommonalityData,
     buildImageUrl: buildCommonCommonalityImageUrl,
   }),
@@ -133,7 +133,7 @@ function FilterCard({
             {title}
           </CardTitle>
           {isLoading
-            ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label="로딩 중" />
+            ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-label="Loading" />
             : badge != null
             ? <Badge variant={isActive ? "default" : "secondary"} className="text-[11px]">{badge}</Badge>
             : null}
@@ -143,7 +143,7 @@ function FilterCard({
         <Input
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="검색…"
+          placeholder="Search…"
           className="h-7 text-xs"
           disabled={disabled}
         />
@@ -181,7 +181,7 @@ function CommonalityImageCard({ row, config, lineId }) {
     : `${row.grade} · ${row.stepSeq} · ${row.ppid}`
   const saveHitHistoryMutation = useMutation({
     mutationFn: createHitHistory,
-    onSuccess: () => toast.success("이력저장 완료"),
+    onSuccess: () => toast.success("History saved"),
     onError: (error) => toast.error(error.message),
   })
   const handleHistorySave = () => {
@@ -209,7 +209,7 @@ function CommonalityImageCard({ row, config, lineId }) {
         {imageFailed ? (
           <div className="grid max-w-full justify-items-center gap-3 px-4 text-center">
             <FileWarning className="size-8 text-destructive" aria-hidden="true" />
-            <p className="text-sm font-medium text-destructive">이미지를 불러오지 못했습니다.</p>
+            <p className="text-sm font-medium text-destructive">Unable to load image.</p>
           </div>
         ) : (
           <img
@@ -233,7 +233,7 @@ function CommonalityImageCard({ row, config, lineId }) {
           {saveHitHistoryMutation.isPending
             ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
             : null}
-          이력저장
+          Save History
         </Button>
       </footer>
     </article>
@@ -399,7 +399,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
       })
       const filePaths = buildHistoryFilePaths(payload.rows ?? [])
       if (!filePaths.length) {
-        throw new Error("클릭이력에 사용할 Drawing 결과가 없습니다.")
+        throw new Error("No drawing results are available for click history.")
       }
       await createClickedCategoryHistory({
         app: "commonality",
@@ -411,7 +411,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
         clickedAt,
       })
     } catch (error) {
-      toast.error(`클릭이력 저장 실패: ${error.message}`)
+      toast.error(`Failed to save click history: ${error.message}`)
     }
   }
   const filteredLines = filterValues(
@@ -460,7 +460,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
           <Button type="button" variant="outline" size="sm" asChild>
             <Link to="/">
               <ArrowLeft className="size-4" aria-hidden="true" />
-              SPIDER 메인
+              SPIDER Home
             </Link>
           </Button>
         </div>
@@ -474,7 +474,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
               title="Line Name"
               badge={lines.length}
               disabled={mappingQuery.isLoading || !lines.length}
-              placeholder={mappingQuery.isLoading ? "로딩 중…" : "선택 가능한 Line이 없습니다."}
+              placeholder={mappingQuery.isLoading ? "Loading…" : "No lines are available."}
               isActive={Boolean(activeLine)}
               isLoading={mappingQuery.isFetching}
               query={queries.line}
@@ -498,7 +498,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
               title="SDWT"
               badge={teamOptions.length}
               disabled={!activeLine}
-              placeholder="Line Name을 먼저 선택하세요"
+              placeholder="Select Line Name first"
               isActive={Boolean(activeTeam)}
               query={queries.team}
               onQueryChange={(value) => setQuery("team", value)}
@@ -519,7 +519,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
               title={config.categoryLabel}
               badge={stepDescs.length}
               disabled={!activeTeam || dataQuery.isLoading}
-              placeholder={dataQuery.isLoading ? config.latestLoadingText : `선택 SDWT에 해당하는 ${config.categoryLabel}이 없습니다.`}
+              placeholder={dataQuery.isLoading ? config.latestLoadingText : `No ${config.categoryLabel} matches the selected SDWT.`}
               isActive={Boolean(activeStepDesc)}
               isLoading={dataQuery.isFetching && !selectedStepDesc}
               query={queries.stepDesc}
@@ -544,7 +544,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
               title="Sensor"
               badge={sensors.length}
               disabled={!selectedStepDesc || dataQuery.isLoading}
-              placeholder={selectedStepDesc ? `선택 ${config.categoryLabel}에 해당하는 Sensor가 없습니다.` : `${config.categoryLabel}을 먼저 선택하세요`}
+              placeholder={selectedStepDesc ? `No Sensor matches the selected ${config.categoryLabel}.` : `Select ${config.categoryLabel} first`}
               isActive={Boolean(activeSensor)}
               isLoading={dataQuery.isFetching && !selectedSensor}
               query={queries.sensor}
@@ -568,7 +568,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
               title="ch_step"
               badge={chSteps.length}
               disabled={!selectedSensor || dataQuery.isLoading}
-              placeholder={selectedSensor ? "선택 Sensor에 해당하는 ch_step이 없습니다." : "Sensor를 먼저 선택하세요"}
+              placeholder={selectedSensor ? "No ch_step matches the selected Sensor." : "Select Sensor first"}
               isActive={Boolean(activeChStep)}
               isLoading={dataQuery.isFetching && Boolean(selectedSensor)}
               query={queries.chStep}
@@ -588,7 +588,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
         </ResizableFilterArea>
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive">
-            <span>기준정보 매핑 오류: {mappingQuery.error.message}</span>
+            <span>Reference mapping error: {mappingQuery.error.message}</span>
             <Button
               type="button"
               size="sm"
@@ -596,7 +596,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
               disabled={mappingQuery.isFetching}
               onClick={() => mappingQuery.refetch()}
             >
-              다시 조회
+              Retry
             </Button>
           </div>
         ) : null}
@@ -632,7 +632,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
           {activeChStep && totalImagePages > 1 ? (
             <nav
               className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3"
-              aria-label={`${config.title} 이미지 페이지`}
+              aria-label={`${config.title} image pages`}
             >
               <span className="text-xs tabular-nums text-muted-foreground">
                 {((activeImagePage - 1) * IMAGES_PER_PAGE + 1).toLocaleString()}
@@ -649,7 +649,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
                     size="sm"
                     variant={activeImagePage === item ? "default" : "outline"}
                     className="h-8 min-w-8 px-2 text-xs"
-                    aria-label={`${item} 페이지`}
+                    aria-label={`Page ${item}`}
                     aria-current={activeImagePage === item ? "page" : undefined}
                     onClick={() => setImagePage(item)}
                   >
@@ -689,7 +689,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
             </div>
           ) : (
             <div className="grid min-h-52 place-items-center rounded-lg border bg-card text-sm text-muted-foreground">
-              {dataQuery.isFetching ? "이미지 목록을 불러오는 중입니다." : "선택 조건에 해당하는 img.png가 없습니다."}
+              {dataQuery.isFetching ? "Loading image list." : "No img.png matches the selected filters."}
             </div>
           )}
         </section>

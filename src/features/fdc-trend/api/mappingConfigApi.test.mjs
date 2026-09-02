@@ -28,7 +28,7 @@ test("mapping API 성공 payload가 최소 계약을 만족하면 반환한다",
 test("mapping API의 빈 success payload를 오류로 처리한다", async () => {
   const restore = withFetchResponse({ line_mapping: {}, sdwt_mapping: {} })
   try {
-    await assert.rejects(fetchLineMapping(), /line_mapping이 비어 있습니다/)
+    await assert.rejects(fetchLineMapping(), /line_mapping reference mapping is empty/)
   } finally {
     restore()
   }

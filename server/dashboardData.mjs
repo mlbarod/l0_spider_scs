@@ -169,7 +169,7 @@ export function resolveDashboardDateRange(dateTimes, requested = {}) {
   if (!availableDates.length) {
     throw createDashboardError(
       "DASHBOARD_LATEST_DATE_NOT_FOUND",
-      "YYYY-MM-DD hh:mm:ss 형식의 대시보드 세부 파일이 없습니다.",
+      "No dashboard detail file uses the YYYY-MM-DD hh:mm:ss format.",
     )
   }
 
@@ -183,13 +183,13 @@ export function resolveDashboardDateRange(dateTimes, requested = {}) {
   if (!parseDateParts(startDate) || !parseDateParts(endDate)) {
     throw createDashboardError(
       "DASHBOARD_INVALID_FILTER",
-      "조회 시작일과 종료일은 YYYY-MM-DD 형식이어야 합니다.",
+      "The query start and end dates must use YYYY-MM-DD format.",
     )
   }
   if (startDate > endDate) {
     throw createDashboardError(
       "DASHBOARD_INVALID_FILTER",
-      "조회 시작일은 종료일보다 늦을 수 없습니다.",
+      "The query start date cannot be later than the end date.",
     )
   }
 
@@ -261,7 +261,7 @@ function validateRequestedLines(lines, mappingConfig) {
   if (invalidLine) {
     throw createDashboardError(
       "DASHBOARD_INVALID_FILTER",
-      `기준정보에 존재하지 않는 라인입니다: ${invalidLine}`,
+      `This line does not exist in the reference data: ${invalidLine}`,
     )
   }
   return requestedLines
@@ -740,7 +740,7 @@ export async function getLatestDashboardDate(pathRoot = DASHBOARD_PATH_ROOT) {
   if (latestDate) return latestDate
   throw createDashboardError(
     "DASHBOARD_LATEST_DATE_NOT_FOUND",
-    `${pathRoot} 아래에 YYYY-MM-DD hh:mm:ss 형식의 파일이 없습니다.`,
+    `No file under ${pathRoot} uses the YYYY-MM-DD hh:mm:ss format.`,
   )
 }
 
@@ -777,8 +777,8 @@ export async function handleDashboardLatestDateRequest(
     sendJson(res, statusCode, createSafeApiError({
       code: isNotFound ? error.code : "DASHBOARD_LATEST_DATE_LOAD_FAILED",
       message: isNotFound
-        ? "대시보드 최신 데이터 기준일을 찾지 못했습니다."
-        : "대시보드 최신 데이터 기준일을 불러오지 못했습니다.",
+        ? "Unable to find the latest dashboard data date."
+        : "Unable to load the latest dashboard data date.",
       scope: "dashboard-latest-date",
     }))
   }
@@ -903,21 +903,21 @@ export async function handleDashboardDataRequest(req, res, requestUrl) {
     const safeError = error.code === "DASHBOARD_LATEST_DATE_NOT_FOUND"
       ? {
           code: "DASHBOARD_LATEST_DATE_NOT_FOUND",
-          message: "대시보드 최신 데이터 기준일을 찾지 못했습니다.",
+          message: "Unable to find the latest dashboard data date.",
         }
       : error.code === "DASHBOARD_INVALID_FILTER"
         ? {
             code: "DASHBOARD_INVALID_FILTER",
-            message: "대시보드 조회 조건이 올바르지 않습니다.",
+            message: "The dashboard query filters are invalid.",
           }
         : error.code === DASHBOARD_INTEGRITY_ERROR_CODE
           ? {
               code: DASHBOARD_INTEGRITY_ERROR_CODE,
-              message: "대시보드 데이터 정합성 오류가 발생했습니다. 다시 조회해 주세요.",
+              message: "Dashboard data integrity validation failed. Please retry.",
             }
           : {
               code: "DASHBOARD_DATA_LOAD_FAILED",
-              message: "대시보드 데이터를 불러오지 못했습니다.",
+              message: "Unable to load dashboard data.",
             }
     sendJson(res, statusCode, createSafeApiError({
       ...safeError,

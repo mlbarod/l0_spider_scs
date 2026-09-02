@@ -349,6 +349,6 @@ test("기본 조회 시작일과 종료일은 모두 가장 최신 데이터 날
       startDate: "2026-07-18",
       endDate: "2026-07-17",
     }),
-    /조회 시작일은 종료일보다 늦을 수 없습니다/,
+    /query start date cannot be later than the end date/,
   )
 })

@@ -29,19 +29,19 @@ test("유효한 mapping payload를 정규화한다", () => {
 test("빈 line mapping과 잘못된 dictionary 항목을 거부한다", () => {
   assert.throws(
     () => validateLineMappingPayload({ line_mapping: {}, sdwt_mapping: {} }),
-    /line_mapping이 비어 있습니다/,
+    /line_mapping reference mapping is empty/,
   )
   assert.throws(
     () => validateLineMappingPayload({ line_mapping: [], sdwt_mapping: {} }),
-    /line_mapping 형식/,
+    /line_mapping reference mapping has an invalid format/,
   )
   assert.throws(
     () => validateLineMappingPayload({ line_mapping: { TEAM_A: "" }, sdwt_mapping: {} }),
-    /line_mapping 항목/,
+    /line_mapping reference mapping contains an invalid entry/,
   )
   assert.throws(
     () => validateLineMappingPayload({ line_mapping: { TEAM_A: "LINE_A" }, sdwt_mapping: null }),
-    /sdwt_mapping 형식/,
+    /sdwt_mapping reference mapping has an invalid format/,
   )
 })
 

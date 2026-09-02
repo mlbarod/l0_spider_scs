@@ -195,7 +195,7 @@ test("eqp 기준정보는 비필수 컬럼이 없어도 main과 prc_group으로 
   })
   assert.throws(
     () => resolveEqpReferenceProjection(["disp_name", "prc_group"]),
-    /main, prc_group/,
+    /main and prc_group/,
   )
 })
 
@@ -427,15 +427,15 @@ test("ERD file_path가 data.parquet이면 중복으로 파일명을 붙이지 �
 test("ERD data 경로는 backup root와 하위만 거부하고 이름이 비슷한 형제는 허용한다", () => {
   assert.throws(
     () => resolveErdDataFilePath("/appdata/abnormal_trend/pic/backup"),
-    /허용되지 않은 ERD 데이터 경로/,
+    /ERD data path is not allowed/,
   )
   assert.throws(
     () => resolveErdDataFilePath("/appdata/abnormal_trend/pic/backup/2026-08-25/EQP-1"),
-    /허용되지 않은 ERD 데이터 경로/,
+    /ERD data path is not allowed/,
   )
   assert.throws(
     () => resolveErdDataFilePath("/appdata/abnormal_trend/outside/EQP-1"),
-    /허용되지 않은 ERD 데이터 경로/,
+    /ERD data path is not allowed/,
   )
   assert.equal(
     resolveErdDataFilePath("/appdata/abnormal_trend/pic/backup2/EQP-1").filePath,

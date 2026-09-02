@@ -165,7 +165,7 @@ export function buildStatsLineDashboard(datedRows, previousRows, filters) {
   )).sort(compareText)
   const requestedLines = Array.from(new Set((filters.lines ?? []).map(normalizeText).filter(Boolean)))
   if (requestedLines.some((lineId) => !availableLines.includes(lineId))) {
-    throw createStatsError("DASHBOARD_STATS_INVALID_FILTER", "조회할 line_id가 통계 범위에 없습니다.")
+    throw createStatsError("DASHBOARD_STATS_INVALID_FILTER", "The requested line_id is outside the statistics scope.")
   }
   const selectedLines = requestedLines.length ? requestedLines : availableLines
   const dates = enumerateDates(filters.startDate, filters.endDate)
@@ -309,7 +309,7 @@ async function listStatsFiles(statsRoot) {
 
 function resolveDateRange(files, requestedFilters) {
   if (!files.length) {
-    throw createStatsError("DASHBOARD_STATS_NOT_FOUND", "대시보드 stats 파일을 찾지 못했습니다.")
+    throw createStatsError("DASHBOARD_STATS_NOT_FOUND", "Unable to find the dashboard stats file.")
   }
   const dates = Array.from(new Set(files.map((file) => file.dateTime.slice(0, 10)))).sort()
   const minDate = dates[0]
@@ -317,7 +317,7 @@ function resolveDateRange(files, requestedFilters) {
   const startDate = requestedFilters.startDate || maxDate
   const endDate = requestedFilters.endDate || maxDate
   if (!parseDate(startDate) || !parseDate(endDate) || startDate > endDate) {
-    throw createStatsError("DASHBOARD_STATS_INVALID_FILTER", "조회 기간이 올바르지 않습니다.")
+    throw createStatsError("DASHBOARD_STATS_INVALID_FILTER", "The query period is invalid.")
   }
   return {
     startDate,
@@ -424,10 +424,10 @@ export async function handleDashboardStatsRequest(req, res, requestUrl) {
         ? error.code
         : isInvalidFilter ? error.code : "DASHBOARD_STATS_LOAD_FAILED",
       message: isNotFound
-        ? "대시보드 통계 파일을 찾지 못했습니다."
+        ? "Unable to find the dashboard statistics file."
         : isInvalidFilter
-          ? "대시보드 조회 조건이 올바르지 않습니다."
-          : "대시보드 통계 파일을 불러오지 못했습니다.",
+          ? "The dashboard query filters are invalid."
+          : "Unable to load the dashboard statistics file.",
       scope: "dashboard-stats",
     }))
   }

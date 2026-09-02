@@ -18,7 +18,7 @@ export async function fetchCommonAnomalyData({
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "공통부 이상감지 경로 데이터를 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load common-area anomaly path data."))
   }
   return payload
 }
@@ -34,7 +34,7 @@ export async function fetchCommonSkipListData({ lineId, prcGroup, eqp, sensor })
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "공통부 SKIP LIST 데이터를 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load common-area SKIP LIST data."))
   }
   return payload
 }
@@ -46,7 +46,7 @@ async function fetchCommonChartData({ filePath, eqp, sensor, chStep, mode = "sca
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "공통부 이상감지 데이터를 불러오지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to load common-area anomaly data."))
   }
   return payload
 }

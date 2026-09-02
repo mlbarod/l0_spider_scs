@@ -151,7 +151,7 @@ def insert_history(connection, payload):
 def insert_many_history(connection, payload):
     records = payload.get("records") or []
     if not records:
-        raise ValueError("일괄 SKIP 대상이 없습니다.")
+        raise ValueError("No bulk SKIP targets were provided.")
 
     identity_columns = PASS_HISTORY_COLUMNS[:10]
     identity_conditions = " AND ".join(f"`{column}` = %s" for column in identity_columns)
@@ -231,11 +231,11 @@ def main():
             elif action == "delete":
                 result = delete_history(connection, payload)
             else:
-                raise ValueError("지원하지 않는 PASS 이력 작업입니다.")
+                raise ValueError("This PASS history operation is not supported.")
         write_json(result)
     except Exception as error:
         print(f"pass history operation failed: {error}", file=sys.stderr)
-        write_json({"ok": False, "error": "PASS 이력 DB 작업에 실패했습니다."})
+        write_json({"ok": False, "error": "The PASS history DB operation failed."})
 
 
 if __name__ == "__main__":

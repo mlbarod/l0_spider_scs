@@ -38,9 +38,9 @@ function uniqueTextValues(values) {
 function normalizeKnoxId(value) {
   const text = normalizeText(value)
   const knoxId = text.includes("@") ? text.slice(0, text.indexOf("@")) : text
-  if (!knoxId) throw new Error("knox_id를 입력해야 합니다.")
+  if (!knoxId) throw new Error("knox_id is required.")
   if (knoxId.length > MAX_KNOX_ID_LENGTH || !/^[A-Za-z0-9._-]+$/.test(knoxId)) {
-    throw new Error("knox_id 형식이 올바르지 않습니다.")
+    throw new Error("knox_id has an invalid format.")
   }
   return knoxId
 }
@@ -49,13 +49,13 @@ async function readJsonBody(req) {
   let body = ""
   for await (const chunk of req) {
     body += chunk
-    if (body.length > 1024 * 1024) throw new Error("요청 데이터가 너무 큽니다.")
+    if (body.length > 1024 * 1024) throw new Error("The request payload is too large.")
   }
   if (!body.trim()) return {}
   try {
     return JSON.parse(body)
   } catch {
-    throw new Error("요청 JSON이 올바르지 않습니다.")
+    throw new Error("The request JSON is invalid.")
   }
 }
 
@@ -64,16 +64,16 @@ export function buildMailingRegistrationPayload(body) {
     ? body.knoxIds
     : [body?.knoxId]
   if (requestedKnoxIds.length > MAX_KNOX_ID_COUNT) {
-    throw new Error(`knox_id는 ${MAX_KNOX_ID_COUNT}명 이하로 등록해야 합니다.`)
+    throw new Error(`No more than ${MAX_KNOX_ID_COUNT} knox_id values may be registered.`)
   }
   const knoxIds = Array.from(new Set(requestedKnoxIds.map(normalizeKnoxId)))
   const sdwts = uniqueTextValues(body?.sdwts)
 
   if (!sdwts.length || sdwts.length > MAX_SDWT_COUNT) {
-    throw new Error(`SDWT는 1개 이상 ${MAX_SDWT_COUNT}개 이하로 선택해야 합니다.`)
+    throw new Error(`Select between 1 and ${MAX_SDWT_COUNT} SDWT values.`)
   }
   if (sdwts.some((sdwt) => sdwt.length > MAX_SDWT_LENGTH)) {
-    throw new Error(`SDWT 값은 ${MAX_SDWT_LENGTH}자 이하여야 합니다.`)
+    throw new Error(`Each SDWT value must be no more than ${MAX_SDWT_LENGTH} characters.`)
   }
 
   return {
@@ -87,7 +87,7 @@ export function buildMailingRegistrationPayload(body) {
 export function buildMailingDeletePayload(body) {
   const payload = buildMailingRegistrationPayload(body)
   const line = normalizeText(body?.line)
-  if (!line) throw new Error("삭제할 Line Name이 필요합니다.")
+  if (!line) throw new Error("The Line Name to delete is required.")
   return { ...payload, line }
 }
 
@@ -131,7 +131,7 @@ function runMailingHelper(action, payload) {
     child.on("close", () => {
       clearTimeout(timeout)
       if (timedOut) {
-        reject(new Error("Mailing 기준정보 처리 시간이 초과되었습니다."))
+        reject(new Error("Mailing reference processing timed out."))
         return
       }
 
@@ -139,11 +139,11 @@ function runMailingHelper(action, payload) {
       try {
         result = JSON.parse(stdout.trim())
       } catch {
-        reject(new Error("Mailing DB 응답을 해석하지 못했습니다."))
+        reject(new Error("Unable to parse the Mailing DB response."))
         return
       }
       if (!result.ok) {
-        reject(new Error("Mailing 기준정보를 처리하지 못했습니다."))
+        reject(new Error("Unable to process Mailing reference data."))
         return
       }
       resolvePromise(result)
@@ -214,10 +214,10 @@ export async function handleMailingRegistrationRequest(
         ? MAPPING_CONFIG_UNAVAILABLE_CODE
         : mappingMismatch ? MAPPING_SCOPE_MISMATCH_CODE : "MAILING_REGISTRATION_REQUEST_FAILED",
       message: mappingUnavailable
-        ? "기준정보 매핑을 사용할 수 없어 Mailing 요청을 중단했습니다."
+        ? "The Mailing request was stopped because reference mappings are unavailable."
         : mappingMismatch
-          ? "선택한 Line과 SDWT가 기준정보와 일치하지 않습니다."
-          : "Mailing 기준정보 요청을 처리하지 못했습니다.",
+          ? "The selected Line and SDWT do not match the reference data."
+          : "Unable to process the Mailing reference request.",
       scope: "mailing-registration",
     }))
   }

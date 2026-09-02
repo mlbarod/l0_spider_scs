@@ -67,7 +67,7 @@ test("IP 형식이 아닌 forwarded 값은 접속자 식별값으로 허용하�
   }
 
   assert.equal(getRemoteIp(req), "")
-  await assert.rejects(resolveCurrentUser("not-an-ip"), /접속자 IP/)
+  await assert.rejects(resolveCurrentUser("not-an-ip"), /client IP/)
 })
 
 test("구버전 Node용 Python helper도 DB 조회 없이 접속 IP를 반환한다", async () => {
@@ -82,6 +82,6 @@ test("구버전 Node용 Python helper도 DB 조회 없이 접속 IP를 반환한
   assert.deepEqual(await runCompatibilityHelper("not-an-ip"), {
     ok: false,
     code: "IP_NOT_FOUND",
-    error: "접속자 IP를 확인하지 못했습니다.",
+    error: "Unable to determine the client IP.",
   })
 })

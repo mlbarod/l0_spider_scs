@@ -185,7 +185,7 @@ function scatterPayload(url) {
     sourcePath: "/manual-test/data.parquet",
     pointCount: points.length,
     points,
-    changeHistory: [{ date: "2026-07-16 13:00:00", dateMs: baseMs + 18 * 45 * 60 * 1000, description: "정비 이력", url: "" }],
+    changeHistory: [{ date: "2026-07-16 13:00:00", dateMs: baseMs + 18 * 45 * 60 * 1000, description: "Maintenance history", url: "" }],
   }
 }
 
@@ -196,7 +196,7 @@ function commonalityPayload(url) {
   const validStep = validSensor && ["10@001", "20@001", "ALL"].includes(chStep)
   const selectedSteps = chStep === "ALL" ? ["10@001", "20@001"] : [chStep]
   return {
-    latest: { name: "동일성 최신날짜", path: "/manual-test/commonality", date: "2026-07-17 12:00:00" },
+    latest: { name: "Latest similarity date", path: "/manual-test/commonality", date: "2026-07-17 12:00:00" },
     filters: {
       line: "H1L",
       pathSdwt: demoTeam,
@@ -304,7 +304,7 @@ async function sanitizeVisibleText(page) {
       node.nodeValue = value
     })
     document.querySelectorAll("code").forEach((element) => {
-      if (element.textContent?.includes("/appdata/")) element.textContent = "/manual-test/보안정보-마스킹"
+      if (element.textContent?.includes("/appdata/")) element.textContent = "/manual-test/sensitive-data-masked"
     })
   })
 }
@@ -390,52 +390,52 @@ async function generateScreenshots() {
     await capture(page, "01-main-screen.png", { fullPage: true })
     await capture(page, "02-main-menu.png", {
       highlights: [
-        page.getByRole("heading", { name: "자설비 이상감지" }),
-        page.getByRole("heading", { name: "동일성 이상감지" }),
-        page.getByRole("heading", { name: "공통부 이상감지" }),
+        page.getByRole("heading", { name: "Equipment Anomaly Detection" }),
+        page.getByRole("heading", { name: "Similarity Anomaly Detection" }),
+        page.getByRole("heading", { name: "Common Area Anomaly Detection" }),
       ],
     })
 
-    await goto(page, "/self-equipment", "자설비 이상감지")
+    await goto(page, "/self-equipment", "Equipment Anomaly Detection")
     await capture(page, "03-self-equipment-filters.png", { highlights: [page.getByText("Sensor Grade"), page.getByText("ch_step", { exact: true })] })
     await clickFilter(page, "MAIN ETCH")
     await clickFilter(page, "EQP-DEMO")
     await clickFilter(page, "Chamber Pressure")
     await clickFilter(page, "10")
     await page.getByText("Scatter chart", { exact: true }).scrollIntoViewIfNeeded()
-    await page.getByText("42 매").waitFor({ state: "visible" })
-    await capture(page, "04-self-equipment-chart.png", { highlights: [page.getByText("Scatter chart", { exact: true }), page.getByText("이상감지 data")] })
+    await page.getByText("42 points").waitFor({ state: "visible" })
+    await capture(page, "04-self-equipment-chart.png", { highlights: [page.getByText("Scatter chart", { exact: true }), page.getByText("Anomaly data")] })
     const selfCard = page.locator("article").filter({ hasText: "EQP-DEMO" }).first()
     await capture(page, "05-self-equipment-actions.png", {
       target: selfCard,
-      highlights: [selfCard.getByRole("button", { name: "SKIP", exact: true }), selfCard.getByRole("button", { name: "EQP ALL SKIP" }), selfCard.getByRole("button", { name: "동일성 차트" })],
+      highlights: [selfCard.getByRole("button", { name: "SKIP", exact: true }), selfCard.getByRole("button", { name: "EQP ALL SKIP" }), selfCard.getByRole("button", { name: "Similarity Chart" })],
     })
     await selfCard.getByRole("button", { name: "SKIP", exact: true }).click()
     await page.getByRole("dialog").waitFor({ state: "visible" })
     await capture(page, "06-self-equipment-skip-dialog.png", { target: page.getByRole("dialog"), highlights: [page.getByLabel("SKIP comment"), page.getByRole("button", { name: "OK" })] })
-    await page.getByRole("button", { name: "취소" }).click()
-    await selfCard.getByRole("button", { name: "동일성 차트" }).click()
-    await page.getByRole("dialog").getByText("3개 EQP").waitFor({ state: "visible" })
-    await capture(page, "07-self-equipment-identity-chart.png", { target: page.getByRole("dialog"), highlights: [page.getByRole("button", { name: "기준선 긋기" })] })
+    await page.getByRole("button", { name: "Cancel" }).click()
+    await selfCard.getByRole("button", { name: "Similarity Chart" }).click()
+    await page.getByRole("dialog").getByText(/3 EQPs/).waitFor({ state: "visible" })
+    await capture(page, "07-self-equipment-identity-chart.png", { target: page.getByRole("dialog"), highlights: [page.getByRole("button", { name: "Draw Reference Lines" })] })
     await page.keyboard.press("Escape")
 
-    await goto(page, "/matching-anomaly", "동일성 이상감지")
+    await goto(page, "/matching-anomaly", "Similarity Anomaly Detection")
     await clickFilter(page, "Chamber Pressure")
     await clickFilter(page, "10@001")
     await page.getByText("MAIN ETCH", { exact: true }).last().waitFor({ state: "visible" })
     await capture(page, "08-matching-anomaly.png", { fullPage: true, highlights: [page.getByText("Sensor", { exact: true }), page.getByText("ch_step", { exact: true })] })
 
-    await goto(page, "/common-anomaly", "공통부 이상감지")
+    await goto(page, "/common-anomaly", "Common Area Anomaly Detection")
     await clickFilter(page, "ETCH")
     await clickFilter(page, "EQP-COMMON")
     await clickFilter(page, "TEMP")
     await page.getByText("EQP-COMMON", { exact: true }).last().waitFor({ state: "visible" })
     await capture(page, "09-common-anomaly-filters.png", { highlights: [page.getByText("prc_group", { exact: true }), page.getByText("eqp", { exact: true }), page.getByText("sensor", { exact: true })] })
     const commonCard = page.locator("article").filter({ hasText: "EQP-COMMON" }).first()
-    await capture(page, "10-common-anomaly-image.png", { target: commonCard, highlights: [commonCard.getByRole("button", { name: "SKIP", exact: true }), commonCard.getByRole("button", { name: "동일성 차트" })] })
+    await capture(page, "10-common-anomaly-image.png", { target: commonCard, highlights: [commonCard.getByRole("button", { name: "SKIP", exact: true }), commonCard.getByRole("button", { name: "Similarity Chart" })] })
 
-    await goto(page, "/manual", "사용자 메뉴얼")
-    await page.getByRole("heading", { name: "SPIDER PC 사용자 매뉴얼", exact: true }).waitFor({ state: "visible" })
+    await goto(page, "/manual", "User Manual")
+    await page.getByRole("heading", { name: "SPIDER User Manual", exact: true }).waitFor({ state: "visible" })
     await capture(page, "15-manual-status.png")
   } finally {
     await browser.close()

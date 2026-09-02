@@ -30,48 +30,48 @@ function createConfigError(message) {
 
 function normalizeTerm(value, appKey) {
   if (typeof value !== "string") {
-    throw createConfigError(`${appKey}.contains 항목은 문자열이어야 합니다.`)
+    throw createConfigError(`${appKey}.contains entries must be strings.`)
   }
   const term = value.trim()
   if (!term || Array.from(value).length > MAX_TERM_LENGTH) {
-    throw createConfigError(`${appKey}.contains 항목 길이가 올바르지 않습니다.`)
+    throw createConfigError(`${appKey}.contains entry length is invalid.`)
   }
   return term.toUpperCase()
 }
 
 export function normalizeSensorExclusionConfig(payload) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    throw createConfigError("sensor 제외 설정은 JSON object여야 합니다.")
+    throw createConfigError("The sensor exclusion configuration must be a JSON object.")
   }
   if (payload.version !== 1) {
-    throw createConfigError("sensor 제외 설정 version은 1이어야 합니다.")
+    throw createConfigError("The sensor exclusion configuration version must be 1.")
   }
   const unknownRootFields = Object.keys(payload)
     .filter((key) => key !== "version" && key !== "apps")
   if (unknownRootFields.length) {
-    throw createConfigError("sensor 제외 설정에는 version과 apps만 사용할 수 있습니다.")
+    throw createConfigError("Only version and apps are allowed in the sensor exclusion configuration.")
   }
   if (!payload.apps || typeof payload.apps !== "object" || Array.isArray(payload.apps)) {
-    throw createConfigError("sensor 제외 설정 apps가 필요합니다.")
+    throw createConfigError("The sensor exclusion configuration requires apps.")
   }
 
   const unknownAppKeys = Object.keys(payload.apps)
     .filter((key) => !SENSOR_EXCLUSION_APP_KEYS.includes(key))
   if (unknownAppKeys.length) {
-    throw createConfigError("지원하지 않는 sensor 제외 App key가 있습니다.")
+    throw createConfigError("The sensor exclusion configuration contains an unsupported app key.")
   }
 
   const apps = Object.fromEntries(SENSOR_EXCLUSION_APP_KEYS.map((appKey) => {
     const appConfig = payload.apps[appKey] ?? { contains: [] }
     if (!appConfig || typeof appConfig !== "object" || Array.isArray(appConfig)) {
-      throw createConfigError(`${appKey} 설정은 object여야 합니다.`)
+      throw createConfigError(`${appKey} configuration must be an object.`)
     }
     const unknownFields = Object.keys(appConfig).filter((key) => key !== "contains")
     if (unknownFields.length || !Array.isArray(appConfig.contains)) {
-      throw createConfigError(`${appKey} 설정에는 contains 배열만 사용할 수 있습니다.`)
+      throw createConfigError(`Only the contains array is allowed in ${appKey} configuration.`)
     }
     if (appConfig.contains.length > MAX_TERMS_PER_APP) {
-      throw createConfigError(`${appKey}.contains는 ${MAX_TERMS_PER_APP}개 이하여야 합니다.`)
+      throw createConfigError(`${appKey}.contains must contain no more than ${MAX_TERMS_PER_APP} entries.`)
     }
     const contains = Array.from(new Set(
       appConfig.contains.map((value) => normalizeTerm(value, appKey)),
@@ -102,7 +102,7 @@ export function isSensorExcluded(sensor, contains = []) {
 
 export function excludeSensorRows(rows, config, appKey) {
   if (!SENSOR_EXCLUSION_APP_KEYS.includes(appKey)) {
-    throw createConfigError("지원하지 않는 sensor 제외 App key입니다.")
+    throw createConfigError("This sensor exclusion app key is not supported.")
   }
   const contains = config.apps[appKey].contains
   if (!contains.length) return { rows, excludedCount: 0 }

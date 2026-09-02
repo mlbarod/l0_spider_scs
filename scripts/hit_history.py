@@ -92,7 +92,7 @@ def main():
         write_json(result)
     except Exception as error:
         print(f"hit history operation failed: {error}", file=sys.stderr)
-        write_json({"ok": False, "error": "HIT 이력 DB 작업에 실패했습니다."})
+        write_json({"ok": False, "error": "The HIT history DB operation failed."})
 
 
 if __name__ == "__main__":

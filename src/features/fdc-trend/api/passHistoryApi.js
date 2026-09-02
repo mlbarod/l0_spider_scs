@@ -3,7 +3,7 @@ import { getApiErrorMessage } from "./errorMessage.js"
 async function parseResponse(response) {
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "PASS 이력을 처리하지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to process PASS history."))
   }
   return payload
 }

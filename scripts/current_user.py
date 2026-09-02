@@ -22,7 +22,7 @@ def main():
         write_json({
             "ok": False,
             "code": "IP_NOT_FOUND",
-            "error": "접속자 IP를 확인하지 못했습니다.",
+            "error": "Unable to determine the client IP.",
         })
         return
 

@@ -25,10 +25,10 @@ export async function createClickedCategoryHistory({
   })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) {
-    throw new Error(getApiErrorMessage(payload, "클릭이력을 저장하지 못했습니다."))
+    throw new Error(getApiErrorMessage(payload, "Unable to save click history."))
   }
   if (Number(payload.affectedRows) < 1) {
-    throw new Error("클릭이력이 DB에 반영되지 않았습니다.")
+    throw new Error("Click history was not written to the DB.")
   }
   return payload
 }
