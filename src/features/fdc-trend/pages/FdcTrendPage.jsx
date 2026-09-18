@@ -107,9 +107,9 @@ function SelectRow({ label, meta, selected, multiple = false, onClick }) {
       type="button"
       onClick={onClick}
       className={cn(
-        "flex h-9 w-full min-w-0 items-center gap-3 rounded-md border border-transparent px-3 text-left transition",
-        "hover:border-border hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected && "border-primary/30 bg-primary/10 text-primary shadow-sm",
+        "flex h-9 w-full min-w-0 items-center gap-3 rounded-full border border-transparent px-3 text-left transition",
+        "hover:border-[#d2d2d7] hover:bg-[#f5f5f7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071e3]",
+        selected && "border-[#0071e3] bg-white text-[#0066cc] ring-1 ring-[#0071e3]",
       )}
     >
       <span
@@ -168,14 +168,14 @@ function FilterCard({
   return (
     <Card
       className={cn(
-        "grid min-h-0 min-w-0 grid-rows-[48px_40px_minmax(0,1fr)] gap-0 overflow-hidden rounded-xl border bg-card py-0 shadow-sm transition-all",
-        isActive && "ring-2 ring-primary/50",
+        "grid min-h-0 min-w-0 grid-rows-[48px_44px_minmax(0,1fr)] gap-0 overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white py-0 transition-all",
+        isActive && "ring-2 ring-[#0071e3]",
       )}
     >
       <div
         className={cn(
-          "flex h-12 items-center border-b px-4",
-          isActive ? "bg-primary/10" : "bg-muted/40",
+          "flex h-12 items-center border-b border-[#e0e0e0] px-4",
+          isActive ? "bg-[#f5f5f7]" : "bg-[#fafafc]",
         )}
       >
         <div className="flex h-full min-w-0 flex-1 items-center justify-between gap-2">
@@ -197,18 +197,18 @@ function FilterCard({
           ) : null}
         </div>
       </div>
-      <div className="border-b px-2 py-1.5">
+      <div className="border-b border-[#e0e0e0] bg-white px-2 py-1.5">
         <Input
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Search…"
-          className="h-7 text-xs"
+          className="h-8 rounded-full border-[#e0e0e0] bg-white px-3 text-xs"
           disabled={disabled}
         />
       </div>
       <CardContent
         ref={contentRef}
-        className="min-h-0 overflow-y-auto overflow-x-hidden bg-background/60 p-2"
+        className="min-h-0 overflow-y-auto overflow-x-hidden bg-white p-2"
         onScroll={(event) => {
           if (!isRestoringScrollRef.current) {
             activeScrollPositionRef.current = event.currentTarget.scrollTop
@@ -830,8 +830,8 @@ const ThreeDayIdentityChartCard = memo(function ThreeDayIdentityChartCard({ row,
   )
 
   return (
-    <article ref={cardRef} className="grid min-h-[400px] min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-lg border border-primary/25 bg-card shadow-sm">
-      <header className="border-b border-primary/20 bg-primary/5 px-3 py-2">
+    <article ref={cardRef} className="grid min-h-[400px] min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border border-primary/20 bg-card">
+      <header className="border-b border-primary/15 bg-primary/5 px-4 py-3">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="min-w-0">
             <h3 className="truncate text-sm font-semibold">Last 3 Days Similarity Chart</h3>
@@ -1269,8 +1269,8 @@ const ErdScatterCard = memo(function ErdScatterCard({
   }
 
   return (
-    <article ref={cardRef} className="grid min-h-[400px] min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-card shadow-sm">
-      <header className="border-b bg-muted/50 px-3 py-2">
+    <article ref={cardRef} className="grid min-h-[400px] min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-xl border bg-card">
+      <header className="border-b bg-muted/35 px-4 py-3">
         <div className="flex min-w-0 items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             <h3 className="shrink-0 text-sm font-semibold">{eqp || "Unspecified EQP"}</h3>
@@ -1391,7 +1391,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
           </div>
         )}
       </div>
-      <footer className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-2.5">
+      <footer className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           {historyActionsEnabled ? (
             <SkipChartDialog
@@ -1909,7 +1909,7 @@ export function FdcTrendPage() {
   }
 
   return (
-    <div ref={pageRef} className="spider-app-page relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted">
+    <div ref={pageRef} className="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted/30">
       <header className="shrink-0 border-b bg-card px-6 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -1971,7 +1971,7 @@ export function FdcTrendPage() {
         </div>
       </section>
 
-      <section className="shrink-0 border-b bg-card">
+      <section className="shrink-0 border-b border-[#e0e0e0] bg-[#f5f5f7]">
         <ResizableFilterArea defaultHeight={332} minHeight={160} maxHeight={720}>
           <div className="h-full overflow-x-auto px-6 py-2">
             <div className="grid h-full min-w-[1640px] grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,.8fr)_minmax(0,1.45fr)_minmax(0,1.15fr)_minmax(0,1.2fr)_minmax(0,1.05fr)] gap-4">
@@ -2177,8 +2177,8 @@ export function FdcTrendPage() {
           </div>
         ) : null}
 
-        <section className="grid min-w-0 gap-3">
-          <div className="flex items-end justify-between gap-3">
+        <section className="min-w-0 overflow-hidden rounded-[18px] border bg-card">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/30 px-5 py-4">
             <div>
               <h2 className="text-base font-semibold">Scatter chart</h2>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -2191,97 +2191,99 @@ export function FdcTrendPage() {
                 <Badge variant="outline">{chartRows.length.toLocaleString()} charts</Badge>
               </div>
             ) : null}
-          </div>
-          {chStepIsSelected && chartPageCount > 1 ? (
-            <nav
-              className="flex flex-wrap items-center justify-center gap-1 rounded-lg border bg-card px-3 py-2"
-              aria-label="Chart pages"
-            >
-              {Array.from({ length: chartPageCount }, (_, index) => {
-                const page = index + 1
-                return (
-                  <Button
-                    key={page}
-                    type="button"
-                    variant={activeChartPage === page ? "default" : "outline"}
-                    size="sm"
-                    className="size-8 p-0"
-                    aria-label={`Page ${page}`}
-                    aria-current={activeChartPage === page ? "page" : undefined}
-                    onClick={() => setChartPage(page)}
-                  >
-                    {page}
-                  </Button>
-                )
-              })}
-            </nav>
-          ) : null}
-          {!chStepIsSelected ? (
-            <div className="grid min-h-52 place-items-center rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-              Select PRC_Group, eqp_ch, sensor, and ch_step to display the scatter chart.
-            </div>
-          ) : chartGroups.length ? (
-            <div className="grid min-w-0 gap-5">
-              {pageChartGroups.map((group) => (
-                <section key={group.eqp} className="min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm">
-                  <header className="flex items-center justify-between gap-3 border-b bg-muted/60 px-4 py-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Badge>EQP</Badge>
-                      <h3 className="truncate text-sm font-semibold">{group.eqp}</h3>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 shrink-0 px-2.5 text-xs"
-                        aria-pressed={group.gathered}
-                        onClick={() => toggleGatheredChSteps(group.eqp)}
-                      >
-                        {group.gathered ? "Show All ch_steps" : "Group ch_steps"}
-                      </Button>
+          </header>
+          <div className="grid min-w-0 gap-4 p-4">
+            {chStepIsSelected && chartPageCount > 1 ? (
+              <nav
+                className="flex flex-wrap items-center justify-center gap-1 rounded-xl border bg-background px-3 py-2"
+                aria-label="Chart pages"
+              >
+                {Array.from({ length: chartPageCount }, (_, index) => {
+                  const page = index + 1
+                  return (
+                    <Button
+                      key={page}
+                      type="button"
+                      variant={activeChartPage === page ? "default" : "outline"}
+                      size="sm"
+                      className="size-8 p-0"
+                      aria-label={`Page ${page}`}
+                      aria-current={activeChartPage === page ? "page" : undefined}
+                      onClick={() => setChartPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  )
+                })}
+              </nav>
+            ) : null}
+            {!chStepIsSelected ? (
+              <div className="grid min-h-52 place-items-center rounded-xl border border-dashed bg-muted/15 p-8 text-center text-sm text-muted-foreground">
+                Select PRC_Group, eqp_ch, sensor, and ch_step to display the scatter chart.
+              </div>
+            ) : chartGroups.length ? (
+              <div className="grid min-w-0 gap-4">
+                {pageChartGroups.map((group) => (
+                  <section key={group.eqp} className="min-w-0 overflow-hidden rounded-2xl border bg-background">
+                    <header className="flex items-center justify-between gap-3 border-b bg-muted/40 px-5 py-3.5">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Badge>EQP</Badge>
+                        <h3 className="truncate text-sm font-semibold">{group.eqp}</h3>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 shrink-0 px-2.5 text-xs"
+                          aria-pressed={group.gathered}
+                          onClick={() => toggleGatheredChSteps(group.eqp)}
+                        >
+                          {group.gathered ? "Show All ch_steps" : "Group ch_steps"}
+                        </Button>
+                      </div>
+                      <Badge variant="secondary">
+                        {group.visibleRows.length.toLocaleString()}
+                        {group.totalVisibleRows !== group.visibleRows.length
+                          ? ` / ${group.totalVisibleRows.toLocaleString()}`
+                          : group.gathered
+                          ? ` / ${group.rows.length.toLocaleString()}`
+                          : ""} charts
+                      </Badge>
+                    </header>
+                    <div
+                      className={cn(
+                        "grid min-w-0 grid-cols-1 gap-4 p-4 lg:grid-cols-2",
+                        !group.gathered && "xl:grid-cols-3",
+                        group.animate && (group.gathered ? "animate-ch-step-gather" : "animate-ch-step-expand"),
+                      )}
+                    >
+                      {group.visibleRows.map((row) => (
+                          <Fragment key={row.id}>
+                            <div className="min-w-0">
+                              <ErdScatterCard
+                                row={row}
+                                lineId={activeLine}
+                                passRecord={isSkipList
+                                  ? row.pass_history
+                                  : passHistoryByKey.get(buildChartPassHistoryKey(activeLine, row))}
+                                allSkipLoadTargets={allSkipLoadTargetsByEqp.get(group.eqp) ?? null}
+                                dataQueryKeyPrefix="self-equipment-data"
+                              />
+                            </div>
+                            {group.gathered && showThreeDayIdentity ? (
+                              <ThreeDayIdentityChartCard row={row} eqp={group.eqp} />
+                            ) : null}
+                          </Fragment>
+                      ))}
                     </div>
-                    <Badge variant="secondary">
-                      {group.visibleRows.length.toLocaleString()}
-                      {group.totalVisibleRows !== group.visibleRows.length
-                        ? ` / ${group.totalVisibleRows.toLocaleString()}`
-                        : group.gathered
-                        ? ` / ${group.rows.length.toLocaleString()}`
-                        : ""} charts
-                    </Badge>
-                  </header>
-                  <div
-                    className={cn(
-                      "grid min-w-0 grid-cols-1 gap-4 p-4 lg:grid-cols-2",
-                      !group.gathered && "xl:grid-cols-3",
-                      group.animate && (group.gathered ? "animate-ch-step-gather" : "animate-ch-step-expand"),
-                    )}
-                  >
-                    {group.visibleRows.map((row) => (
-                        <Fragment key={row.id}>
-                          <div className="min-w-0">
-                            <ErdScatterCard
-                              row={row}
-                              lineId={activeLine}
-                              passRecord={isSkipList
-                                ? row.pass_history
-                                : passHistoryByKey.get(buildChartPassHistoryKey(activeLine, row))}
-                              allSkipLoadTargets={allSkipLoadTargetsByEqp.get(group.eqp) ?? null}
-                              dataQueryKeyPrefix="self-equipment-data"
-                            />
-                          </div>
-                          {group.gathered && showThreeDayIdentity ? (
-                            <ThreeDayIdentityChartCard row={row} eqp={group.eqp} />
-                          ) : null}
-                        </Fragment>
-                    ))}
-                  </div>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <div className="grid min-h-52 place-items-center rounded-lg border bg-card text-sm text-muted-foreground">
-              {dataQuery.isLoading ? "Loading data." : "No file_path data to display."}
-            </div>
-          )}
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="grid min-h-52 place-items-center rounded-xl border border-dashed bg-muted/15 text-sm text-muted-foreground">
+                {dataQuery.isLoading ? "Loading data." : "No file_path data to display."}
+              </div>
+            )}
+          </div>
         </section>
       </main>
 

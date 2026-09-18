@@ -230,9 +230,8 @@
   }
 }
 
-/* 홈과 App이 공유하는 DESIGN.md 색상. root 적용으로 포털 팝업도 함께 사용합니다. */
-.spider-home,
-:root:has(.spider-app):not(.dark) {
+/* DESIGN.md 기반 L0 SPIDER 홈 전용 디자인 토큰 */
+.spider-home {
   --background: #ffffff;
   --foreground: #1d1d1f;
   --card: #ffffff;
@@ -250,27 +249,22 @@
   --border: #e0e0e0;
   --input: #e0e0e0;
   --ring: #0071e3;
-  font-family: "SF Pro Text", "Pretendard Variable", Inter, system-ui, -apple-system, sans-serif;
-}
-
-.spider-home {
   --chart-1: #0066cc;
   --chart-2: #2997ff;
   --chart-3: #1d1d1f;
   --chart-4: #7a7a7a;
   --chart-5: #b2b2b7;
+  font-family: "SF Pro Text", "Pretendard Variable", Inter, system-ui, -apple-system, sans-serif;
   scroll-behavior: smooth;
 }
 
-.spider-home [data-slot="button"],
-:root:has(.spider-app) [data-slot="button"] {
+.spider-home [data-slot="button"] {
   border-radius: 9999px;
   box-shadow: none;
   font-weight: 400;
 }
 
-.spider-home [data-slot="button"]:active,
-:root:has(.spider-app) [data-slot="button"]:active:not(:disabled) {
+.spider-home [data-slot="button"]:active {
   transform: scale(0.95);
 }
 
@@ -286,68 +280,61 @@
   box-shadow: none;
 }
 
-.spider-app {
+/* DESIGN.md 기반 App 필터 영역 전용 디자인 토큰 */
+.spider-filter-area {
+  --background: #ffffff;
+  --foreground: #1d1d1f;
+  --card: #ffffff;
+  --card-foreground: #1d1d1f;
+  --popover: #ffffff;
+  --popover-foreground: #1d1d1f;
+  --primary: #0066cc;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f7;
+  --secondary-foreground: #1d1d1f;
+  --muted: #f5f5f7;
+  --muted-foreground: #7a7a7a;
+  --accent: #f5f5f7;
+  --accent-foreground: #1d1d1f;
+  --border: #e0e0e0;
+  --input: #e0e0e0;
+  --ring: #0071e3;
+  border-radius: 18px;
+  background-color: #f5f5f7;
+  color: #1d1d1f;
   font-family: "SF Pro Text", "Pretendard Variable", Inter, system-ui, -apple-system, sans-serif;
 }
 
-.spider-app-page > header {
-  padding: 24px 32px;
-  background-color: color-mix(in srgb, var(--muted) 85%, var(--background));
-}
-
-.spider-app-page > header h1 {
-  white-space: normal;
-  font-size: 24px;
-  line-height: 1.25;
-  letter-spacing: -0.37px;
-}
-
-.spider-app-page > header p {
-  line-height: 1.5;
-}
-
-.spider-app [data-slot="card"] {
-  border-radius: 18px;
+.spider-filter-area [data-slot="card"],
+.spider-filter-area [data-slot="input"],
+.spider-filter-area [data-slot="select-trigger"],
+.spider-filter-area [data-slot="tabs-trigger"],
+.spider-filter-area [data-slot="button"] {
   box-shadow: none;
 }
 
-.spider-app main > div > section.rounded-lg,
-.spider-app main > div > div.rounded-lg {
-  border-radius: 18px;
-}
-
-:root:has(.spider-app) :is([data-slot="input"], [data-slot="select-trigger"]) {
+.spider-filter-area [data-slot="input"],
+.spider-filter-area [data-slot="select-trigger"],
+.spider-filter-area [data-slot="button"] {
   border-radius: 9999px;
-  box-shadow: none;
 }
 
-:root:has(.spider-app) :is([data-slot="tabs-list"], [data-slot="tabs-trigger"]) {
+.spider-filter-area [data-slot="button"]:active {
+  transform: scale(0.95);
+}
+
+.spider-filter-area [data-slot="tabs-list"] {
   border-radius: 9999px;
-  box-shadow: none;
+  background: #f5f5f7;
 }
 
-:root:has(.spider-app) :is([data-slot="dialog-content"], [data-slot="select-content"], [data-slot="dropdown-menu-content"]) {
-  border-radius: 18px;
-  box-shadow: none;
+.spider-filter-area [data-slot="tabs-trigger"] {
+  border-radius: 9999px;
+  font-weight: 400;
 }
 
-.spider-app :is(.shadow-xs, .shadow-sm, .shadow-md, .shadow-lg) {
-  box-shadow: none;
-}
-
-:root:has(.spider-app) :is([data-slot="button"], [data-slot="input"], [data-slot="select-trigger"], [data-slot="tabs-trigger"]):focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-@media (max-width: 640px) {
-  .spider-app-page > header {
-    padding: 20px;
-  }
-
-  .spider-app-page > header h1 {
-    font-size: 21px;
-  }
+.spider-filter-area [data-slot="tabs-trigger"][data-state="active"] {
+  color: #0066cc;
 }
 
 @theme inline {
