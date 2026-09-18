@@ -445,7 +445,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
   )
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted/30">
+    <div className="spider-app-page flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted">
       <header className="shrink-0 border-b bg-card px-6 py-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

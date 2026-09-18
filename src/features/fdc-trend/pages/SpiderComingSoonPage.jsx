@@ -16,10 +16,10 @@ export function SpiderComingSoonPage({ appId: configuredAppId = "" }) {
   const app = getUnderConstructionApp(configuredAppId || routeAppId) ?? FALLBACK_APP
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-background">
+    <div className="spider-app-page flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted">
       <main className="grid min-h-full flex-1 place-items-center px-4 py-10 sm:px-6">
-        <section className="w-full max-w-2xl rounded-3xl border border-border/70 bg-card p-8 text-center shadow-sm sm:p-12">
-          <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary">
+        <section className="w-full max-w-2xl rounded-[18px] border border-border bg-card p-8 text-center shadow-sm sm:p-12">
+          <div className="mx-auto grid size-16 place-items-center rounded-full bg-muted text-primary">
             <Construction className="size-8" aria-hidden="true" />
           </div>
 

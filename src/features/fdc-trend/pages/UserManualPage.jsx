@@ -63,7 +63,7 @@ export function UserManualPage() {
   const manualHtml = useMemo(() => buildManualHtml(manualMarkdown), [manualMarkdown])
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col bg-background">
+    <div className="spider-app-page flex h-full min-h-0 min-w-0 flex-col bg-muted">
       <header className="shrink-0 border-b bg-card px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">

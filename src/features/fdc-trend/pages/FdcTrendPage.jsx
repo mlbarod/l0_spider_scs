@@ -1909,7 +1909,7 @@ export function FdcTrendPage() {
   }
 
   return (
-    <div ref={pageRef} className="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted/30">
+    <div ref={pageRef} className="spider-app-page relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted">
       <header className="shrink-0 border-b bg-card px-6 py-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
