@@ -39,6 +39,8 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 - chart 요청은 `path`, `eqp`, `sensor`, `chStep`과 선택적인 `ver`, `latestDate`, `line`, `pathSdwt`를 전달한다.
 - 이미지 경로, directory 경로와 직접 `data.parquet` 경로의 기존 변환 규칙을 보존한다.
 - Sensor 제외 설정이 없으면 빈 제외 규칙으로 동작한다.
+- 일반 자설비 결과의 `CRITICAL` 버튼은 `status=ALARM`, `WARNING` 버튼은 `status=WARN` 차트만 표시한다. 기본은 전체이며 선택된 버튼을 다시 누르면 전체로 돌아간다. 상태 필터는 ch_step 모아보기와 페이지 분할 전에 적용하고, 변경 시 첫 페이지로 돌아간다. SKIP LIST에는 적용하지 않는다.
+- chart 상단에는 `reason` 코드에 따른 `이상감지 사유: {문구}`를 표시한다. 문구는 `l0_spider`와 동일하며 알 수 없거나 빈 사유는 표시하지 않는다. `status`, `reason`이 없는 이전 경로 파일도 조회할 수 있으며 상태 미지정 행은 전체 보기에서만 표시한다.
 
 ## 5. 오류와 보안
 
@@ -67,7 +69,7 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 | --- | --- | --- | --- |
 | `latest_date` 결정 및 대시보드 세부 파일 | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `{latest_date}` |
 | 최신 자설비 index | `{latest_date}` | `/appdata/abnormal_trend/pic/path_xian/{latest_date}` | `ver` 포함; 현재 일반 자설비 필터에서는 사용하지 않음 |
-| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | 원본 `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev`; EQP 기준정보 결합 후 `prc_group` 추가 |
+| 분임조별 ERD 이상감지 경로 테이블 | `df_path.parquet` | `/appdata/abnormal_trend/pic/path_xian/{line}/{sdwt}/df_path.parquet` | 원본 `sdwt`, `desc`, `ver`, `recipe_id`, `priority`, `sensor`, `step`, `eqp`, `file_path`, `line_rev`, `status`, `reason`; EQP 기준정보 결합 후 `prc_group` 추가 |
 | eqp 기준정보 | `erdtsum_info.parque` | `/appdata/abnormal_trend/pic/erdtsum_info.parque` (`.parque`가 없으면 같은 위치의 `.parquet` 호환) | `line_no`, `fdc_model`, `main`, `disp_name`, `sdwt_prod`, `prc_group`; 기본 결합 키는 `sdwt_prod` + `main` |
 | 자설비 이상감지 단일설비 데이터 | `data.parquet` | `file_path`가 `{eqp}.png`이면 같은 디렉터리의 `data.parquet`; 디렉터리이면 하위 `data.parquet`; 이미 `data.parquet`이면 그대로 사용 | 선택적 `ver`가 있으면 정확히 일치하는 row 우선·단일값 file-scope fallback, 없으면 선택 경로에 한정된 파일로 처리; `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` 또는 `eqp` (차트별 EQP 필터), 선택적 hover 컬럼 |
 | 자설비 이상감지 동일성 데이터 | `data.parquet` | 위와 같은 `file_path` 변환으로 선택한 `data.parquet` | 위와 같은 선택적 `ver` 규칙, `act_time` (x축), 실제 schema의 `{sensor}_{ch_step}` 우선·`{sensor}*{ch_step}` 호환 (y축), `eqp_cb` (series), 선택적 hover 컬럼 |

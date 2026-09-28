@@ -41,6 +41,8 @@ export const TEAM_ERD_COLUMNS = Object.freeze([
   "eqp",
   "file_path",
   "line_rev",
+  "status",
+  "reason",
 ])
 export { EQP_REFERENCE_COLUMNS, resolveEqpReferenceProjection }
 
@@ -115,6 +117,8 @@ export function normalizeTeamErdRow(row, { line, pathSdwt, displaySdwt }) {
     step: normalizeTextValue(row.step),
     eqp: normalizeTextValue(row.eqp),
     prc_group: normalizeTextValue(row.prc_group),
+    status: normalizeTextValue(row.status),
+    reason: normalizeTextValue(row.reason),
     file_path: normalizeSelfEquipmentFilePath(row.file_path),
     line_rev: normalizeTextValue(line),
     path_sdwt: normalizeTextValue(pathSdwt),
@@ -215,6 +219,13 @@ export function resolveTeamErdPath(
     : join(pathRoot, line, pathSdwt, "df_path.parquet")
 }
 
+export function resolveTeamErdProjection(schemaColumns) {
+  const availableColumns = new Set(schemaColumns)
+  return TEAM_ERD_COLUMNS.filter((column) => (
+    !["status", "reason"].includes(column) || availableColumns.has(column)
+  ))
+}
+
 export async function readTeamErdRows({ line, pathSdwt }) {
   const filePath = resolveTeamErdPath({ line, pathSdwt })
   const fileStat = statSync(filePath)
@@ -224,9 +235,12 @@ export async function readTeamErdRows({ line, pathSdwt }) {
   }
 
   const file = await asyncBufferFromFile(filePath)
+  const metadata = await parquetMetadataAsync(file)
+  const schemaColumns = parquetSchema(metadata).children.map((column) => column.element.name)
   const rows = (await parquetReadObjects({
     file,
-    columns: TEAM_ERD_COLUMNS,
+    metadata,
+    columns: resolveTeamErdProjection(schemaColumns),
     compressors,
   })).map((row) => Object.fromEntries(TEAM_ERD_COLUMNS.map((column) => [
     column,

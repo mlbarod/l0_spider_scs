@@ -69,6 +69,8 @@ import {
 } from "../api/selfEquipmentApi"
 import { SENSOR_GRADES } from "../utils/fdcTrendMockData"
 import { getLowestChStepRowsByPpid } from "../utils/chStepGrouping.mjs"
+import { ANOMALY_STATUSES, filterChartsByStatus } from "../utils/anomalyStatus.mjs"
+import { getAnomalyReasonLabel } from "../utils/anomalyReason.mjs"
 import { paginateChartGroups } from "../utils/chartPagination.mjs"
 import { formatLineDisplayName } from "../utils/lineDisplay.mjs"
 import {
@@ -1122,6 +1124,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const historyFilePath = getSelfEquipmentHistoryFilePath(row)
   const passHistoryFields = getSelfEquipmentPassHistoryFields(row)
   const historyActionsEnabled = isSelfEquipmentHistoryActionAvailable(row)
+  const reasonLabel = getAnomalyReasonLabel(row.reason)
 
   const refreshPassHistory = () => Promise.all([
     queryClient.invalidateQueries({ queryKey: ["pass-history", lineId] }),
@@ -1297,6 +1300,9 @@ const ErdScatterCard = memo(function ErdScatterCard({
             <span className="w-4 border-t border-dashed border-green-600" /> Change history
           </span>
           <span>Drag to zoom · Double-click to reset</span>
+          {reasonLabel ? (
+            <span className="text-xs text-foreground">이상감지 사유: {reasonLabel}</span>
+          ) : null}
         </div>
       </header>
       <div
@@ -1532,6 +1538,7 @@ export function FdcTrendPage() {
   const [selectedSensor, setSelectedSensor] = useState("")
   const [selectedChStep, setSelectedChStep] = useState("")
   const [chartPage, setChartPage] = useState(1)
+  const [selectedStatus, setSelectedStatus] = useState("")
   const [showThreeDayIdentity, setShowThreeDayIdentity] = useState(true)
   const [expandedChSteps, setExpandedChSteps] = useState({
     contextKey: "",
@@ -1678,8 +1685,8 @@ export function FdcTrendPage() {
   const dataRows = dataQuery.data?.rows
   const chartRows = useMemo(() => {
     if (!chStepIsSelected) return []
-    return dataRows ?? []
-  }, [chStepIsSelected, dataRows])
+    return filterChartsByStatus(dataRows ?? [], isSkipList ? "" : selectedStatus)
+  }, [chStepIsSelected, dataRows, isSkipList, selectedStatus])
   const chartGroups = useMemo(() => {
     const groups = new Map()
 
@@ -1722,7 +1729,7 @@ export function FdcTrendPage() {
 
   useEffect(() => {
     setChartPage(1)
-  }, [gatherContextKey])
+  }, [gatherContextKey, selectedStatus])
 
   useEffect(() => {
     if (chartPage !== activeChartPage) setChartPage(activeChartPage)
@@ -2186,7 +2193,32 @@ export function FdcTrendPage() {
               </p>
             </div>
             {chStepIsSelected ? (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-3">
+                {!isSkipList ? (
+                  <div className="flex items-center gap-2" role="group" aria-label="이상감지 심각도 필터">
+                    {ANOMALY_STATUSES.map(({ value, label }) => (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "h-11 min-w-28 px-5 text-sm font-semibold",
+                          selectedStatus === value && (value === "ALARM"
+                            ? "border-red-700 bg-red-700 text-white hover:bg-red-800 hover:text-white"
+                            : "border-amber-300 bg-amber-300 text-amber-950 hover:bg-amber-400 hover:text-amber-950"),
+                        )}
+                        aria-pressed={selectedStatus === value}
+                        title="다시 누르면 전체 이상감지를 표시합니다."
+                        onClick={() => {
+                          setSelectedStatus((current) => current === value ? "" : value)
+                          setChartPage(1)
+                        }}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                ) : null}
                 <Badge variant="secondary">{chartGroups.length.toLocaleString()} EQP categories</Badge>
                 <Badge variant="outline">{chartRows.length.toLocaleString()} charts</Badge>
               </div>
@@ -2280,7 +2312,9 @@ export function FdcTrendPage() {
               </div>
             ) : (
               <div className="grid min-h-52 place-items-center rounded-xl border border-dashed bg-muted/15 text-sm text-muted-foreground">
-                {dataQuery.isLoading ? "Loading data." : "No file_path data to display."}
+                {dataQuery.isLoading ? "Loading data." : selectedStatus && !isSkipList
+                  ? `${ANOMALY_STATUSES.find((status) => status.value === selectedStatus)?.label} 이상감지 차트가 없습니다.`
+                  : "No file_path data to display."}
               </div>
             )}
           </div>

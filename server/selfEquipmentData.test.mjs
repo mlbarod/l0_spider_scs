@@ -22,6 +22,7 @@ import {
   resolveErdDataFilePath,
   resolveErdHistoryFilePath,
   resolveTeamErdPath,
+  resolveTeamErdProjection,
   scopeSelfEquipmentRows,
 } from "./selfEquipmentData.mjs"
 
@@ -174,6 +175,8 @@ test("분임조별 path_xian 테이블은 ver를 포함한 원본 컬럼을 proj
     "eqp",
     "file_path",
     "line_rev",
+    "status",
+    "reason",
   ])
 })
 
@@ -262,6 +265,8 @@ test("분임조별 path_xian row는 ver를 경로 추정 없이 원본 컬럼에
     step: "10@MAIN",
     eqp: "EQP-1",
     prc_group: "",
+    status: "",
+    reason: "",
     file_path: "/appdata/abnormal_trend/pic/erd/2026-08-27/SDWT-1/ETCH/V7/RECIPE-1/A/TEMP/10@MAIN/EQP-1.png",
     line_rev: "P1L",
     path_sdwt: "RAW-SDWT-1",
@@ -709,4 +714,29 @@ test("chart API는 path_xian latestDate 형식이 잘못되면 파일을 읽기 
 
   assert.equal(response.statusCode, 400)
   assert.match(JSON.parse(response.body).error, /latestDate/)
+})
+
+
+test("신규 상태·사유 컬럼이 없는 이전 경로 파일도 기존 컬럼으로 읽는다", () => {
+  const legacyColumns = TEAM_ERD_COLUMNS.filter((column) => !["status", "reason"].includes(column))
+  assert.deepEqual(resolveTeamErdProjection(legacyColumns), legacyColumns)
+  assert.deepEqual(resolveTeamErdProjection([...legacyColumns, "status"]), [...legacyColumns, "status"])
+  assert.deepEqual(resolveTeamErdProjection(TEAM_ERD_COLUMNS), TEAM_ERD_COLUMNS)
+})
+
+test("SDWT 범위 확인과 기준정보 결합 후에도 status와 reason을 응답에 보존한다", () => {
+  const reason = "AVG_OUTSIDE_IDENTITY_RANGE"
+  const source = [createRow({ status: " ALARM ", reason: ` ${reason} ` })]
+  const joined = joinTeamErdRowsWithEqpReference(source, [{ main: "EQP", prc_group: "ETCH" }])
+  const scoped = scopeSelfEquipmentRows(joined, {
+    line: "P1L", pathSdwt: "RAW-SDWT-1",
+    mapping: { line_mapping: { "RAW-SDWT-1": "P1L" }, sdwt_mapping: { "RAW-SDWT-1": "SDWT-1" } },
+  })
+  const payload = buildSelfEquipmentPayload(scoped, {
+    line: "P1L", sdwt: "SDWT-1", priorities: ["A"], prcGroup: "ETCH",
+    eqpCh: "ALL", sensor: "ALL", chStep: "ALL",
+  })
+  assert.equal(payload.rows.length, 1)
+  assert.equal(payload.rows[0].status, "ALARM")
+  assert.equal(payload.rows[0].reason, reason)
 })
