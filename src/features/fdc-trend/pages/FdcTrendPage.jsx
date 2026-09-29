@@ -103,7 +103,7 @@ function expandPriorities(grades) {
   ))
 }
 
-function SelectRow({ label, meta, selected, multiple = false, onClick }) {
+export function SelectRow({ label, meta, selected, multiple = false, onClick }) {
   return (
     <button
       type="button"
@@ -135,7 +135,7 @@ function SelectRow({ label, meta, selected, multiple = false, onClick }) {
   )
 }
 
-function FilterCard({
+export function FilterCard({
   title,
   badge,
   disabled = false,

@@ -15,10 +15,6 @@ const UNDER_CONSTRUCTION_APPS = Object.freeze({
     title: "MY EQP Registration",
     category: "Registration",
   }),
-  "defect-spider": Object.freeze({
-    title: "Defect SPIDER",
-    category: "Defect",
-  }),
   "l1-spider": Object.freeze({
     title: "L1 SPIDER",
     category: "Level 1",

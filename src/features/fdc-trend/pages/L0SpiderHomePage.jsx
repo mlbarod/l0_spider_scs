@@ -87,9 +87,9 @@ const spiderSuites = [
     title: "Defect SPIDER",
     subtitle: "Explore anomalous patterns based on defect signals.",
     category: "Defect",
-    href: getUnderConstructionPath("defect-spider"),
+    href: "/defect-spider",
     active: true,
-    status: "Planned",
+    status: "In Development",
   },
   {
     icon: Radar,

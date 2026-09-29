@@ -10,7 +10,6 @@ const EXPECTED_APPS = [
   ["common-anomaly", "Common Area Anomaly Detection"],
   ["common-commonality", "Common Area Similarity Detection"],
   ["fdc-hard-limit", "FDC Hard Limit Recommendations"],
-  ["defect-spider", "Defect SPIDER"],
   ["l1-spider", "L1 SPIDER"],
   ["l3-spider", "L3 SPIDER"],
   ["my-eqp-registration", "MY EQP Registration"],

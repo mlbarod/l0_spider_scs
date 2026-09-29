@@ -8,6 +8,14 @@ export const LANGUAGE_OPTIONS = Object.freeze([
 ])
 
 const ko = {
+  "Select Line Name, SDWT, PRC_Group, main_seq, and met_seq to view Defect results.": "Line Name, SDWT, PRC_Group, main_seq, met_seq를 선택해 Defect 결과를 확인합니다.",
+  "Defect data is not connected yet.": "Defect 데이터 연결을 기다리고 있습니다.",
+  "In grouped view, show the similarity chart to the right.": "모아보기에서 동일성 차트를 오른쪽에 표시합니다.",
+  "Layout preview": "배치 미리보기",
+  "Show all charts": "전체 차트 보기",
+  "Group charts": "차트 모아보기",
+  "Last 72 hours": "최근 72시간",
+  "No matching items.": "일치하는 항목이 없습니다.",
   "Applications": "애플리케이션",
   "Dashboard": "대시보드",
   "L0 PROCESS INTELLIGENCE": "L0 공정 인텔리전스",
@@ -274,6 +282,14 @@ const ko = {
 }
 
 const zhCN = {
+  "Select Line Name, SDWT, PRC_Group, main_seq, and met_seq to view Defect results.": "选择 Line Name、SDWT、PRC_Group、main_seq 和 met_seq 查看 Defect 结果。",
+  "Defect data is not connected yet.": "正在等待连接 Defect 数据。",
+  "In grouped view, show the similarity chart to the right.": "在分组视图中，在右侧显示相似性图表。",
+  "Layout preview": "布局预览",
+  "Show all charts": "显示全部图表",
+  "Group charts": "合并查看图表",
+  "Last 72 hours": "最近 72 小时",
+  "No matching items.": "没有匹配的项目。",
   "Applications": "应用",
   "Dashboard": "仪表板",
   "L0 PROCESS INTELLIGENCE": "L0 工艺智能",
