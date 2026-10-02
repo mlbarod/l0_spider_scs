@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUp } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 
 import { fetchDefectFilters, fetchDefectFile } from "../api/defectSpiderApi"
 import { fetchLineMapping } from "../api/mappingConfigApi"
@@ -109,8 +110,9 @@ function DefectChartTrellis({ pair, selection }) {
       ) : null}
       {groups.map(({ eqp_ch }) => (
         <article key={eqp_ch} className="min-h-64 min-w-0 overflow-hidden rounded-xl border bg-card">
-          <header className="border-b bg-muted/35 px-4 py-3">
-            <h3 className="break-all text-sm font-semibold">{defectChartTitle(eqp_ch, pair.main_seq, pair.met_seq)}</h3>
+          <header className="flex items-center justify-between gap-2 border-b bg-muted/35 px-4 py-3">
+            <h3 className="min-w-0 break-all text-sm font-semibold">{defectChartTitle(eqp_ch, pair.main_seq, pair.met_seq)}</h3>
+            <Badge variant="destructive">중심치 이상</Badge>
           </header>
           {allQuery.isSuccess ? (
             <DefectScatterChart failData={failQuery.data} allData={allQuery.data} eqpCh={eqp_ch} />

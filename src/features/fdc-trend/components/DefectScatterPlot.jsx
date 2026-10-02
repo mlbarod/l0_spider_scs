@@ -15,14 +15,14 @@ const DefectAxes = memo(function DefectAxes({ width, domain }) {
           tickFormatter={(value) => formatDefectTime(value)} tick={{ fontSize: 10 }} minTickGap={35} height={46}
           label={{ value: "tkout_time", position: "insideBottom", offset: -10, fontSize: 11 }} />
         <YAxis type="number" dataKey="fab_value" domain={domain.y} allowDataOverflow width={68}
-          tick={{ fontSize: 10 }} tickFormatter={(value) => Number(value).toLocaleString(undefined, { maximumSignificantDigits: 5 })}
+          tick={{ fontSize: 10 }} tickFormatter={(value) => (Math.trunc(Number(value)) || 0).toLocaleString()}
           label={{ value: "fab_value", angle: -90, position: "insideLeft", fontSize: 11 }} />
       </ScatterChart>
     </div>
   )
 })
 
-export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidden, domain, onZoom, onReset }) {
+export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidden, domain, onZoom, onResetInitial, onShowFullRange }) {
   const plotRef = useRef(null), canvasRef = useRef(null), selectionRef = useRef(null), tooltipRef = useRef(null)
   const dragRef = useRef(null), frameRef = useRef(null), indexRef = useRef(null), hoverRef = useRef(null)
   const [size, setSize] = useState({ width: 0, pixelRatio: 1 })
@@ -111,11 +111,11 @@ export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidde
         clearDrag()
         if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId)
         if (dx > 8 && dy > 8) onZoom({ x: [drag.start.x, end.x], y: [end.y, drag.start.y] })
-        else if (dx < -8 && dy < -8) onReset()
+        else if (dx < -8 && dy < -8) onResetInitial()
       }}
       onPointerCancel={clearDrag} onLostPointerCapture={clearDrag}
       onPointerLeave={() => { if (!dragRef.current) { cancelFrame(); tooltipRef.current.style.display = "none" } }}
-      onDoubleClick={onReset}>
+      onDoubleClick={onShowFullRange}>
       {size.width > 88 ? <DefectAxes width={size.width} domain={domain} /> : null}
       <canvas ref={canvasRef} data-defect-canvas className="pointer-events-none absolute inset-0 h-full w-full"
         role="img" aria-label="tkout_time별 fab_value 산점도. ALL은 STEP별 색상, RAW는 NG 빨강·그 외 청록색." />
