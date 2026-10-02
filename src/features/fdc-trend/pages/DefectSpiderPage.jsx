@@ -5,9 +5,8 @@ import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
 
-import { fetchDefectFilters } from "../api/defectSpiderApi"
+import { fetchDefectFilters, fetchDefectFile } from "../api/defectSpiderApi"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
@@ -24,9 +23,9 @@ function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
   const [selected, setSelected] = useState({ prc_group: "", main_seq: "", met_seq: "" })
   const [queries, setQueries] = useState({ prc_group: "", main_seq: "", met_seq: "" })
   const filtersQuery = useQuery({
-    queryKey: ["defect-filters", line, pathSdwt, selected.prc_group, selected.main_seq],
+    queryKey: ["defect-filters", line, pathSdwt, selected.prc_group, selected.main_seq, selected.met_seq],
     queryFn: ({ signal }) => fetchDefectFilters({
-      line, pathSdwt, prcGroup: selected.prc_group, mainSeq: selected.main_seq, signal,
+      line, pathSdwt, prcGroup: selected.prc_group, mainSeq: selected.main_seq, metSeq: selected.met_seq, signal,
     }),
     enabled: Boolean(line && pathSdwt),
   })
@@ -35,12 +34,14 @@ function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
     ? filtersQuery.error.sourcePath ?? ""
     : filtersQuery.data?.source_path ?? ""
   useEffect(() => {
-    onLoadInfoChange({ line, pathSdwt, sourcePath, status: filtersQuery.status })
-  }, [line, pathSdwt, sourcePath, filtersQuery.status, onLoadInfoChange])
+    onLoadInfoChange({ line, pathSdwt, sourcePath, status: filtersQuery.status, files: filtersQuery.isSuccess ? filtersQuery.data.files : [], selected })
+  }, [line, pathSdwt, sourcePath, filtersQuery.status, filtersQuery.isSuccess, filtersQuery.data, selected, onLoadInfoChange])
 
   return DEFECT_FILTERS.map(({ key, title }, index) => {
-    const options = filters[key] ?? []
-    const ready = Boolean(line && pathSdwt && (index === 0 || selected[DEFECT_FILTERS[index - 1].key]))
+    const values = filters[key] ?? []
+    const options = values.map((value) => ({ value, label: value }))
+    if (index > 0 && values.length) options.unshift({ value: null, label: "ALL" })
+    const ready = Boolean(line && pathSdwt && (index === 0 || selected[DEFECT_FILTERS[index - 1].key] !== ""))
     const query = queries[key].trim().toLowerCase()
     return (
       <FilterCard
@@ -54,15 +55,15 @@ function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
             <Button type="button" size="sm" variant="outline" disabled={filtersQuery.isFetching} onClick={() => filtersQuery.refetch()}>Retry</Button>
           </div>
         ) : !ready ? "이전 필터를 먼저 선택하세요." : filtersQuery.isPending ? "Loading…" : "No matching items."}
-        isActive={options.includes(selected[key])}
+        isActive={options.some(({ value }) => value === selected[key])}
         isLoading={ready && filtersQuery.isFetching}
         query={queries[key]}
         onQueryChange={(value) => setQueries((current) => ({ ...current, [key]: value }))}
       >
-        {options.filter((value) => value.toLowerCase().includes(query)).map((value) => (
+        {options.filter(({ label }) => label.toLowerCase().includes(query)).map(({ value, label }) => (
           <SelectRow
-            key={value}
-            label={value}
+            key={JSON.stringify(value)}
+            label={label}
             selected={selected[key] === value}
             onClick={() => {
               const cleared = Object.fromEntries(DEFECT_FILTERS.slice(index + 1).map((filter) => [filter.key, ""]))
@@ -76,21 +77,50 @@ function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
   })
 }
 
-function DefectChartPlaceholder({ similarity = false }) {
+function DefectFileStatus({ kind, pair, selection }) {
+  const filePath = kind === "FAIL" ? pair.fail_path : pair.all_path
+  const fileQuery = useQuery({
+    queryKey: ["defect-file", selection, filePath],
+    queryFn: ({ signal }) => fetchDefectFile({ ...selection, filePath, signal }),
+    enabled: Boolean(filePath),
+    retry: false,
+  })
   return (
-    <article className="grid min-h-[400px] min-w-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden rounded-xl border bg-card">
-      <header className="border-b bg-muted/35 px-4 py-3">
-        <h3 className="text-sm font-semibold">
-          {similarity ? "Show 3-Day Similarity Chart" : "Scatter chart"}
-        </h3>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          {similarity ? "Last 72 hours" : "main_seq · met_seq"}
-        </p>
+    <section className="min-w-0 rounded-lg border bg-background">
+      <header className="border-b px-4 py-3">
+        <Badge variant="outline">{kind}</Badge>
+        <p className="mt-2 text-xs text-muted-foreground">로드 경로</p>
+        <code className="block select-text break-all text-xs">{filePath || "경로 변환 불가"}</code>
       </header>
-      <div className="flex min-h-72 items-center justify-center p-6">
-        <div className="grid min-h-60 w-full place-items-center rounded-xl border border-dashed bg-muted/15 p-6 text-center text-sm text-muted-foreground">
-          Defect data is not connected yet.
-        </div>
+      <div className="space-y-2 p-4 text-sm">
+        {pair.error ? <p className="text-destructive" role="alert">{pair.error}</p>
+          : fileQuery.isError ? (
+            <div className="space-y-2" role="alert">
+              <p className="text-destructive">{fileQuery.error.message}</p>
+              <Button size="sm" variant="outline" disabled={fileQuery.isFetching} onClick={() => fileQuery.refetch()}>Retry</Button>
+            </div>
+          ) : fileQuery.isPending ? <p>파일 로드 중…</p> : (
+            <>
+              <p>로드 완료 · {fileQuery.data.row_count.toLocaleString()}행</p>
+              <p className="break-all text-xs text-muted-foreground">컬럼: {fileQuery.data.columns.join(", ") || "없음"}</p>
+            </>
+          )}
+      </div>
+    </section>
+  )
+}
+
+function DefectChartCard({ pair, selection, index }) {
+  return (
+    <article className="min-h-64 min-w-0 overflow-hidden rounded-xl border bg-card">
+      <header className="border-b bg-muted/35 px-4 py-3">
+        <h3 className="text-sm font-semibold">Chart {index + 1} · FAIL / ALL</h3>
+        <p className="mt-2 text-xs text-muted-foreground">path 원문</p>
+        <code className="block select-text break-all text-xs">{pair.path || "(빈 값)"}</code>
+      </header>
+      <div className="grid min-w-0 gap-3 p-4">
+        <DefectFileStatus kind="FAIL" pair={pair} selection={selection} />
+        <DefectFileStatus kind="ALL" pair={pair} selection={selection} />
       </div>
     </article>
   )
@@ -102,8 +132,6 @@ export function DefectSpiderPage() {
   const [selectedTeam, setSelectedTeam] = useState("")
   const [loadInfo, setLoadInfo] = useState(null)
   const [queries, setQueries] = useState({ line: "", team: "" })
-  const [grouped, setGrouped] = useState(true)
-  const [showSimilarity, setShowSimilarity] = useState(true)
   const mappingQuery = useQuery({
     queryKey: ["l0-spider-line-mapping"],
     queryFn: fetchLineMapping,
@@ -146,34 +174,6 @@ export function DefectSpiderPage() {
           </Button>
         </div>
       </header>
-
-      <section className="shrink-0 border-b bg-card px-6 py-3">
-        <button
-          type="button"
-          className="group inline-flex items-center gap-3 rounded-lg px-2 py-1.5 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          role="switch"
-          aria-label="Show 3-Day Similarity Chart"
-          aria-checked={showSimilarity}
-          onClick={() => setShowSimilarity((current) => !current)}
-        >
-          <span className={cn(
-            "relative h-6 w-11 shrink-0 rounded-full border transition-colors duration-200",
-            showSimilarity ? "border-primary bg-primary" : "border-input bg-muted-foreground/35",
-          )}>
-            <span className={cn(
-              "absolute left-0.5 top-0.5 size-5 rounded-full bg-white shadow-sm transition-transform duration-200",
-              showSimilarity && "translate-x-5",
-            )} />
-          </span>
-          <span>
-            <span className="block text-sm font-medium text-foreground">Show 3-Day Similarity Chart</span>
-            <span className="mt-0.5 block text-xs text-muted-foreground">
-              In grouped view, show the similarity chart to the right.
-            </span>
-          </span>
-          <span className="sr-only">{showSimilarity ? "On" : "Off"}</span>
-        </button>
-      </section>
 
       <section className="shrink-0 border-b border-[#e0e0e0] bg-[#f5f5f7]">
         <ResizableFilterArea defaultHeight={332} minHeight={160} maxHeight={720}>
@@ -246,39 +246,37 @@ export function DefectSpiderPage() {
         ) : null}
       </section>
 
-      <main className="grid min-w-0 gap-4 p-4">
+      <main className="min-w-0 p-4">
         <section className="min-w-0 overflow-hidden rounded-[18px] border bg-card">
-          <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/30 px-5 py-4">
-            <div>
-              <h2 className="text-base font-semibold">Scatter chart</h2>
-              <p className="mt-1 text-xs text-muted-foreground">Defect data is not connected yet.</p>
-            </div>
-            <Badge variant="outline">Layout preview</Badge>
+          <header className="border-b bg-muted/30 px-5 py-4">
+            <h2 className="text-base font-semibold">Scatter chart</h2>
+            <p className="mt-1 text-xs text-muted-foreground">차트 하나당 FAIL / ALL 파일 한 쌍의 로드 경로와 상태를 표시합니다.</p>
           </header>
-          <div className="grid min-w-0 gap-4 p-4">
-            <section className="min-w-0 overflow-hidden rounded-2xl border bg-background">
-              <header className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/40 px-5 py-3.5">
-                <div className="flex min-w-0 items-center gap-2">
-                  <Badge>EQP</Badge>
-                  <h3 className="text-sm font-semibold">Layout preview</h3>
-                </div>
-                <Button type="button" variant="outline" size="sm" className="h-7 shrink-0 px-2.5 text-xs" aria-pressed={grouped} onClick={() => setGrouped((current) => !current)}>
-                  {grouped ? "Show all charts" : "Group charts"}
-                </Button>
-              </header>
-              <div className={cn("grid min-w-0 grid-cols-1 gap-4 p-4 lg:grid-cols-2", !grouped && "xl:grid-cols-3")}>
-                <DefectChartPlaceholder />
-                {grouped ? (
-                  showSimilarity ? <DefectChartPlaceholder similarity /> : null
-                ) : (
-                  <>
-                    <DefectChartPlaceholder />
-                    <DefectChartPlaceholder />
-                  </>
-                )}
+          {currentLoadInfo?.status === "success" && currentLoadInfo.files?.length ? (
+            <div className="overflow-x-auto p-4">
+              <div className="grid min-w-[640px] grid-cols-2 gap-4">
+                {currentLoadInfo.files.map((pair, index) => (
+                  <DefectChartCard
+                    key={JSON.stringify([activeLine, activeTeam, pair.path])}
+                    index={index}
+                    pair={pair}
+                    selection={{ line: activeLine, pathSdwt: activeTeam,
+                      prcGroup: currentLoadInfo.selected.prc_group,
+                      mainSeq: currentLoadInfo.selected.main_seq,
+                      metSeq: currentLoadInfo.selected.met_seq }}
+                  />
+                ))}
               </div>
-            </section>
-          </div>
+            </div>
+          ) : (
+            <p className="p-6 text-sm text-muted-foreground">
+              {currentLoadInfo?.status === "pending" ? "선택 조건의 파일 목록을 확인 중입니다."
+                : currentLoadInfo?.status === "error" ? "필터의 오류 안내를 확인하세요."
+                : currentLoadInfo?.selected && Object.values(currentLoadInfo.selected).every((value) => value !== "")
+                  ? "선택 조건에 해당하는 파일이 없습니다."
+                  : "PRC_Group, main_seq, met_seq를 선택하세요. ALL을 선택하면 해당 단계의 전체 값을 조회합니다."}
+            </p>
+          )}
         </section>
       </main>
 

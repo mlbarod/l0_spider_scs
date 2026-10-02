@@ -2,7 +2,8 @@ import assert from "node:assert/strict"
 import test from "node:test"
 import { parseEnv } from "node:util"
 import { getDefectFailListPath, resolveDefectFailListPath } from "./defectSpiderConfig.mjs"
-import { buildDefectFilters, handleDefectFiltersRequest, scopeDefectRows } from "./defectSpiderData.mjs"
+import { buildDefectFilters, handleDefectFiltersRequest, handleDefectFileRequest, scopeDefectRows, selectDefectRows } from "./defectSpiderData.mjs"
+import { buildDefectFilePairs } from "./defectFiles.mjs"
 import { blockDisabledDataRequest } from "./dataConnections.mjs"
 
 const rows = [
@@ -125,7 +126,7 @@ test("API는 매핑 범위 내 후보만 반환하고 eqpid·path를 노출하�
   await handleDefectFiltersRequest({ method: "GET" }, res,
     new URL("http://localhost/api/defect-filters?line=L1&pathSdwt=RAW-A&prcGroup=ETCH&mainSeq=10"), dependencies)
   assert.equal(res.status, 200)
-  assert.deepEqual(res.body, { source_path: resolveDefectFailListPath("L1", environment), filters: { prc_group: ["CLEAN", "ETCH"], main_seq: ["2", "10"], met_seq: ["2"] } })
+  assert.deepEqual(res.body, { files: [], source_path: resolveDefectFailListPath("L1", environment), filters: { prc_group: ["CLEAN", "ETCH"], main_seq: ["2", "10"], met_seq: ["2"] } })
 })
 
 test("잘못된 Line·SDWT 조합은 파일 조회 전에 거부한다", async () => {
@@ -160,4 +161,68 @@ test("API는 GET 외 메서드를 거부한다", async () => {
   await handleDefectFiltersRequest({ method: "POST" }, res, new URL("http://localhost/api/defect-filters"), dependencies)
   assert.equal(res.status, 405)
   assert.equal(res.headers.Allow, "GET")
+})
+
+const fileRows = [
+  { sdwt: "TEAM-A", prc_group: "ETCH", main_seq: "10", met_seq: "20", path: "/fixture/fail_dir/fail_1.parquet" },
+  { sdwt: "TEAM-A", prc_group: "ETCH", main_seq: "11", met_seq: "21", path: "/fixture/fail_2.parquet" },
+  { sdwt: "TEAM-B", prc_group: "ETCH", main_seq: "10", met_seq: "20", path: "/fixture/fail_other.parquet" },
+]
+
+test("main_seq ALL은 PRC_Group 내 met_seq 전체를, met_seq ALL은 현재 main 범위만 선택한다", () => {
+  const scoped = scopeDefectRows(fileRows, { sdwt: "TEAM-A", pathSdwt: "RAW-A" })
+  assert.deepEqual(buildDefectFilters(scoped, { prcGroup: "ETCH", mainAll: true }).met_seq, ["20", "21"])
+  assert.equal(selectDefectRows(scoped, { prcGroup: "ETCH", mainAll: true, metAll: true }).length, 2)
+  assert.equal(selectDefectRows(scoped, { prcGroup: "ETCH", mainSeq: "10", metAll: true }).length, 1)
+  assert.equal(selectDefectRows(scoped, { prcGroup: "ETCH", mainAll: true, metSeq: "21" })[0].main_seq, "11")
+  assert.deepEqual(selectDefectRows(scoped, { prcGroup: "ETCH", mainAll: true }), [])
+})
+
+test("path를 그대로 표시하고 파일명 접두사 fail_만 all_로 바꾸며 중복은 한 번만 로드한다", () => {
+  const pairs = buildDefectFilePairs([fileRows[0], fileRows[0]])
+  assert.deepEqual(pairs, [{ path: fileRows[0].path, fail_path: fileRows[0].path,
+    all_path: "/fixture/fail_dir/all_1.parquet", error: "" }])
+  for (const path of ["", "/fixture/other.parquet", "relative/fail_1.parquet", "/fixture/../fail_1.parquet"]) {
+    const [pair] = buildDefectFilePairs([{ path }])
+    assert.equal(pair.path, path)
+    assert.equal(pair.fail_path, "")
+    assert.equal(pair.all_path, "")
+    assert.ok(pair.error)
+  }
+})
+
+test("필터 API는 ALL 조건의 경로 쌍을 반환하고 다른 SDWT의 파일을 제외한다", async () => {
+  const res = response()
+  await handleDefectFiltersRequest({ method: "GET" }, res,
+    new URL("http://localhost/api/defect-filters?line=L1&pathSdwt=RAW-A&prcGroup=ETCH&mainAll=1&metAll=1"),
+    { ...dependencies, readRows: async () => fileRows })
+  assert.equal(res.status, 200)
+  assert.deepEqual(res.body.files, buildDefectFilePairs(fileRows.slice(0, 2)))
+})
+
+test("파일 API는 현재 범위의 fail과 all을 모두 읽고 임의 파일·다른 SDWT는 거부한다", async () => {
+  for (const [filePath, status] of [[fileRows[0].path, 200], ["/fixture/fail_dir/all_1.parquet", 200],
+    ["/fixture/fail_other.parquet", 400], ["/etc/passwd", 400], ["/fixture/fail_2.parquet", 400]]) {
+    const res = response()
+    let readPath
+    const params = new URLSearchParams({ line: "L1", pathSdwt: "RAW-A", prcGroup: "ETCH", mainSeq: "10", metAll: "1", filePath })
+    await handleDefectFileRequest({ method: "GET" }, res, new URL(`http://localhost/api/defect-file?${params}`), {
+      ...dependencies, readRows: async () => fileRows,
+      readFile: async (path) => { readPath = path; return { row_count: 3, columns: ["x", "y"] } },
+    })
+    assert.equal(res.status, status)
+    assert.equal(readPath, status === 200 ? filePath : undefined)
+    if (status === 200) assert.equal(res.body.row_count, 3)
+  }
+})
+
+test("파일 누락 오류를 해당 파일에만 반환한다", async () => {
+  const res = response()
+  const params = new URLSearchParams({ line: "L1", pathSdwt: "RAW-A", prcGroup: "ETCH", mainAll: "1", metAll: "1", filePath: fileRows[0].path })
+  await handleDefectFileRequest({ method: "GET" }, res, new URL(`http://localhost/api/defect-file?${params}`), {
+    ...dependencies, readRows: async () => fileRows,
+    readFile: async () => { throw Object.assign(new Error("private detail"), { code: "ENOENT" }) },
+  })
+  assert.equal(res.status, 503)
+  assert.equal(res.body.error, "파일이 없습니다.")
 })
