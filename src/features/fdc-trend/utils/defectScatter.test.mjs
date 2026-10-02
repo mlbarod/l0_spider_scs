@@ -74,3 +74,12 @@ test("같은 ALL을 공유하는 카드도 NG 보호 범위는 독립적이고 �
   assert.deepEqual(defectInitialDomain(points([5, 10]), []).y, [3, 12])
   assert.deepEqual(defectScatterDomain(all, first.selected), defectScatterDomain([...all, ...first.selected]))
 })
+
+test("STEP 범례 개수는 eqp_ch 구분 없이 ALL 점을 앞 두 글자로 집계하고 RAW를 중복 가산하지 않는다", () => {
+  const all = [
+    { eqp_ch: "A", step_seq: "10_A" }, { eqp_ch: "B", step_seq: "10_B" },
+    { eqp_ch: "A", step_seq: "20_A" }, { eqp_ch: "A", step_seq: null },
+  ]
+  const series = buildDefectScatterSeries([{ eqp_ch: "A", step_seq: "10_A" }], all, "A")
+  assert.deepEqual([...series.stepCounts], [["10", 2], ["20", 1], ["-", 1]])
+})

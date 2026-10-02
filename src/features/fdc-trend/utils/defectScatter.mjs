@@ -88,20 +88,23 @@ export function defectChartTitle(eqpCh, mainSeq, metSeq) {
 function prepareBackground(allPoints) {
   if (backgroundCache.has(allPoints)) return backgroundCache.get(allPoints)
   const background = new Map()
+  const stepCounts = new Map()
   for (const point of allPoints) {
     const group = background.get(point.eqp_ch) ?? []
     group.push(point)
     background.set(point.eqp_ch, group)
+    const step = defectStepPrefix(point)
+    stepCounts.set(step, (stepCounts.get(step) ?? 0) + 1)
   }
-  const steps = [...new Set(allPoints.map(defectStepPrefix))].sort((a, b) => a.localeCompare(b))
+  const steps = [...stepCounts.keys()].sort((a, b) => a.localeCompare(b))
   const stepColors = new Map(steps.map((step, index) => [step, COLORS[index % COLORS.length]]))
-  const prepared = { background: [...background].map(([eqp_ch, points]) => ({ eqp_ch, points })), stepColors }
+  const prepared = { background: [...background].map(([eqp_ch, points]) => ({ eqp_ch, points })), stepColors, stepCounts }
   backgroundCache.set(allPoints, prepared)
   return prepared
 }
 
 export function buildDefectScatterSeries(failPoints, allPoints, eqpCh) {
-  const { background, stepColors } = prepareBackground(allPoints)
+  const { background, stepColors, stepCounts } = prepareBackground(allPoints)
   const selectedPoints = failPoints.filter((point) => point.eqp_ch === eqpCh)
   const ngIdentities = new Set(selectedPoints.filter(defectIsNg).map(pointIdentity).filter(Boolean))
   const selected = selectedPoints.map((point) => ({ ...point, isNg: defectIsNg(point) || ngIdentities.has(pointIdentity(point)) }))
@@ -111,6 +114,7 @@ export function buildDefectScatterSeries(failPoints, allPoints, eqpCh) {
     background,
     selected,
     stepColors,
+    stepCounts,
   }
 }
 

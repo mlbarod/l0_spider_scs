@@ -39,9 +39,9 @@ export function buildDefectScatterData(rows, columns) {
       : typeof row.fab_value === "string" && row.fab_value.trim() ? Number(row.fab_value) : Number.NaN
     if (!Number.isFinite(timestamp) || !Number.isFinite(value)) continue
     const point = { tkout_time: timestamp, fab_value: value, eqp_ch: String(row.eqp_ch ?? "").trim() }
-    // 색상과 NG 보호에 필요한 원본 메타데이터만 추가로 전달한다.
-    for (const key of ["step_seq", "final_decision", "std_result", "anomaly_type", "lot_id", "wafer_id"]) {
-      const metadata = row[key] ?? row[key.toUpperCase()] ?? (key === "lot_id" ? row.lot_wf : undefined)
+    // 색상·NG 보호·툴팁·Wafer List에 필요한 원본 메타데이터를 전달한다.
+    for (const key of ["step_seq", "final_decision", "std_result", "anomaly_type", "lot_id", "lot_wf", "wafer_id", "ppid", "process_id", "item_id"]) {
+      const metadata = row[key] ?? row[key.toUpperCase()] ?? (key === "lot_id" ? row.lot_wf ?? row.LOT_WF : undefined)
       if (metadata != null) point[key] = String(metadata)
     }
     points.push(point)

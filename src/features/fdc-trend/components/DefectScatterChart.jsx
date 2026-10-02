@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { buildDefectScatterSeries, defectInitialDomain, defectScatterDomain } from "../utils/defectScatter.mjs"
 import { DefectScatterPlot } from "./DefectScatterPlot"
+import { DefectWaferList } from "./DefectWaferList"
 
 export function DefectScatterChart({ failData, allData, eqpCh }) {
   const [hidden, setHidden] = useState([])
@@ -25,7 +26,15 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_144px] items-start gap-2 px-2 pt-2">
       <DefectScatterPlot series={series} hidden={hidden} domain={domain} onZoom={setZoom} onResetInitial={resetInitialZoom} onShowFullRange={resetZoom} />
       <aside className="h-[340px] overflow-y-auto rounded-md border bg-muted/25 p-2" aria-label="eqp_ch 범례">
-        <p className="mb-2 text-[10px] font-semibold text-muted-foreground">eqp_ch</p>
+        <p className="mb-2 text-[10px] font-semibold text-muted-foreground">STEP</p>
+        {[...series.stepColors].map(([step, color]) => (
+          <div key={step} data-defect-step={step} className="grid grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-1 px-1 py-1 text-[10px]">
+            <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
+            <span>{step}</span>
+            <span className="text-muted-foreground">{series.stepCounts.get(step).toLocaleString()}</span>
+          </div>
+        ))}
+        <p className="mb-2 mt-3 text-[10px] font-semibold text-muted-foreground">eqp_ch</p>
         {legendEqps.map((eqp) => (
           <button key={eqp} type="button" aria-pressed={!hidden.includes(eqp)} title={eqp || "eqp_ch 없음"}
             className="grid w-full grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-1 rounded px-1 py-1.5 text-left text-[10px] hover:bg-muted"
@@ -36,12 +45,6 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
             <span className="text-muted-foreground">{(legendCounts.get(eqp) ?? 0).toLocaleString()}</span>
           </button>
         ))}
-        <p className="mb-2 mt-3 text-[10px] font-semibold text-muted-foreground">STEP</p>
-        {[...series.stepColors].map(([step, color]) => (
-          <div key={step} className="flex items-center gap-2 px-1 py-1 text-[10px]">
-            <span className="size-2 rounded-full" style={{ backgroundColor: color }} />{step}
-          </div>
-        ))}
       </aside>
       </div>
       <div className="flex items-center justify-between gap-2 px-4 pb-2 text-[10px] text-muted-foreground">
@@ -50,6 +53,7 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
       </div>
       <p className="px-4 pb-3 text-[11px] text-muted-foreground">작고 옅은 점: ALL (STEP별 색상) · 크고 진한 점: RAW (빨강 NG / 청록 그 외)</p>
       {invalidCount > 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">시간 또는 값이 유효하지 않은 {invalidCount}행은 표시에서 제외했습니다.</p> : null}
+      <DefectWaferList points={series.selected} />
     </div>
   )
 }

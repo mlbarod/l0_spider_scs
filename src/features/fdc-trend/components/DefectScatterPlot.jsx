@@ -84,6 +84,9 @@ export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidde
           tooltip.children[0].textContent = match.point.eqp_ch || "eqp_ch 없음"
           tooltip.children[1].textContent = `tkout_time: ${formatDefectTime(match.point.tkout_time, true)}`
           tooltip.children[2].textContent = `fab_value: ${match.point.fab_value}`
+          tooltip.children[3].textContent = `lot_wf: ${match.point.lot_wf ?? "—"}`
+          tooltip.children[4].textContent = `step_seq: ${match.point.step_seq ?? "—"}`
+          tooltip.children[5].textContent = `ppid: ${match.point.ppid ?? "—"}`
           hoverRef.current = match.point
         }
         tooltip.style.display = "block"
@@ -120,8 +123,8 @@ export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidde
       <canvas ref={canvasRef} data-defect-canvas className="pointer-events-none absolute inset-0 h-full w-full"
         role="img" aria-label="tkout_time별 fab_value 산점도. ALL은 STEP별 색상, RAW는 NG 빨강·그 외 청록색." />
       <div ref={selectionRef} data-defect-selection className="pointer-events-none absolute left-0 top-0 border border-dashed border-primary bg-primary/10" style={{ display: "none" }} />
-      <div ref={tooltipRef} role="tooltip" className="pointer-events-none absolute left-0 top-0 z-10 w-max max-w-full space-y-1 rounded-md border bg-background p-3 text-xs shadow-md" style={{ display: "none" }}>
-        <p /><p /><p />
+      <div ref={tooltipRef} role="tooltip" className="pointer-events-none absolute left-0 top-0 z-10 w-max max-w-full space-y-1 break-all rounded-md border bg-background p-3 text-xs shadow-md" style={{ display: "none" }}>
+        <p /><p /><p /><p /><p /><p />
       </div>
     </div>
   )
