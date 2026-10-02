@@ -2,11 +2,16 @@ import { useCallback, useMemo, useState } from "react"
 import { buildDefectScatterSeries, defectInitialDomain, defectScatterDomain } from "../utils/defectScatter.mjs"
 import { DefectScatterPlot } from "./DefectScatterPlot"
 import { DefectWaferList } from "./DefectWaferList"
+import { DefectPmHistory } from "./DefectPmHistory"
+
+const EMPTY_LIST = []
 
 export function DefectScatterChart({ failData, allData, eqpCh }) {
   const [hidden, setHidden] = useState([])
   const [zoom, setZoom] = useState(null)
   const series = useMemo(() => buildDefectScatterSeries(failData.points ?? [], allData.points ?? [], eqpCh), [failData, allData, eqpCh])
+  const pmHistory = failData.pm_history
+  const pmRows = useMemo(() => (pmHistory?.rows ?? EMPTY_LIST).filter((row) => row.eqp_ch === eqpCh), [pmHistory, eqpCh])
   const baseDomain = useMemo(() => defectInitialDomain(allData.points ?? [], series.selected), [allData, series])
   const fullDomain = useMemo(() => defectScatterDomain(allData.points ?? [], series.selected), [allData, series])
   const resetZoom = useCallback(() => setZoom(fullDomain), [fullDomain])
@@ -24,7 +29,7 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
   return (
     <div className="min-w-0" data-defect-scatter={eqpCh}>
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_144px] items-start gap-2 px-2 pt-2">
-      <DefectScatterPlot series={series} hidden={hidden} domain={domain} onZoom={setZoom} onResetInitial={resetInitialZoom} onShowFullRange={resetZoom} />
+      <DefectScatterPlot series={series} hidden={hidden} domain={domain} pmRows={pmRows} onZoom={setZoom} onResetInitial={resetInitialZoom} onShowFullRange={resetZoom} />
       <aside className="h-[340px] overflow-y-auto rounded-md border bg-muted/25 p-2" aria-label="eqp_ch 범례">
         <p className="mb-2 text-[10px] font-semibold text-muted-foreground">STEP</p>
         {[...series.stepColors].map(([step, color]) => (
@@ -52,8 +57,10 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
         <button type="button" className="shrink-0 rounded border px-2 py-1 hover:bg-muted" onClick={resetZoom}>범위 초기화</button>
       </div>
       <p className="px-4 pb-3 text-[11px] text-muted-foreground">작고 옅은 점: ALL (STEP별 색상) · 크고 진한 점: RAW (빨강 NG / 청록 그 외)</p>
+      <p className="flex items-center gap-1 px-4 pb-3 text-[11px] text-muted-foreground"><span className="w-4 border-t border-dashed border-green-600" />변경점 (PM이력)</p>
       {invalidCount > 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">시간 또는 값이 유효하지 않은 {invalidCount}행은 표시에서 제외했습니다.</p> : null}
       <DefectWaferList points={series.selected} />
+      <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} />
     </div>
   )
 }

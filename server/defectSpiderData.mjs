@@ -5,6 +5,7 @@ import { compressors } from "hyparquet-compressors"
 import { getDefectFailListPath } from "./defectSpiderConfig.mjs"
 import { assertKnownMappingLineSdwt, requireLineMapping } from "./mappingConfig.mjs"
 import { buildDefectFilePairs, readDefectFileSummary } from "./defectFiles.mjs"
+import { readDefectPmHistory, selectDefectPmHistory } from "./defectPmHistory.mjs"
 
 export const DEFECT_COLUMNS = ["sdwt", "prc_group", "main_seq", "met_seq", "eqpid", "path"]
 const text = (value) => String(value ?? "").trim()
@@ -128,7 +129,17 @@ export async function handleDefectFileRequest(req, res, url, dependencies = {}) 
       return
     }
     const summary = await (dependencies.readFile ?? readDefectFileSummary)(filePath)
-    send(200, { source_path: filePath, ...summary })
+    let pmHistory
+    if (pairs.some((pair) => pair.fail_path === filePath) && summary.eqp_ch_groups?.length) {
+      try {
+        const history = await (dependencies.readPmHistory ?? readDefectPmHistory)()
+        pmHistory = selectDefectPmHistory(history, summary.eqp_ch_groups.map((group) => group.eqp_ch))
+      } catch {
+        // A missing PM file must not prevent the RAW scatter from loading.
+        pmHistory = { columns: [], rows: [], error: "변경점 파일을 읽을 수 없습니다. 파일 경로·권한·필수 컬럼을 확인하세요." }
+      }
+    }
+    send(200, { source_path: filePath, ...summary, ...(pmHistory ? { pm_history: pmHistory } : {}) })
   } catch (error) {
     send(error.code === "MAPPING_SCOPE_MISMATCH" ? 400 : 503, {
       error: error.code === "ENOENT" ? "파일이 없습니다."

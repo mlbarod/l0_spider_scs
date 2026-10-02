@@ -22,7 +22,25 @@ const DefectAxes = memo(function DefectAxes({ width, domain }) {
   )
 })
 
-export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidden, domain, onZoom, onResetInitial, onShowFullRange }) {
+const DefectPmMarkers = memo(function DefectPmMarkers({ rows, width, domain }) {
+  const plotWidth = width - DEFECT_PLOT.left - DEFECT_PLOT.right
+  return (
+    <svg width={width} height={DEFECT_PLOT.height} className="pointer-events-none absolute inset-0 overflow-hidden" aria-label="PM 변경점">
+      {rows.map((row, index) => {
+        if (!Number.isFinite(row.timestamp) || row.timestamp < domain.x[0] || row.timestamp > domain.x[1]) return null
+        const x = DEFECT_PLOT.left + (row.timestamp - domain.x[0]) / (domain.x[1] - domain.x[0]) * plotWidth
+        return (
+          <g key={index} data-defect-change-point={row.timestamp}>
+            <line x1={x} x2={x} y1={DEFECT_PLOT.top} y2={DEFECT_PLOT.bottom} stroke="#16a34a" strokeDasharray="6 4" strokeWidth={1.5} />
+            <text x={x + 4} y={DEFECT_PLOT.top + 10} textAnchor="start" fill="#15803d" fontSize={10} fontWeight={600}>{row.work_type || "변경점"}</text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+})
+
+export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidden, domain, pmRows, onZoom, onResetInitial, onShowFullRange }) {
   const plotRef = useRef(null), canvasRef = useRef(null), selectionRef = useRef(null), tooltipRef = useRef(null)
   const dragRef = useRef(null), frameRef = useRef(null), indexRef = useRef(null), hoverRef = useRef(null)
   const [size, setSize] = useState({ width: 0, pixelRatio: 1 })
@@ -120,6 +138,7 @@ export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidde
       onPointerLeave={() => { if (!dragRef.current) { cancelFrame(); tooltipRef.current.style.display = "none" } }}
       onDoubleClick={onShowFullRange}>
       {size.width > 88 ? <DefectAxes width={size.width} domain={domain} /> : null}
+      {size.width > 88 ? <DefectPmMarkers rows={pmRows} width={size.width} domain={domain} /> : null}
       <canvas ref={canvasRef} data-defect-canvas className="pointer-events-none absolute inset-0 h-full w-full"
         role="img" aria-label="tkout_time별 fab_value 산점도. ALL은 STEP별 색상, RAW는 NG 빨강·그 외 청록색." />
       <div ref={selectionRef} data-defect-selection className="pointer-events-none absolute left-0 top-0 border border-dashed border-primary bg-primary/10" style={{ display: "none" }} />

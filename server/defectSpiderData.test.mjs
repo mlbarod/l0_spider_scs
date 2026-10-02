@@ -226,3 +226,42 @@ test("파일 누락 오류를 해당 파일에만 반환한다", async () => {
   assert.equal(res.status, 503)
   assert.equal(res.body.error, "파일이 없습니다.")
 })
+
+test("PM이력은 허용된 FAIL의 eqp_ch에만 연결하고 ALL·허용되지 않은 파일에서는 읽지 않는다", async () => {
+  const { buildDefectPmHistory } = await import("./defectPmHistory.mjs")
+  const history = buildDefectPmHistory([
+    { asset: "XXXX12-YY", inprt_dt: "2026-10-01", work_type: "PM" },
+    { asset: "OTHER1-AA", inprt_dt: "2026-10-01", work_type: "PM" },
+  ], ["asset", "inprt_dt", "work_type"])
+  for (const filePath of [fileRows[0].path, "/fixture/fail_dir/all_1.parquet", "/fixture/fail_other.parquet"]) {
+    let pmReads = 0
+    const res = response()
+    const params = new URLSearchParams({ line: "L1", pathSdwt: "RAW-A", prcGroup: "ETCH", mainSeq: "10", metAll: "1", filePath })
+    await handleDefectFileRequest({ method: "GET" }, res, new URL(`http://localhost/api/defect-file?${params}`), {
+      ...dependencies, readRows: async () => fileRows,
+      readFile: async () => ({ points: [], eqp_ch_groups: [{ eqp_ch: "XXXX12_YY" }] }),
+      readPmHistory: async () => { pmReads += 1; return history },
+    })
+    assert.equal(pmReads, filePath === fileRows[0].path ? 1 : 0)
+    if (pmReads) {
+      assert.equal(res.status, 200)
+      assert.equal(res.body.pm_history.rows.length, 1)
+      assert.equal(res.body.pm_history.rows[0].raw.asset, "XXXX12-YY")
+    } else assert.equal(res.body.pm_history, undefined)
+  }
+})
+
+test("변경점 파일 실패는 산점도 로드를 막지 않으며 내부 오류 상세는 숨긴다", async () => {
+  const res = response()
+  const params = new URLSearchParams({ line: "L1", pathSdwt: "RAW-A", prcGroup: "ETCH", mainSeq: "10", metAll: "1", filePath: fileRows[0].path })
+  const points = [{ eqp_ch: "X_Y", tkout_time: 1, fab_value: 2 }]
+  await handleDefectFileRequest({ method: "GET" }, res, new URL(`http://localhost/api/defect-file?${params}`), {
+    ...dependencies, readRows: async () => fileRows,
+    readFile: async () => ({ points, eqp_ch_groups: [{ eqp_ch: "X_Y" }] }),
+    readPmHistory: async () => { throw new Error("private details") },
+  })
+  assert.equal(res.status, 200)
+  assert.deepEqual(res.body.points, points)
+  assert.match(res.body.pm_history.error, /변경점 파일/)
+  assert.doesNotMatch(res.body.pm_history.error, /private/)
+})
