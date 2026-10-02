@@ -60,7 +60,7 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
       <p className="flex items-center gap-1 px-4 pb-3 text-[11px] text-muted-foreground"><span className="w-4 border-t border-dashed border-green-600" />변경점 (PM이력)</p>
       {invalidCount > 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">시간 또는 값이 유효하지 않은 {invalidCount}행은 표시에서 제외했습니다.</p> : null}
       <DefectWaferList points={series.selected} />
-      <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} />
+      <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} sourcePath={pmHistory?.source_path} />
     </div>
   )
 }

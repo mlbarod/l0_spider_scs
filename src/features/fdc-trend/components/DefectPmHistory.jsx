@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react"
 
 const PAGE_SIZE = 100
 
-export const DefectPmHistory = memo(function DefectPmHistory({ rows, columns, error }) {
+export const DefectPmHistory = memo(function DefectPmHistory({ rows, columns, error, sourcePath }) {
   const [open, setOpen] = useState(false)
   const [page, setPage] = useState(0)
   const contentId = useId()
@@ -21,6 +21,12 @@ export const DefectPmHistory = memo(function DefectPmHistory({ rows, columns, er
           <ChevronDown className={`size-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
         </span>
       </button>
+      {sourcePath && (open || error) ? (
+        <p className="px-4 pb-3 text-xs text-muted-foreground">
+          변경점 파일 로드 경로:
+          <code className="mt-1 block select-text break-all">{sourcePath}</code>
+        </p>
+      ) : null}
       <div id={contentId} hidden={!open}>
         {open ? error ? <p className="px-4 pb-3 text-xs text-destructive" role="alert">{error}</p> : rows.length ? (
           <>

@@ -247,6 +247,7 @@ test("PM이력은 허용된 FAIL의 eqp_ch에만 연결하고 ALL·허용되지 
       assert.equal(res.status, 200)
       assert.equal(res.body.pm_history.rows.length, 1)
       assert.equal(res.body.pm_history.rows[0].raw.asset, "XXXX12-YY")
+      assert.equal(res.body.pm_history.source_path, "/appdata/abnormal_trend/pic/xian_change_point/pm_code_info.parquet")
     } else assert.equal(res.body.pm_history, undefined)
   }
 })
@@ -263,5 +264,6 @@ test("변경점 파일 실패는 산점도 로드를 막지 않으며 내부 오
   assert.equal(res.status, 200)
   assert.deepEqual(res.body.points, points)
   assert.match(res.body.pm_history.error, /변경점 파일/)
+  assert.equal(res.body.pm_history.source_path, "/appdata/abnormal_trend/pic/xian_change_point/pm_code_info.parquet")
   assert.doesNotMatch(res.body.pm_history.error, /private/)
 })
