@@ -77,20 +77,17 @@ function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
   })
 }
 
-function DefectFileStatus({ kind, pair, selection }) {
+function DefectFileStatus({ kind, pair, fileQuery, eqpCh }) {
   const filePath = kind === "FAIL" ? pair.fail_path : pair.all_path
-  const fileQuery = useQuery({
-    queryKey: ["defect-file", selection, filePath],
-    queryFn: ({ signal }) => fetchDefectFile({ ...selection, filePath, signal }),
-    enabled: Boolean(filePath),
-    retry: false,
-  })
   return (
     <section className="min-w-0 rounded-lg border bg-background">
       <header className="border-b px-4 py-3">
-        <Badge variant="outline">{kind}</Badge>
-        <p className="mt-2 text-xs text-muted-foreground">로드 경로</p>
-        <code className="block select-text break-all text-xs">{filePath || "경로 변환 불가"}</code>
+        <Badge variant="outline">{kind === "FAIL" ? "이상감지 RAW데이터" : "이상감지 스탭 ALL RAW데이터"}</Badge>
+        <p className="mt-2 text-xs text-muted-foreground">
+          {kind === "FAIL" ? eqpCh ? `eqp_ch: ${eqpCh}` : "eqp_ch 확인 중"
+            : "eqp_ch 분리 없이 원본 전체를 모든 차트에 공통 사용"}
+        </p>
+        <code className="mt-2 block select-text break-all text-xs">{filePath || pair.path || "경로 변환 불가"}</code>
       </header>
       <div className="space-y-2 p-4 text-sm">
         {pair.error ? <p className="text-destructive" role="alert">{pair.error}</p>
@@ -99,30 +96,57 @@ function DefectFileStatus({ kind, pair, selection }) {
               <p className="text-destructive">{fileQuery.error.message}</p>
               <Button size="sm" variant="outline" disabled={fileQuery.isFetching} onClick={() => fileQuery.refetch()}>Retry</Button>
             </div>
-          ) : fileQuery.isPending ? <p>파일 로드 중…</p> : (
-            <>
-              <p>로드 완료 · {fileQuery.data.row_count.toLocaleString()}행</p>
-              <p className="break-all text-xs text-muted-foreground">컬럼: {fileQuery.data.columns.join(", ") || "없음"}</p>
-            </>
-          )}
+          ) : fileQuery.isPending ? <p>파일 로드 중…</p> : <p>로드 완료</p>}
       </div>
     </section>
   )
 }
 
-function DefectChartCard({ pair, selection, index }) {
+function DefectChartTrellis({ pair, selection }) {
+  const failQuery = useQuery({
+    queryKey: ["defect-file", selection, pair.fail_path],
+    queryFn: ({ signal }) => fetchDefectFile({ ...selection, filePath: pair.fail_path, signal }),
+    enabled: Boolean(pair.fail_path),
+    retry: false,
+  })
+  // ALL 데이터는 eqp_ch 조건을 보내지 않고 파일 쌍마다 한 번 조회해 공유한다.
+  const allQuery = useQuery({
+    queryKey: ["defect-file", selection, pair.all_path],
+    queryFn: ({ signal }) => fetchDefectFile({ ...selection, filePath: pair.all_path, signal }),
+    enabled: Boolean(pair.all_path),
+    retry: false,
+  })
+  const groups = failQuery.isSuccess ? failQuery.data.eqp_ch_groups ?? [] : []
+  if (!groups.length) {
+    return (
+      <section className="col-span-2 min-w-0 space-y-3 rounded-xl border bg-card p-4">
+        <p className="text-sm" role={failQuery.data?.trellis_error ? "alert" : "status"}>
+          {pair.error || (failQuery.isError ? "이상감지 RAW데이터를 읽지 못해 eqp_ch별 차트를 구성할 수 없습니다."
+            : failQuery.isPending ? "이상감지 RAW데이터의 eqp_ch를 확인 중입니다."
+            : failQuery.data.trellis_error || "차트로 표시할 eqp_ch 값이 없습니다.")}
+        </p>
+        <DefectFileStatus kind="FAIL" pair={pair} fileQuery={failQuery} />
+        <DefectFileStatus kind="ALL" pair={pair} fileQuery={allQuery} />
+      </section>
+    )
+  }
   return (
-    <article className="min-h-64 min-w-0 overflow-hidden rounded-xl border bg-card">
-      <header className="border-b bg-muted/35 px-4 py-3">
-        <h3 className="text-sm font-semibold">Chart {index + 1} · FAIL / ALL</h3>
-        <p className="mt-2 text-xs text-muted-foreground">path 원문</p>
-        <code className="block select-text break-all text-xs">{pair.path || "(빈 값)"}</code>
-      </header>
-      <div className="grid min-w-0 gap-3 p-4">
-        <DefectFileStatus kind="FAIL" pair={pair} selection={selection} />
-        <DefectFileStatus kind="ALL" pair={pair} selection={selection} />
-      </div>
-    </article>
+    <>
+      {failQuery.data.unassigned_row_count > 0 ? (
+        <p className="col-span-2 text-xs text-muted-foreground">eqp_ch가 비어 있는 {failQuery.data.unassigned_row_count}행은 차트 구분에서 제외했습니다.</p>
+      ) : null}
+      {groups.map(({ eqp_ch }) => (
+        <article key={eqp_ch} className="min-h-64 min-w-0 overflow-hidden rounded-xl border bg-card">
+          <header className="border-b bg-muted/35 px-4 py-3">
+            <h3 className="break-all text-sm font-semibold">eqp_ch: {eqp_ch}</h3>
+          </header>
+          <div className="grid min-w-0 gap-3 p-4">
+            <DefectFileStatus kind="FAIL" pair={pair} fileQuery={failQuery} eqpCh={eqp_ch} />
+            <DefectFileStatus kind="ALL" pair={pair} fileQuery={allQuery} />
+          </div>
+        </article>
+      ))}
+    </>
   )
 }
 
@@ -250,15 +274,14 @@ export function DefectSpiderPage() {
         <section className="min-w-0 overflow-hidden rounded-[18px] border bg-card">
           <header className="border-b bg-muted/30 px-5 py-4">
             <h2 className="text-base font-semibold">Scatter chart</h2>
-            <p className="mt-1 text-xs text-muted-foreground">차트 하나당 FAIL / ALL 파일 한 쌍의 로드 경로와 상태를 표시합니다.</p>
+            <p className="mt-1 text-xs text-muted-foreground">이상감지 RAW데이터의 eqp_ch별 차트 경로입니다. 이상감지 스탭 ALL RAW데이터는 원본 전체를 공통 사용합니다.</p>
           </header>
           {currentLoadInfo?.status === "success" && currentLoadInfo.files?.length ? (
             <div className="overflow-x-auto p-4">
               <div className="grid min-w-[640px] grid-cols-2 gap-4">
-                {currentLoadInfo.files.map((pair, index) => (
-                  <DefectChartCard
+                {currentLoadInfo.files.map((pair) => (
+                  <DefectChartTrellis
                     key={JSON.stringify([activeLine, activeTeam, pair.path])}
-                    index={index}
                     pair={pair}
                     selection={{ line: activeLine, pathSdwt: activeTeam,
                       prcGroup: currentLoadInfo.selected.prc_group,

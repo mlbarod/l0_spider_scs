@@ -18,6 +18,27 @@ export function buildDefectFilePairs(rows) {
   })
 }
 
+export function buildDefectRawSummary(rows, columns, { trellis = false } = {}) {
+  const summary = { row_count: rows.length, columns }
+  if (!trellis) return summary
+  if (!columns.includes("eqp_ch")) {
+    return { ...summary, eqp_ch_groups: [], trellis_error: "이상감지 RAW데이터에 eqp_ch 컬럼이 없어 차트를 나눌 수 없습니다." }
+  }
+  const counts = new Map()
+  let unassigned = 0
+  for (const row of rows) {
+    const eqpCh = String(row.eqp_ch ?? "").trim()
+    if (!eqpCh) { unassigned += 1; continue }
+    counts.set(eqpCh, (counts.get(eqpCh) ?? 0) + 1)
+  }
+  return {
+    ...summary,
+    eqp_ch_groups: [...counts].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
+      .map(([eqp_ch, row_count]) => ({ eqp_ch, row_count })),
+    unassigned_row_count: unassigned,
+  }
+}
+
 export async function readDefectFileSummary(filePath) {
   const info = await stat(filePath)
   const cached = getLruEntry(cache, filePath)
@@ -26,10 +47,9 @@ export async function readDefectFileSummary(filePath) {
   const metadata = await parquetMetadataAsync(file)
   // 실제 데이터까지 읽어 파일 손상·압축 해제 오류를 확인한다.
   const rows = await parquetReadObjects({ file, compressors })
-  const summary = {
-    row_count: rows.length,
-    columns: parquetSchema(metadata).children.map((column) => column.element.name),
-  }
+  const summary = buildDefectRawSummary(rows,
+    parquetSchema(metadata).children.map((column) => column.element.name),
+    { trellis: /\/fail_[^/]+\.parquet$/.test(filePath) })
   setLruEntry(cache, filePath, { mtimeMs: info.mtimeMs, size: info.size, summary }, 32)
   return summary
 }
