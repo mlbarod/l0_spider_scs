@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, ArrowUp } from "lucide-react"
 import { Link } from "react-router-dom"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 import { fetchDefectFilters, fetchDefectFile } from "../api/defectSpiderApi"
@@ -32,12 +31,9 @@ function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
     enabled: Boolean(line && pathSdwt),
   })
   const filters = filtersQuery.isSuccess ? filtersQuery.data.filters : {}
-  const sourcePath = filtersQuery.isError
-    ? filtersQuery.error.sourcePath ?? ""
-    : filtersQuery.data?.source_path ?? ""
   useEffect(() => {
-    onLoadInfoChange({ line, pathSdwt, sourcePath, status: filtersQuery.status, files: filtersQuery.isSuccess ? filtersQuery.data.files : [], selected })
-  }, [line, pathSdwt, sourcePath, filtersQuery.status, filtersQuery.isSuccess, filtersQuery.data, selected, onLoadInfoChange])
+    onLoadInfoChange({ line, pathSdwt, status: filtersQuery.status, files: filtersQuery.isSuccess ? filtersQuery.data.files : [], selected })
+  }, [line, pathSdwt, filtersQuery.status, filtersQuery.isSuccess, filtersQuery.data, selected, onLoadInfoChange])
 
   return DEFECT_FILTERS.map(({ key, title }, index) => {
     const values = filters[key] ?? []
@@ -79,31 +75,6 @@ function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
   })
 }
 
-function DefectFileStatus({ kind, pair, fileQuery, eqpCh }) {
-  const filePath = kind === "FAIL" ? pair.fail_path : pair.all_path
-  return (
-    <section className="min-w-0 rounded-lg border bg-background">
-      <header className="border-b px-4 py-3">
-        <Badge variant="outline">{kind === "FAIL" ? "이상감지 RAW데이터" : "이상감지 스탭 ALL RAW데이터"}</Badge>
-        <p className="mt-2 text-xs text-muted-foreground">
-          {kind === "FAIL" ? eqpCh ? `eqp_ch: ${eqpCh}` : "eqp_ch 확인 중"
-            : "eqp_ch 분리 없이 원본 전체를 모든 차트에 공통 사용"}
-        </p>
-        <code className="mt-2 block select-text break-all text-xs">{filePath || pair.path || "경로 변환 불가"}</code>
-      </header>
-      <div className="space-y-2 p-4 text-sm">
-        {pair.error ? <p className="text-destructive" role="alert">{pair.error}</p>
-          : fileQuery.isError ? (
-            <div className="space-y-2" role="alert">
-              <p className="text-destructive">{fileQuery.error.message}</p>
-              <Button size="sm" variant="outline" disabled={fileQuery.isFetching} onClick={() => fileQuery.refetch()}>Retry</Button>
-            </div>
-          ) : fileQuery.isPending ? <p>파일 로드 중…</p> : <p>로드 완료</p>}
-      </div>
-    </section>
-  )
-}
-
 function DefectChartTrellis({ pair, selection }) {
   const failQuery = useQuery({
     queryKey: ["defect-file", selection, pair.fail_path],
@@ -127,8 +98,7 @@ function DefectChartTrellis({ pair, selection }) {
             : failQuery.isPending ? "이상감지 RAW데이터의 eqp_ch를 확인 중입니다."
             : failQuery.data.trellis_error || "차트로 표시할 eqp_ch 값이 없습니다.")}
         </p>
-        <DefectFileStatus kind="FAIL" pair={pair} fileQuery={failQuery} />
-        <DefectFileStatus kind="ALL" pair={pair} fileQuery={allQuery} />
+        {failQuery.isError ? <Button size="sm" variant="outline" disabled={failQuery.isFetching} onClick={() => failQuery.refetch()}>Retry</Button> : null}
       </section>
     )
   }
@@ -146,16 +116,10 @@ function DefectChartTrellis({ pair, selection }) {
             <DefectScatterChart failData={failQuery.data} allData={allQuery.data} eqpCh={eqp_ch} />
           ) : (
             <div className="grid h-[340px] place-items-center p-4 text-sm text-muted-foreground">
-              {allQuery.isError ? "이상감지 스탭 ALL RAW데이터를 읽지 못했습니다. 아래에서 재시도하세요." : "차트 데이터를 불러오는 중입니다."}
+              {allQuery.isError ? "이상감지 스탭 ALL RAW데이터를 읽지 못했습니다. 재시도해 주세요." : "차트 데이터를 불러오는 중입니다."}
+              {allQuery.isError ? <Button size="sm" variant="outline" disabled={allQuery.isFetching} onClick={() => allQuery.refetch()}>Retry</Button> : null}
             </div>
           )}
-          <details className="border-t p-3 text-xs">
-            <summary className="cursor-pointer text-muted-foreground">RAW데이터 경로 및 로드 상태</summary>
-            <div className="mt-3 grid min-w-0 gap-3">
-              <DefectFileStatus kind="FAIL" pair={pair} fileQuery={failQuery} eqpCh={eqp_ch} />
-              <DefectFileStatus kind="ALL" pair={pair} fileQuery={allQuery} />
-            </div>
-          </details>
         </article>
       ))}
     </>
@@ -260,18 +224,6 @@ export function DefectSpiderPage() {
             </div>
           </div>
         </ResizableFilterArea>
-        <div className="border-t bg-card px-6 py-2 text-xs" aria-live="polite">
-          <span className="font-medium">이상감지 리스트 로드 경로: </span>
-          {currentLoadInfo?.sourcePath ? (
-            <code className="select-text break-all">{currentLoadInfo.sourcePath}</code>
-          ) : (
-            <span className="text-muted-foreground">
-              {!activeLine || !activeTeam ? "Line과 SDWT를 선택하세요."
-                : currentLoadInfo?.status === "error" ? "파일 경로를 확인하지 못했습니다. 위 오류 안내를 확인하세요."
-                : "서버에서 파일 경로를 확인 중입니다."}
-            </span>
-          )}
-        </div>
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive" role="alert">
             <span>Reference mapping error: {mappingQuery.error.message}</span>

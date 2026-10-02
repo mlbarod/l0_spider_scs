@@ -43,6 +43,13 @@ test("ALL 선택 중에도 각 파일의 main_seq·met_seq를 헤더용으로 �
   assert.equal(pairs[1].met_seq, "21_ITEM")
 })
 
+test("Scatter 응답은 STEP 색상과 NG 판정·동일 wafer 보호용 메타데이터를 유지한다", () => {
+  const { points } = buildDefectScatterData([
+    { tkout_time: 1, fab_value: 10, step_seq: "10_STEP", FINAL_DECISION: "NG", STD_RESULT: "OK", anomaly_type: "std", lot_wf: "L", wafer_id: "W", unrelated: "제외" },
+  ], ["tkout_time", "fab_value"])
+  assert.deepEqual(points[0], { tkout_time: 1, fab_value: 10, eqp_ch: "", step_seq: "10_STEP", final_decision: "NG", std_result: "OK", anomaly_type: "std", lot_id: "L", wafer_id: "W" })
+})
+
 test("이상감지 스탭 ALL RAW데이터는 eqp_ch가 있어도 분리하거나 행을 제외하지 않는다", () => {
   assert.deepEqual(buildDefectRawSummary(rows, ["eqp_ch", "x"]), { row_count: 5, columns: ["eqp_ch", "x"] })
   assert.deepEqual(buildDefectRawSummary([{ x: 1 }], ["x"]), { row_count: 1, columns: ["x"] })
