@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, ArrowUp } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -20,7 +20,7 @@ const DEFECT_FILTERS = [
   { key: "met_seq", title: "met_seq" },
 ]
 
-function DefectDataFilters({ line, pathSdwt }) {
+function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
   const [selected, setSelected] = useState({ prc_group: "", main_seq: "", met_seq: "" })
   const [queries, setQueries] = useState({ prc_group: "", main_seq: "", met_seq: "" })
   const filtersQuery = useQuery({
@@ -31,6 +31,12 @@ function DefectDataFilters({ line, pathSdwt }) {
     enabled: Boolean(line && pathSdwt),
   })
   const filters = filtersQuery.isSuccess ? filtersQuery.data.filters : {}
+  const sourcePath = filtersQuery.isError
+    ? filtersQuery.error.sourcePath ?? ""
+    : filtersQuery.data?.source_path ?? ""
+  useEffect(() => {
+    onLoadInfoChange({ line, pathSdwt, sourcePath, status: filtersQuery.status })
+  }, [line, pathSdwt, sourcePath, filtersQuery.status, onLoadInfoChange])
 
   return DEFECT_FILTERS.map(({ key, title }, index) => {
     const options = filters[key] ?? []
@@ -94,6 +100,7 @@ export function DefectSpiderPage() {
   const pageRef = useRef(null)
   const [selectedLine, setSelectedLine] = useState("")
   const [selectedTeam, setSelectedTeam] = useState("")
+  const [loadInfo, setLoadInfo] = useState(null)
   const [queries, setQueries] = useState({ line: "", team: "" })
   const [grouped, setGrouped] = useState(true)
   const [showSimilarity, setShowSimilarity] = useState(true)
@@ -118,6 +125,8 @@ export function DefectSpiderPage() {
   const filteredTeams = teams.filter(({ label }) => (
     label.toLowerCase().includes(queries.team.trim().toLowerCase())
   ))
+  const currentLoadInfo = loadInfo?.line === activeLine && loadInfo?.pathSdwt === activeTeam
+    ? loadInfo : null
 
   return (
     <div ref={pageRef} className="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted/30">
@@ -211,10 +220,22 @@ export function DefectSpiderPage() {
                   />
                 ))}
               </FilterCard>
-              <DefectDataFilters key={JSON.stringify([activeLine, activeTeam])} line={activeLine} pathSdwt={activeTeam} />
+              <DefectDataFilters key={JSON.stringify([activeLine, activeTeam])} line={activeLine} pathSdwt={activeTeam} onLoadInfoChange={setLoadInfo} />
             </div>
           </div>
         </ResizableFilterArea>
+        <div className="border-t bg-card px-6 py-2 text-xs" aria-live="polite">
+          <span className="font-medium">이상감지 리스트 로드 경로: </span>
+          {currentLoadInfo?.sourcePath ? (
+            <code className="select-text break-all">{currentLoadInfo.sourcePath}</code>
+          ) : (
+            <span className="text-muted-foreground">
+              {!activeLine || !activeTeam ? "Line과 SDWT를 선택하세요."
+                : currentLoadInfo?.status === "error" ? "파일 경로를 확인하지 못했습니다. 위 오류 안내를 확인하세요."
+                : "서버에서 파일 경로를 확인 중입니다."}
+            </span>
+          )}
+        </div>
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive" role="alert">
             <span>Reference mapping error: {mappingQuery.error.message}</span>

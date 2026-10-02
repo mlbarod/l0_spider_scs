@@ -84,6 +84,7 @@ test("API는 선택한 Line의 device 파일을 읽는다", async () => {
       })
     assert.equal(res.status, 200)
     assert.equal(actualPath, `/appdata/hadoop/code/eads/${line}/${device}/fail_list.parquet`)
+    assert.equal(res.body.source_path, actualPath)
   }
 })
 
@@ -97,6 +98,7 @@ test("Line의 device가 미설정이면 파일을 읽지 않고 설정 오류를
     })
   assert.equal(res.status, 503)
   assert.match(res.body.error, /DEFECT_SPIDER_LINE_DEVICES/)
+  assert.equal(res.body.source_path, "")
 })
 
 test("파일의 line·sdwt로 제한하고 단계별 유니크값과 숫자 0을 유지한다", () => {
@@ -116,7 +118,7 @@ test("API는 매핑 범위 내 후보만 반환하고 eqpid·path를 노출하�
   await handleDefectFiltersRequest({ method: "GET" }, res,
     new URL("http://localhost/api/defect-filters?line=L1&pathSdwt=RAW-A&prcGroup=ETCH&mainSeq=10"), dependencies)
   assert.equal(res.status, 200)
-  assert.deepEqual(res.body, { filters: { prc_group: ["CLEAN", "ETCH"], main_seq: ["2", "10"], met_seq: ["2"] } })
+  assert.deepEqual(res.body, { source_path: resolveDefectFailListPath("L1", environment), filters: { prc_group: ["CLEAN", "ETCH"], main_seq: ["2", "10"], met_seq: ["2"] } })
 })
 
 test("잘못된 Line·SDWT 조합은 파일 조회 전에 거부한다", async () => {
@@ -128,7 +130,7 @@ test("잘못된 Line·SDWT 조합은 파일 조회 전에 거부한다", async (
   assert.equal(res.status, 400)
 })
 
-test("파일 읽기 오류는 경로를 노출하지 않고 재시도 가능한 오류를 반환한다", async () => {
+test("파일 읽기 오류에도 실제 시도 경로를 반환하고 내부 오류 상세는 숨긴다", async () => {
   const res = response()
   await handleDefectFiltersRequest({ method: "GET" }, res,
     new URL("http://localhost/api/defect-filters?line=L1&pathSdwt=RAW-A"), {
@@ -136,6 +138,7 @@ test("파일 읽기 오류는 경로를 노출하지 않고 재시도 가능한 
     })
   assert.equal(res.status, 503)
   assert.doesNotMatch(res.body.error, /private/)
+  assert.equal(res.body.source_path, resolveDefectFailListPath("L1", environment))
 })
 
 test("Defect 조회 gate는 GET만 기본 허용하고 명시적으로 차단 가능하다", () => {

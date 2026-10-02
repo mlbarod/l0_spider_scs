@@ -55,17 +55,18 @@ export async function handleDefectFiltersRequest(req, res, url, dependencies = {
     send(405, { error: "Method not allowed" })
     return
   }
+  let filePath = ""
   try {
     const mapping = await requireLineMapping(dependencies.readMapping)
     const line = text(url.searchParams.get("line"))
     const pathSdwt = text(url.searchParams.get("pathSdwt"))
     assertKnownMappingLineSdwt(mapping, { line, pathSdwt })
-    const filePath = (dependencies.resolvePath ?? getDefectFailListPath)(line)
+    filePath = (dependencies.resolvePath ?? getDefectFailListPath)(line)
     const rows = await (dependencies.readRows ?? readDefectFailList)(filePath)
     const scopedRows = scopeDefectRows(rows, {
       line, pathSdwt, sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt,
     })
-    send(200, { filters: buildDefectFilters(scopedRows, {
+    send(200, { source_path: filePath, filters: buildDefectFilters(scopedRows, {
       prcGroup: text(url.searchParams.get("prcGroup")),
       mainSeq: text(url.searchParams.get("mainSeq")),
     }) })
@@ -73,6 +74,7 @@ export async function handleDefectFiltersRequest(req, res, url, dependencies = {
     const invalidScope = error.code === "MAPPING_SCOPE_MISMATCH"
     const configured = error.code === "DEFECT_CONFIG_INVALID"
     send(invalidScope ? 400 : 503, {
+      source_path: filePath,
       error: invalidScope ? "Line Name과 SDWT 선택을 확인하세요."
         : configured || error.code === "DEFECT_SCHEMA_INVALID" ? error.message
         : "이상감지 리스트를 불러올 수 없습니다. 서버 설정과 파일을 확인하세요.",
