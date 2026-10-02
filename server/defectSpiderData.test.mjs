@@ -6,13 +6,12 @@ import { buildDefectFilters, handleDefectFiltersRequest, scopeDefectRows } from 
 import { blockDisabledDataRequest } from "./dataConnections.mjs"
 
 const rows = [
-  { line: "L1", sdwt: "TEAM-A", prc_group: "ETCH", main_seq: 10, met_seq: 2, eqpid: "E1", path: "/example/a" },
-  { line: "L1", sdwt: "TEAM-A", prc_group: "ETCH", main_seq: 10, met_seq: 2, eqpid: "E2", path: "/example/b" },
-  { line: "L1", sdwt: "TEAM-A", prc_group: "ETCH", main_seq: 2, met_seq: 0, eqpid: "E3", path: "/example/c" },
-  { line: "L1", sdwt: "RAW-A", prc_group: "CLEAN", main_seq: 10, met_seq: 9 },
-  { line: "L1", sdwt: "TEAM-B", prc_group: "OTHER-TEAM", main_seq: 10, met_seq: 99 },
-  { line: "L2", sdwt: "TEAM-A", prc_group: "OTHER-LINE", main_seq: 10, met_seq: 99 },
-  { line: "L1", sdwt: "TEAM-A", prc_group: null, main_seq: null, met_seq: null },
+  { sdwt: "TEAM-A", prc_group: "ETCH", main_seq: 10, met_seq: 2, eqpid: "E1", path: "/example/a" },
+  { sdwt: "TEAM-A", prc_group: "ETCH", main_seq: 10, met_seq: 2, eqpid: "E2", path: "/example/b" },
+  { sdwt: "TEAM-A", prc_group: "ETCH", main_seq: 2, met_seq: 0, eqpid: "E3", path: "/example/c" },
+  { sdwt: "RAW-A", prc_group: "CLEAN", main_seq: 10, met_seq: 9 },
+  { sdwt: "TEAM-B", prc_group: "OTHER-TEAM", main_seq: 10, met_seq: 99 },
+  { sdwt: "TEAM-A", prc_group: null, main_seq: null, met_seq: null },
 ]
 const mapping = { line_mapping: { "RAW-A": "L1", "RAW-B": "L1", "RAW-C": "L2" }, sdwt_mapping: { "RAW-A": "TEAM-A", "RAW-B": "TEAM-B" } }
 const environment = { DEFECT_SPIDER_LINE_DEVICES: JSON.stringify({ L1: "DEVICE-A", L2: "DEVICE-B" }) }
@@ -101,8 +100,8 @@ test("Line의 device가 미설정이면 파일을 읽지 않고 설정 오류를
   assert.equal(res.body.source_path, "")
 })
 
-test("파일의 line·sdwt로 제한하고 단계별 유니크값과 숫자 0을 유지한다", () => {
-  const scoped = scopeDefectRows(rows, { line: "L1", sdwt: "TEAM-A", pathSdwt: "RAW-A" })
+test("line 컬럼 없는 파일에서 SDWT로 제한하고 단계별 유니크값과 숫자 0을 유지한다", () => {
+  const scoped = scopeDefectRows(rows, { sdwt: "TEAM-A", pathSdwt: "RAW-A" })
   assert.deepEqual(buildDefectFilters(scoped), { prc_group: ["CLEAN", "ETCH"], main_seq: [], met_seq: [] })
   assert.deepEqual(buildDefectFilters(scoped, { prcGroup: "ETCH" }), {
     prc_group: ["CLEAN", "ETCH"], main_seq: ["2", "10"], met_seq: [],
@@ -111,6 +110,14 @@ test("파일의 line·sdwt로 제한하고 단계별 유니크값과 숫자 0을
   assert.deepEqual(buildDefectFilters(scoped, { prcGroup: "ETCH", mainSeq: "2" }).met_seq, ["0"])
   assert.deepEqual(buildDefectFilters(scoped, { prcGroup: "UNKNOWN", mainSeq: "10" }).met_seq, [])
   assert.deepEqual(buildDefectFilters([]), { prc_group: [], main_seq: [], met_seq: [] })
+})
+
+test("파일에 line 컬럼이 남아 있어도 값과 무관하게 SDWT만 적용한다", () => {
+  const withLine = rows.map((row) => ({ ...row, line: "IGNORED-LINE" }))
+  const scope = { sdwt: "TEAM-A", pathSdwt: "RAW-A" }
+  assert.deepEqual(buildDefectFilters(scopeDefectRows(withLine, scope)), {
+    prc_group: ["CLEAN", "ETCH"], main_seq: [], met_seq: [],
+  })
 })
 
 test("API는 매핑 범위 내 후보만 반환하고 eqpid·path를 노출하지 않는다", async () => {

@@ -5,7 +5,7 @@ import { compressors } from "hyparquet-compressors"
 import { getDefectFailListPath } from "./defectSpiderConfig.mjs"
 import { assertKnownMappingLineSdwt, requireLineMapping } from "./mappingConfig.mjs"
 
-export const DEFECT_COLUMNS = ["line", "sdwt", "prc_group", "main_seq", "met_seq", "eqpid", "path"]
+export const DEFECT_COLUMNS = ["sdwt", "prc_group", "main_seq", "met_seq", "eqpid", "path"]
 const text = (value) => String(value ?? "").trim()
 let cache
 
@@ -18,7 +18,7 @@ export async function readDefectFailList(filePath) {
   const metadata = await parquetMetadataAsync(file)
   const columns = new Set(parquetSchema(metadata).children.map((column) => column.element.name))
   if (DEFECT_COLUMNS.some((column) => !columns.has(column))) {
-    const error = new Error("이상감지 리스트에 line, sdwt, prc_group, main_seq, met_seq, eqpid, path 컬럼이 필요합니다.")
+    const error = new Error("이상감지 리스트에 sdwt, prc_group, main_seq, met_seq, eqpid, path 컬럼이 필요합니다.")
     error.code = "DEFECT_SCHEMA_INVALID"
     throw error
   }
@@ -40,9 +40,8 @@ export function buildDefectFilters(rows, { prcGroup = "", mainSeq = "" } = {}) {
   }
 }
 
-export function scopeDefectRows(rows, { line, sdwt, pathSdwt }) {
-  return rows.filter((row) => text(row.line) === line
-    && (text(row.sdwt) === sdwt || text(row.sdwt) === pathSdwt))
+export function scopeDefectRows(rows, { sdwt, pathSdwt }) {
+  return rows.filter((row) => text(row.sdwt) === sdwt || text(row.sdwt) === pathSdwt)
 }
 
 export async function handleDefectFiltersRequest(req, res, url, dependencies = {}) {
@@ -64,7 +63,7 @@ export async function handleDefectFiltersRequest(req, res, url, dependencies = {
     filePath = (dependencies.resolvePath ?? getDefectFailListPath)(line)
     const rows = await (dependencies.readRows ?? readDefectFailList)(filePath)
     const scopedRows = scopeDefectRows(rows, {
-      line, pathSdwt, sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt,
+      pathSdwt, sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt,
     })
     send(200, { source_path: filePath, filters: buildDefectFilters(scopedRows, {
       prcGroup: text(url.searchParams.get("prcGroup")),
