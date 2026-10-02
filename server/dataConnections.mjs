@@ -127,6 +127,12 @@ export function blockDisabledDataRequest(
     && isExactPath
     && SELF_EQUIPMENT_READ_METHODS.get(normalizedPathname)?.has(req.method)
   )
+  const isAllowedDefectRead = (
+    isDefaultEnabled(environment, "SCS_DEFECT_DATA_ENABLED")
+    && isExactPath
+    && normalizedPathname === "/api/defect-filters"
+    && req.method === "GET"
+  )
   const isAllowedMappingRead = (
     (areSelfEquipmentDataConnectionsEnabled(environment)
       || areCommonAnomalyDataConnectionsEnabled(environment))
@@ -154,6 +160,7 @@ export function blockDisabledDataRequest(
     || areDataConnectionsEnabled(environment)
     || isAllowedDashboardRead
     || isAllowedSelfEquipmentRead
+    || isAllowedDefectRead
     || isAllowedMappingRead
     || isAllowedCommonalityRead
     || isAllowedCommonAnomalyRead

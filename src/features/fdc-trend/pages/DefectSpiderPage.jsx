@@ -7,14 +7,68 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
+import { fetchDefectFilters } from "../api/defectSpiderApi"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { formatLineDisplayName } from "../utils/lineDisplay.mjs"
 import { FilterCard, SelectRow } from "./FdcTrendPage"
 
-// Defect files and their chart schema will be connected separately from ERD data.
-const PENDING_FILTERS = ["PRC_Group", "main_seq", "met_seq"]
+const DEFECT_FILTERS = [
+  { key: "prc_group", title: "PRC_Group" },
+  { key: "main_seq", title: "main_seq" },
+  { key: "met_seq", title: "met_seq" },
+]
+
+function DefectDataFilters({ line, pathSdwt }) {
+  const [selected, setSelected] = useState({ prc_group: "", main_seq: "", met_seq: "" })
+  const [queries, setQueries] = useState({ prc_group: "", main_seq: "", met_seq: "" })
+  const filtersQuery = useQuery({
+    queryKey: ["defect-filters", line, pathSdwt, selected.prc_group, selected.main_seq],
+    queryFn: ({ signal }) => fetchDefectFilters({
+      line, pathSdwt, prcGroup: selected.prc_group, mainSeq: selected.main_seq, signal,
+    }),
+    enabled: Boolean(line && pathSdwt),
+  })
+  const filters = filtersQuery.isSuccess ? filtersQuery.data.filters : {}
+
+  return DEFECT_FILTERS.map(({ key, title }, index) => {
+    const options = filters[key] ?? []
+    const ready = Boolean(line && pathSdwt && (index === 0 || selected[DEFECT_FILTERS[index - 1].key]))
+    const query = queries[key].trim().toLowerCase()
+    return (
+      <FilterCard
+        key={key}
+        title={title}
+        badge={options.length || null}
+        disabled={!ready || !options.length}
+        placeholder={filtersQuery.isError && index === 0 ? (
+          <div className="space-y-2 text-xs text-destructive" role="alert">
+            <p>{filtersQuery.error.message}</p>
+            <Button type="button" size="sm" variant="outline" disabled={filtersQuery.isFetching} onClick={() => filtersQuery.refetch()}>Retry</Button>
+          </div>
+        ) : !ready ? "이전 필터를 먼저 선택하세요." : filtersQuery.isPending ? "Loading…" : "No matching items."}
+        isActive={options.includes(selected[key])}
+        isLoading={ready && filtersQuery.isFetching}
+        query={queries[key]}
+        onQueryChange={(value) => setQueries((current) => ({ ...current, [key]: value }))}
+      >
+        {options.filter((value) => value.toLowerCase().includes(query)).map((value) => (
+          <SelectRow
+            key={value}
+            label={value}
+            selected={selected[key] === value}
+            onClick={() => {
+              const cleared = Object.fromEntries(DEFECT_FILTERS.slice(index + 1).map((filter) => [filter.key, ""]))
+              setSelected((current) => ({ ...current, ...cleared, [key]: value }))
+              setQueries((current) => ({ ...current, ...cleared }))
+            }}
+          />
+        ))}
+      </FilterCard>
+    )
+  })
+}
 
 function DefectChartPlaceholder({ similarity = false }) {
   return (
@@ -157,17 +211,7 @@ export function DefectSpiderPage() {
                   />
                 ))}
               </FilterCard>
-              {PENDING_FILTERS.map((title) => (
-                <FilterCard
-                  key={title}
-                  title={title}
-                  disabled
-                  placeholder="Defect data is not connected yet."
-                  query=""
-                >
-                  {[]}
-                </FilterCard>
-              ))}
+              <DefectDataFilters key={JSON.stringify([activeLine, activeTeam])} line={activeLine} pathSdwt={activeTeam} />
             </div>
           </div>
         </ResizableFilterArea>

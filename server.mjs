@@ -30,6 +30,7 @@ import {
 } from "./server/commonCommonalityData.mjs"
 import { handleLatestCommonalityPathRequest } from "./server/latestCommonalityPath.mjs"
 import { handleMappingConfigRequest } from "./server/mappingConfig.mjs"
+import { handleDefectFiltersRequest } from "./server/defectSpiderData.mjs"
 import { handleMailingRegistrationRequest } from "./server/mailingRegistration.mjs"
 import { handlePassHistoryRequest } from "./server/passHistory.mjs"
 import {
@@ -239,6 +240,11 @@ const server = createServer((req, res) => {
     handlePassHistoryRequest(req, res, url).catch((error) => {
       sendJson(res, 500, { ok: false, error: error.message })
     })
+    return
+  }
+
+  if (url.pathname === "/api/defect-filters") {
+    handleDefectFiltersRequest(req, res, url)
     return
   }
 
