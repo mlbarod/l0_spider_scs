@@ -6,16 +6,41 @@ import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
 const cache = new Map()
 
 export function buildDefectFilePairs(rows) {
-  return [...new Set(rows.map((row) => String(row.path ?? "")))].map((sourcePath) => {
+  const contexts = new Map(rows.map((row) => {
+    const context = { path: String(row.path ?? ""), main_seq: String(row.main_seq ?? "").trim(), met_seq: String(row.met_seq ?? "").trim() }
+    return [JSON.stringify(context), context]
+  }))
+  return [...contexts.values()].map((context) => {
+    const sourcePath = context.path
     const valid = sourcePath.startsWith("/") && !sourcePath.includes("\0")
       && !sourcePath.split("/").includes("..") && /\/fail_[^/]+\.parquet$/.test(sourcePath)
     return {
-      path: sourcePath,
+      ...context,
       fail_path: valid ? sourcePath : "",
       all_path: valid ? sourcePath.replace(/\/fail_([^/]+\.parquet)$/, "/all_$1") : "",
       error: valid ? "" : "path가 절대 경로의 fail_*.parquet 형식이 아닙니다.",
     }
   })
+}
+
+export function buildDefectScatterData(rows, columns) {
+  const missing = ["tkout_time", "fab_value"].filter((column) => !columns.includes(column))
+  if (missing.length) return { points: [], scatter_error: `Scatter 데이터에 ${missing.join(", ")} 컬럼이 필요합니다.`, invalid_point_count: rows.length }
+  const points = []
+  for (const row of rows) {
+    const rawTime = row.tkout_time
+    const timeText = typeof rawTime === "string" ? rawTime.trim().replace(" ", "T") : ""
+    // 시간대 없는 데이터는 원문 시각을 유지하는 UTC 좌표로 표현한다.
+    const timestamp = rawTime instanceof Date ? rawTime.getTime()
+      : typeof rawTime === "number" ? rawTime
+      : /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(timeText)
+        ? Date.parse(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(timeText) ? timeText : `${timeText}Z`) : Number.NaN
+    const value = typeof row.fab_value === "number" ? row.fab_value
+      : typeof row.fab_value === "string" && row.fab_value.trim() ? Number(row.fab_value) : Number.NaN
+    if (!Number.isFinite(timestamp) || !Number.isFinite(value)) continue
+    points.push({ tkout_time: timestamp, fab_value: value, eqp_ch: String(row.eqp_ch ?? "").trim() })
+  }
+  return { points, invalid_point_count: rows.length - points.length }
 }
 
 export function buildDefectRawSummary(rows, columns, { trellis = false } = {}) {
@@ -50,6 +75,7 @@ export async function readDefectFileSummary(filePath) {
   const summary = buildDefectRawSummary(rows,
     parquetSchema(metadata).children.map((column) => column.element.name),
     { trellis: /\/fail_[^/]+\.parquet$/.test(filePath) })
+  Object.assign(summary, buildDefectScatterData(rows, summary.columns))
   setLruEntry(cache, filePath, { mtimeMs: info.mtimeMs, size: info.size, summary }, 32)
   return summary
 }

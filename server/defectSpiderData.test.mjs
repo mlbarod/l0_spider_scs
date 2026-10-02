@@ -180,7 +180,7 @@ test("main_seq ALL은 PRC_Group 내 met_seq 전체를, met_seq ALL은 현재 mai
 
 test("path를 그대로 표시하고 파일명 접두사 fail_만 all_로 바꾸며 중복은 한 번만 로드한다", () => {
   const pairs = buildDefectFilePairs([fileRows[0], fileRows[0]])
-  assert.deepEqual(pairs, [{ path: fileRows[0].path, fail_path: fileRows[0].path,
+  assert.deepEqual(pairs, [{ path: fileRows[0].path, main_seq: "10", met_seq: "20", fail_path: fileRows[0].path,
     all_path: "/fixture/fail_dir/all_1.parquet", error: "" }])
   for (const path of ["", "/fixture/other.parquet", "relative/fail_1.parquet", "/fixture/../fail_1.parquet"]) {
     const [pair] = buildDefectFilePairs([{ path }])

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { fetchDefectFilters, fetchDefectFile } from "../api/defectSpiderApi"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
+import { DefectScatterChart } from "../components/DefectScatterChart"
+import { defectChartTitle } from "../utils/defectScatter.mjs"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { formatLineDisplayName } from "../utils/lineDisplay.mjs"
 import { FilterCard, SelectRow } from "./FdcTrendPage"
@@ -138,12 +140,22 @@ function DefectChartTrellis({ pair, selection }) {
       {groups.map(({ eqp_ch }) => (
         <article key={eqp_ch} className="min-h-64 min-w-0 overflow-hidden rounded-xl border bg-card">
           <header className="border-b bg-muted/35 px-4 py-3">
-            <h3 className="break-all text-sm font-semibold">eqp_ch: {eqp_ch}</h3>
+            <h3 className="break-all text-sm font-semibold">{defectChartTitle(eqp_ch, pair.main_seq, pair.met_seq)}</h3>
           </header>
-          <div className="grid min-w-0 gap-3 p-4">
-            <DefectFileStatus kind="FAIL" pair={pair} fileQuery={failQuery} eqpCh={eqp_ch} />
-            <DefectFileStatus kind="ALL" pair={pair} fileQuery={allQuery} />
-          </div>
+          {allQuery.isSuccess ? (
+            <DefectScatterChart failData={failQuery.data} allData={allQuery.data} eqpCh={eqp_ch} />
+          ) : (
+            <div className="grid h-[340px] place-items-center p-4 text-sm text-muted-foreground">
+              {allQuery.isError ? "이상감지 스탭 ALL RAW데이터를 읽지 못했습니다. 아래에서 재시도하세요." : "차트 데이터를 불러오는 중입니다."}
+            </div>
+          )}
+          <details className="border-t p-3 text-xs">
+            <summary className="cursor-pointer text-muted-foreground">RAW데이터 경로 및 로드 상태</summary>
+            <div className="mt-3 grid min-w-0 gap-3">
+              <DefectFileStatus kind="FAIL" pair={pair} fileQuery={failQuery} eqpCh={eqp_ch} />
+              <DefectFileStatus kind="ALL" pair={pair} fileQuery={allQuery} />
+            </div>
+          </details>
         </article>
       ))}
     </>
@@ -274,14 +286,14 @@ export function DefectSpiderPage() {
         <section className="min-w-0 overflow-hidden rounded-[18px] border bg-card">
           <header className="border-b bg-muted/30 px-5 py-4">
             <h2 className="text-base font-semibold">Scatter chart</h2>
-            <p className="mt-1 text-xs text-muted-foreground">이상감지 RAW데이터의 eqp_ch별 차트 경로입니다. 이상감지 스탭 ALL RAW데이터는 원본 전체를 공통 사용합니다.</p>
+            <p className="mt-1 text-xs text-muted-foreground">eqp_ch별 이상감지 RAW데이터와 이상감지 스탭 ALL RAW데이터를 겹쳐 표시합니다.</p>
           </header>
           {currentLoadInfo?.status === "success" && currentLoadInfo.files?.length ? (
             <div className="overflow-x-auto p-4">
               <div className="grid min-w-[640px] grid-cols-2 gap-4">
                 {currentLoadInfo.files.map((pair) => (
                   <DefectChartTrellis
-                    key={JSON.stringify([activeLine, activeTeam, pair.path])}
+                    key={JSON.stringify([activeLine, activeTeam, pair.path, pair.main_seq, pair.met_seq])}
                     pair={pair}
                     selection={{ line: activeLine, pathSdwt: activeTeam,
                       prcGroup: currentLoadInfo.selected.prc_group,
