@@ -31,15 +31,15 @@ function response() {
 }
 
 test("선택한 Line에 종속된 device로 경로를 만들고 서버 환경변수가 우선한다", () => {
-  assert.equal(resolveDefectFailListPath("L1", environment), "/appdata/hadoop/code/eads/L1/DEVICE-A/fail_list.parquet")
-  assert.equal(resolveDefectFailListPath("L2", environment), "/appdata/hadoop/code/eads/L2/DEVICE-B/fail_list.parquet")
+  assert.equal(resolveDefectFailListPath("L1", environment), "/appdata/abnormal_trend/pic/defect/L1/DEVICE-A/fail_list.parquet")
+  assert.equal(resolveDefectFailListPath("L2", environment), "/appdata/abnormal_trend/pic/defect/L2/DEVICE-B/fail_list.parquet")
   assert.equal(getDefectFailListPath("L2", environment), resolveDefectFailListPath("L2", environment))
 })
 
 test("정상 JSON은 .env와 작은따옴표가 남은 서버 환경변수 모두에서 처리한다", () => {
   const value = `'${JSON.stringify({ "라인명": "디바이스" })}'`
   const envFile = parseEnv(`DEFECT_SPIDER_LINE_DEVICES=${value}`)
-  const expected = "/appdata/hadoop/code/eads/라인명/디바이스/fail_list.parquet"
+  const expected = "/appdata/abnormal_trend/pic/defect/라인명/디바이스/fail_list.parquet"
   assert.equal(resolveDefectFailListPath("라인명", envFile), expected)
   assert.equal(resolveDefectFailListPath("라인명", { DEFECT_SPIDER_LINE_DEVICES: value }), expected)
 })
@@ -83,7 +83,7 @@ test("API는 선택한 Line의 device 파일을 읽는다", async () => {
         ...dependencies, readRows: async (filePath) => { actualPath = filePath; return rows },
       })
     assert.equal(res.status, 200)
-    assert.equal(actualPath, `/appdata/hadoop/code/eads/${line}/${device}/fail_list.parquet`)
+    assert.equal(actualPath, `/appdata/abnormal_trend/pic/defect/${line}/${device}/fail_list.parquet`)
     assert.equal(res.body.source_path, actualPath)
   }
 })

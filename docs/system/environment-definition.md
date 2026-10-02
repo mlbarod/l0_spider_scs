@@ -64,7 +64,7 @@ DB API는 gate가 활성이고 `DB_INFO_PATH`가 읽을 수 있는 파일일 때
 
 `config/defect-spider.env`의 `DEFECT_SPIDER_LINE_DEVICES`에 Line별 device를 JSON으로 지정한다. 예: `DEFECT_SPIDER_LINE_DEVICES='{"P1L":"DEVICE_A","P2L":"DEVICE_B"}'`. Line 키는 화면에서 선택하는 원래 Line 값이며 각 Line에 device 하나를 지정한다. 같은 이름의 서버 환경변수가 있으면 환경변수가 우선한다. 개발·통합·정적 서버가 모두 이 파일을 사용한다. 설정 변경 후 서버를 재시작한다.
 
-읽기 경로는 `/appdata/hadoop/code/eads/<선택한 Line>/<해당 Line의 device>/fail_list.parquet`이다. Line 선택이 바뀌면 해당 Line에 지정된 device의 파일을 읽는다. 선택한 Line에 device가 없으면 설정 오류를 표시하며 다른 Line의 파일로 대체하지 않는다. 기존 `DEFECT_SPIDER_LINE`, `DEFECT_SPIDER_DEVICE` 대신 이 매핑을 사용한다.
+읽기 경로는 `/appdata/abnormal_trend/pic/defect/<선택한 Line>/<해당 Line의 device>/fail_list.parquet`이다. Line 선택이 바뀌면 해당 Line에 지정된 device의 파일을 읽는다. 선택한 Line에 device가 없으면 설정 오류를 표시하며 다른 Line의 파일로 대체하지 않는다. 기존 `DEFECT_SPIDER_LINE`, `DEFECT_SPIDER_DEVICE` 대신 이 매핑을 사용한다.
 
 `GET /api/defect-filters`는 `line`, `pathSdwt`로 기존 매핑의 선택 범위를 검증한 뒤 파일의 `line`, `sdwt`로 행을 제한한다. `sdwt`는 선택한 SDWT의 원래 코드 또는 매핑된 표시값과 비교한다. Line·SDWT로 제한된 행에서 `PRC_Group → main_seq → met_seq` 순으로 상위 선택 조건을 누적 적용해 각 컬럼의 중복 없는 값을 반환한다. 하위 후보는 상위 선택 후 제공한다.
 

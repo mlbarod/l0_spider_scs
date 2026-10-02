@@ -3,7 +3,7 @@ import test from "node:test"
 import { fetchDefectFilters } from "./defectSpiderApi.js"
 
 test("읽기 실패 응답의 실제 경로를 화면에 전달할 오류 객체에 보존한다", async (t) => {
-  const sourcePath = "/appdata/hadoop/code/eads/L1/DEVICE-A/fail_list.parquet"
+  const sourcePath = "/appdata/abnormal_trend/pic/defect/L1/DEVICE-A/fail_list.parquet"
   t.mock.method(globalThis, "fetch", async () => ({
     ok: false,
     json: async () => ({ error: "파일 읽기 실패", source_path: sourcePath }),

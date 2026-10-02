@@ -33,7 +33,7 @@ export function resolveDefectFailListPath(line, environment) {
   if (segments.some((value) => !value || value === "." || value === ".." || /[/\\]/.test(value) || value.includes("\0"))) {
     throw configError("Line과 device에는 폴더 이름만 사용할 수 있습니다. 경로 구분자(/, \\), 점(.)·상위 경로(..), 빈 값은 사용할 수 없습니다.")
   }
-  return `/appdata/hadoop/code/eads/${segments.join("/")}/fail_list.parquet`
+  return `/appdata/abnormal_trend/pic/defect/${segments.join("/")}/fail_list.parquet`
 }
 
 export function getDefectFailListPath(line, environment = process.env) {
