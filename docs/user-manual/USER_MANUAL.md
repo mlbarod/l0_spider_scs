@@ -41,7 +41,7 @@ If `Last algorithm run time` at the top of the home screen shows `Unavailable`, 
 
 ### 3.1 Filter Order
 
-Select filters from left to right.
+Select Line Name, SDWT, and Sensor Grade to automatically set the remaining filters to `ALL` and display `CRITICAL` charts. You can then narrow the filters in the order below. Removing a Grade or changing Line or SDWT clears downstream selections. SKIP LIST keeps its sequential selection flow.
 
 1. `Line Name`
 2. `SDWT`

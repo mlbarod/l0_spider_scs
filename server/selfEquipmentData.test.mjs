@@ -142,6 +142,31 @@ test("eqp_ch ALL에서 Sensor ALL과 ch_step ALL을 선택하면 모든 센서 �
   assert.deepEqual(payload.rows.map((row) => row.sensor).sort(), ["PRESSURE", "TEMP"])
 })
 
+test("PRC_Group ALL은 Line·분임조·Grade 범위의 여러 그룹 차트를 반환한다", () => {
+  const rows = [
+    createRow({ prc_group: "ETCH" }),
+    createRow({ prc_group: "CLEAN", priority: "B", eqp: "EQP-2.png" }),
+    createRow({ prc_group: "ETCH", priority: "D" }),
+    createRow({ prc_group: "ETCH", line_rev: "OTHER" }),
+    createRow({ prc_group: "ETCH", sdwt: "OTHER" }),
+  ]
+  const filters = {
+    line: "P1L", sdwt: "SDWT-1", priorities: ["A", "B"],
+    prcGroup: "ALL", eqpCh: "ALL", sensor: "ALL", chStep: "ALL",
+  }
+  const payload = buildSelfEquipmentPayload(rows, filters)
+  assert.equal(payload.filters.prcGroup, "ALL")
+  assert.equal(payload.filters.chStep, "ALL")
+  assert.deepEqual(payload.rows.map((row) => row.prc_group), ["ETCH", "CLEAN"])
+  assert.equal(payload.eqpChannels.length, 2)
+
+  const narrowed = buildSelfEquipmentPayload(rows, { ...filters, prcGroup: "CLEAN" })
+  assert.deepEqual(narrowed.rows.map((row) => row.prc_group), ["CLEAN"])
+  const empty = buildSelfEquipmentPayload(rows, { ...filters, priorities: [] })
+  assert.equal(empty.filters.prcGroup, "")
+  assert.deepEqual(empty.rows, [])
+})
+
 test("Sensor ALL에서는 개별 ch_step 선택을 허용하지 않는다", () => {
   const rows = [
     createRow({ sensor: "TEMP", step: "10@MAIN" }),

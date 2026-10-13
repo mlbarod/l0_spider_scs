@@ -41,7 +41,7 @@ Dashboard 用于查看各产线的异常情况和近期趋势。
 
 ### 3.1 筛选顺序
 
-请从左到右依次选择筛选条件。
+选择 Line Name、SDWT 和 Sensor Grade 后，其余筛选项自动设为 `ALL`，并显示 `CRITICAL` 图表。之后可按以下顺序缩小筛选范围。取消 Grade 或更改 Line、SDWT 会清除后续选择。SKIP LIST 仍需依次选择。
 
 1. `Line Name`
 2. `SDWT`

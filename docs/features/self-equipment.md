@@ -9,7 +9,7 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 ## 2. 사용자 흐름
 
 1. Line과 분임조를 선택한다.
-2. Grade, PRC_Group, EQP, Sensor, STEP 조건을 좁힌다.
+2. Grade를 선택하면 PRC_Group, EQP, Sensor, STEP이 `ALL`, 심각도가 `CRITICAL`로 설정되고 차트가 자동 조회된다. 필요하면 이후 조건을 직접 좁힌다. Line·분임조 변경 시 Grade는 해제되며, Grade 해제 시 하위 선택도 해제된다. SKIP LIST는 기존 수동 선택을 유지한다.
 3. 결과 목록에서 설비 chart를 연다.
 4. scatter, 동일성 비교와 변경점 정보를 확인한다.
 5. 권한과 데이터가 허용하는 범위에서 SKIP·HIT·click 이력을 사용한다.
@@ -33,13 +33,13 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 
 ## 4. 필터와 데이터 처리
 
-- `/api/self-equipment-data`의 기본 조건은 `line`, `pathSdwt`, `sdwt`이며 `priority`, `prcGroup`, `eqpCh`, `sensor`, `chStep`을 선택적으로 전달한다. 기존 API의 `desc` 조건도 호환을 위해 유지한다.
+- `/api/self-equipment-data`의 기본 조건은 `line`, `pathSdwt`, `sdwt`이며 `priority`, `prcGroup`, `eqpCh`, `sensor`, `chStep`을 선택적으로 전달한다. `prcGroup=ALL`은 현재 Line·분임조·Grade 범위의 전체 그룹을 조회한다. 기존 API의 `desc` 조건도 호환을 위해 유지한다.
 - 화면의 PRC_Group은 분임조별 경로 테이블의 `sdwt`, `eqp`와 EQP 기준정보의 `sdwt_prod`, `main`을 결합해 얻은 `prc_group`을 사용한다. `eqp`는 첫 `-` 앞 값을 `main`과 비교한다. SDWT 기준정보가 없는 구형 축약 데이터에서는 `main`이 하나의 `prc_group`으로만 해석될 때에만 기존 EQP 단독 결합을 적용한다.
 - 일반 자설비와 SKIP LIST 모두 같은 `prc_group` 기준으로 이후 `eqp_ch`, `sensor`, `ch_step` 후보를 제한한다.
 - chart 요청은 `path`, `eqp`, `sensor`, `chStep`과 선택적인 `ver`, `latestDate`, `line`, `pathSdwt`를 전달한다.
 - 이미지 경로, directory 경로와 직접 `data.parquet` 경로의 기존 변환 규칙을 보존한다.
 - Sensor 제외 설정이 없으면 빈 제외 규칙으로 동작한다.
-- 일반 자설비 결과의 `CRITICAL` 버튼은 `status=ALARM`, `WARNING` 버튼은 `status=WARN` 차트만 표시한다. 기본은 전체이며 선택된 버튼을 다시 누르면 전체로 돌아간다. 상태 필터는 ch_step 모아보기와 페이지 분할 전에 적용하고, 변경 시 첫 페이지로 돌아간다. SKIP LIST에는 적용하지 않는다.
+- 일반 자설비 결과의 `CRITICAL` 버튼은 `status=ALARM`, `WARNING` 버튼은 `status=WARN` 차트만 표시한다. Grade 자동 조회 시 `CRITICAL`을 선택하며 선택된 버튼을 다시 누르면 전체로 돌아간다. 상태 필터는 ch_step 모아보기와 페이지 분할 전에 적용하고, 변경 시 첫 페이지로 돌아간다. SKIP LIST에는 적용하지 않는다.
 - chart 상단에는 `reason` 코드에 따른 `이상감지 사유: {문구}`를 표시한다. 문구는 `l0_spider`와 동일하며 알 수 없거나 빈 사유는 표시하지 않는다. `status`, `reason`이 없는 이전 경로 파일도 조회할 수 있으며 상태 미지정 행은 전체 보기에서만 표시한다.
 
 ## 5. 오류와 보안

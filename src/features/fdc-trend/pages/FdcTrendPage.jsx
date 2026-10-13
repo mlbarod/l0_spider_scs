@@ -1527,9 +1527,7 @@ export function FdcTrendPage() {
   const [selectedLine, setSelectedLine] = useState(() => requestedFilters.line)
   const [selectedTeam, setSelectedTeam] = useState(() => requestedFilters.sdwts[0] ?? "")
   const [selectedGrades, setSelectedGrades] = useState(() => (
-    resolveSelfEquipmentGrades(requestedFilters.grades, SENSOR_GRADES).length
-      ? resolveSelfEquipmentGrades(requestedFilters.grades, SENSOR_GRADES)
-      : ["A/B"]
+    resolveSelfEquipmentGrades(requestedFilters.grades, SENSOR_GRADES)
   ))
   const [selectedDesc, setSelectedDesc] = useState(() => (
     requestedFilters.stepToken === ALL_STEPS ? ALL_STEPS : ""
@@ -1777,11 +1775,18 @@ export function FdcTrendPage() {
     queries.grade,
   )
   const filteredSteps = filterItems(
-    steps.map((item) => ({
-      value: item.prcGroup,
-      label: item.prcGroup,
-      meta: `${item.rowCount.toLocaleString()} rows · ${item.equipmentCount.toLocaleString()} eqp`,
-    })),
+    [
+      ...(!isSkipList && steps.length ? [{
+        value: ALL_STEPS,
+        label: "ALL",
+        meta: `${steps.reduce((total, item) => total + item.rowCount, 0).toLocaleString()} rows`,
+      }] : []),
+      ...steps.map((item) => ({
+        value: item.prcGroup,
+        label: item.prcGroup,
+        meta: `${item.rowCount.toLocaleString()} rows · ${item.equipmentCount.toLocaleString()} eqp`,
+      })),
+    ],
     queries.step,
   )
   const filteredEqpChannels = filterItems(
@@ -1842,39 +1847,60 @@ export function FdcTrendPage() {
   const handleLineChange = (line) => {
     setSelectedLine(line)
     setSelectedTeam("")
+    setSelectedGrades([])
+    setQuery("grade", "")
     setQueries((current) => ({ ...current, team: "", step: "", eqpCh: "", sensor: "", chStep: "" }))
     resetStepAndSensor()
   }
   const handleTeamChange = (team) => {
     setSelectedTeam(team)
+    setSelectedGrades([])
+    setQuery("grade", "")
     resetStepAndSensor()
   }
   const toggleGrade = (grade) => {
-    setSelectedGrades((current) => (
-      current.includes(grade)
-        ? current.filter((item) => item !== grade)
-        : gradeOptions.filter((item) => [...current, grade].includes(item))
-    ))
-    resetStepAndSensor()
+    const addingGrade = !selectedGrades.includes(grade)
+    const nextGrades = addingGrade
+      ? gradeOptions.filter((item) => [...selectedGrades, grade].includes(item))
+      : selectedGrades.filter((item) => item !== grade)
+    setSelectedGrades(nextGrades)
+    if (!addingGrade || isSkipList) {
+      resetStepAndSensor()
+      return
+    }
+    setSelectedDesc(ALL_STEPS)
+    setSelectedEqpCh(ALL_EQP_CHANNELS)
+    setSelectedSensor(ALL_SENSORS)
+    setSelectedChStep(ALL_CH_STEPS)
+    setSelectedStatus("ALARM")
+    setQueries((current) => ({ ...current, grade: "", step: "", eqpCh: "", sensor: "", chStep: "" }))
+    void saveChartSelectionHistory({
+      grades: expandPriorities(nextGrades),
+      prcGroup: ALL_STEPS,
+      eqpCh: ALL_EQP_CHANNELS,
+      sensor: ALL_SENSORS,
+      chStep: ALL_CH_STEPS,
+    })
   }
-  const handleChStepChange = async (chStep) => {
-    if (selectedSensor === ALL_SENSORS && chStep !== ALL_CH_STEPS) return
-    const nextChStep = selectedChStep === chStep ? "" : chStep
+  const saveChartSelectionHistory = async ({
+    grades = priorities,
+    prcGroup = selectedDesc,
+    eqpCh = selectedEqpCh,
+    sensor = selectedSensor,
+    chStep,
+  }) => {
     const clickedAt = new Date().toISOString()
-    setSelectedChStep(nextChStep)
-    if (!nextChStep || isSkipList) return
-
     try {
       const queryKey = [
         "self-equipment-data",
         activeLine,
         activeTeam,
         activeTeamLabel,
-        priorities,
-        selectedDesc,
-        selectedEqpCh,
-        selectedSensor,
-        nextChStep,
+        grades,
+        prcGroup,
+        eqpCh,
+        sensor,
+        chStep,
       ]
       const payload = await queryClient.fetchQuery({
         queryKey,
@@ -1882,29 +1908,34 @@ export function FdcTrendPage() {
           line: activeLine,
           pathSdwt: activeTeam,
           sdwt: activeTeamLabel,
-          priorities,
-          prcGroup: selectedDesc,
-          eqpCh: selectedEqpCh,
-          sensor: selectedSensor,
-          chStep: nextChStep,
+          priorities: grades,
+          prcGroup,
+          eqpCh,
+          sensor,
+          chStep,
         }),
       })
       const filePaths = getSelfEquipmentHistoryFilePaths(payload.rows)
-      if (!filePaths.length) {
-        throw new Error("No file_path is available for click history.")
-      }
+      if (!filePaths.length) return
       await createClickedCategoryHistory({
         app: "self",
         lineId: activeLine,
         filePaths,
-        grades: payload.filters?.priorities ?? priorities,
+        grades: payload.filters?.priorities ?? grades,
         selectedSdwt: payload.filters?.sdwt || activeTeamLabel,
-        selectedSensor: payload.filters?.sensor || selectedSensor,
+        selectedSensor: payload.filters?.sensor || sensor,
         clickedAt,
       })
     } catch (error) {
       toast.error(`Failed to save click history: ${error.message}`)
     }
+  }
+  const handleChStepChange = (chStep) => {
+    if (selectedSensor === ALL_SENSORS && chStep !== ALL_CH_STEPS) return
+    const nextChStep = selectedChStep === chStep ? "" : chStep
+    setSelectedChStep(nextChStep)
+    if (!nextChStep || isSkipList) return
+    void saveChartSelectionHistory({ chStep: nextChStep })
   }
   const toggleGatheredChSteps = (eqp) => {
     setExpandedChSteps((current) => {
@@ -1924,7 +1955,7 @@ export function FdcTrendPage() {
               <h1 className="text-lg font-semibold tracking-tight">Equipment Anomaly Detection</h1>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Select a line, team, sensor grade, PRC_Group, eqp_ch, sensor, and ch_step to view ERD results.
+              Select a line, team, and sensor grade to automatically view CRITICAL charts with all remaining filters set to ALL.
             </p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">

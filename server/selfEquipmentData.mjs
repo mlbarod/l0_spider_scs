@@ -389,13 +389,17 @@ export function buildSelfEquipmentPayload(rows, filters) {
     rowCount: prcGroupRows.length,
     equipmentCount: uniqueCount(prcGroupRows, "eqp"),
   })), "prcGroup")
-  const selectedPrcGroup = prcGroups.some((item) => item.prcGroup === filters.prcGroup)
+  const selectedPrcGroup = filters.prcGroup === "ALL" && prcGroups.length > 0
+    ? "ALL"
+    : prcGroups.some((item) => item.prcGroup === filters.prcGroup)
     ? filters.prcGroup
     : ""
   const selectedDesc = !selectedPrcGroup && steps.some((item) => item.desc === filters.desc)
     ? filters.desc
     : ""
-  const stepRows = selectedPrcGroup
+  const stepRows = selectedPrcGroup === "ALL"
+    ? baseRows
+    : selectedPrcGroup
     ? baseRows.filter((row) => row.prc_group === selectedPrcGroup)
     : selectedDesc
     ? baseRows.filter((row) => row.recipe_id === selectedDesc)

@@ -41,7 +41,7 @@ Dashboard에서는 Line별 이상 현황과 최근 추이를 확인합니다.
 
 ### 3.1 조회 순서
 
-필터는 왼쪽에서 오른쪽 순서로 선택합니다.
+Line Name, SDWT, Sensor Grade를 선택하면 나머지 항목은 `ALL`, 심각도는 `CRITICAL`로 자동 선택되고 차트가 표시됩니다. 이후 필요하면 아래 순서로 조건을 좁힐 수 있습니다. Grade를 해제하거나 Line·SDWT를 변경하면 하위 선택이 초기화됩니다. SKIP LIST는 기존처럼 순서대로 선택합니다.
 
 1. `Line Name`
 2. `SDWT`
