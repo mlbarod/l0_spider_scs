@@ -2,7 +2,7 @@ import { spawn } from "node:child_process"
 import { relative, resolve, sep } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 
-import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
+import { getRemoteIp, resolveCurrentUser, sendCurrentUserError } from "./currentUser.mjs"
 import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
@@ -230,7 +230,7 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
   try {
     const remoteIp = getRemoteIp(req)
     if (!remoteIp) {
-      sendJson(res, 400, { ok: false, error: "Unable to determine the client IP." })
+      sendJson(res, 400, { ok: false, error: "Unable to identify the current user." })
       return
     }
     const [body, currentUser] = await Promise.all([readJsonBody(req), resolveCurrentUser(remoteIp)])
@@ -240,7 +240,8 @@ export async function handleClickedCategoryHistoryRequest(req, res) {
       throw new Error("Click history was not written to the DB.")
     }
     sendJson(res, 200, result)
-  } catch {
+  } catch (error) {
+    if (sendCurrentUserError(res, error)) return
     const errorPayload = createSafeApiError({
       code: "CLICKED_CATEGORY_HISTORY_REQUEST_FAILED",
       message: "Unable to process the click-history request.",

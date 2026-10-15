@@ -490,10 +490,10 @@ export function CommonAnomalyPage() {
           <div className="flex flex-wrap items-center justify-end gap-3">
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
-                ? `Client IP: ${currentUserQuery.data.knoxId}`
+                ? `knox_id: ${currentUserQuery.data.knoxId}`
                 : currentUserQuery.isLoading
-                ? "Checking client IP…"
-                : "Unable to determine client IP."}
+                ? "Checking user registration…"
+                : "Unable to identify the current user."}
             </p>
             <Button type="button" variant="outline" size="sm" asChild>
               <Link to="/"><ArrowLeft className="size-4" aria-hidden="true" />SPIDER Home</Link>

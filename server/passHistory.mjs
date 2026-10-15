@@ -2,7 +2,7 @@ import { spawn } from "node:child_process"
 import { relative, resolve, sep } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 
-import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
+import { getRemoteIp, resolveCurrentUser, sendCurrentUserError } from "./currentUser.mjs"
 import { createEqpReferencePrcGroupResolver, readEqpReferenceRows } from "./eqpReference.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 
@@ -624,7 +624,7 @@ export async function handlePassHistoryRequest(req, res, url) {
     if (req.method === "POST" || req.method === "DELETE") {
       const remoteIp = getRemoteIp(req)
       if (!remoteIp) {
-        sendJson(res, 400, { ok: false, error: "Unable to determine the client IP." })
+        sendJson(res, 400, { ok: false, error: "Unable to identify the current user." })
         return
       }
       const currentUser = await resolveCurrentUser(remoteIp)
@@ -654,7 +654,8 @@ export async function handlePassHistoryRequest(req, res, url) {
     }
 
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
-  } catch {
+  } catch (error) {
+    if (sendCurrentUserError(res, error)) return
     const errorPayload = createSafeApiError({
       code: "PASS_HISTORY_REQUEST_FAILED",
       message: "Unable to process the PASS history request.",

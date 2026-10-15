@@ -274,6 +274,7 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
   const environment = { DB_INFO_PATH: "/synthetic/db_info.pkl" }
   for (const [method, pathname] of [
     ["GET", "/api/current-user"],
+    ["POST", "/api/current-user"],
     ["POST", "/api/hit-history"],
     ["POST", "/api/clicked-category-history"],
     ["GET", "/api/pass-history"],

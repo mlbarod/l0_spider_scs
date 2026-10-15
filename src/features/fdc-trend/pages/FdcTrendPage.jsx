@@ -1961,12 +1961,12 @@ export function FdcTrendPage() {
           <div className="flex flex-wrap items-center justify-end gap-3">
             <p className="text-sm font-medium text-foreground" aria-live="polite">
               {currentUserQuery.data?.knoxId
-                ? `Client IP: ${currentUserQuery.data.knoxId}`
+                ? `knox_id: ${currentUserQuery.data.knoxId}`
                 : !dbConnectionsEnabled
                 ? "DB features are not connected."
                 : currentUserQuery.isLoading
-                ? "Checking client IP…"
-                : "Unable to determine client IP."}
+                ? "Checking user registration…"
+                : "Unable to identify the current user."}
             </p>
             <Button type="button" variant="outline" size="sm" asChild>
               <Link to="/">

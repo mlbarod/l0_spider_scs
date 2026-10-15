@@ -24,12 +24,14 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 | `/api/self-equipment-data` | 필터 선택지와 자설비 결과 행 |
 | `/api/erd-scatter-data` | scatter·동일성 chart 데이터 |
 | `/api/erd-file` | 허용된 ERD 파일 제공 |
-| `/api/current-user` | 현재 사용자 식별 정보 |
+| `/api/current-user` | IP에 연결된 knox_id 조회(GET)·최초 등록(POST) |
 | `/api/pass-history` | SKIP 이력 조회·변경 |
 | `/api/hit-history` | HIT 이력 기록 |
 | `/api/clicked-category-history` | category click 이력 기록 |
 
 `npm run dev`와 `node server.mjs`는 같은 API handler를 등록한다. DB 이력 API는 DB gate와 `DB_INFO_PATH` readiness 영향을 받는다.
+
+접속 사용자 등록 및 이력의 `knox_id` 저장 방식은 [사용자 식별](current-user.md)을 따른다. 미등록 IP는 먼저 ID를 등록해야 이력을 저장할 수 있다.
 
 ## 4. 필터와 데이터 처리
 

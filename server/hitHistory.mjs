@@ -2,7 +2,7 @@ import { spawn } from "node:child_process"
 import { isAbsolute, relative, resolve, sep } from "node:path"
 import { fileURLToPath, URL } from "node:url"
 
-import { getRemoteIp, resolveCurrentUser } from "./currentUser.mjs"
+import { getRemoteIp, resolveCurrentUser, sendCurrentUserError } from "./currentUser.mjs"
 import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
 import { commonalityRootPath } from "./latestCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
@@ -247,7 +247,7 @@ export async function handleHitHistoryRequest(req, res) {
   try {
     const remoteIp = getRemoteIp(req)
     if (!remoteIp) {
-      sendJson(res, 400, { ok: false, error: "Unable to determine the client IP." })
+      sendJson(res, 400, { ok: false, error: "Unable to identify the current user." })
       return
     }
     const [body, currentUser] = await Promise.all([
@@ -260,7 +260,8 @@ export async function handleHitHistoryRequest(req, res) {
     })
     const result = await runHitHistoryHelper(record)
     sendJson(res, 200, result)
-  } catch {
+  } catch (error) {
+    if (sendCurrentUserError(res, error)) return
     const errorPayload = createSafeApiError({
       code: "HIT_HISTORY_REQUEST_FAILED",
       message: "Unable to process the HIT history request.",

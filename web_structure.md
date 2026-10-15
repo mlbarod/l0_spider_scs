@@ -36,7 +36,7 @@ flowchart TB
     PYTHON["Python DB helper"]
 
     subgraph DATABASE["업무 DB"]
-        CLIENTIP["사용자 식별값<br/>접속 IP"]
+        CLIENTIP["사용자 식별값<br/>user_ip_mapping의 knox_id"]
         CONDITION["조회·수신 조건<br/>myeqp_regist · email · erdtsum_info"]
         HISTORY["사용 이력<br/>pass_history · hit_history<br/>clicked_category_history"]
     end
@@ -615,13 +615,19 @@ sequenceDiagram
     B->>N: API 요청
     N->>N: x-forwarded-for → x-real-ip → socket IP
     N->>N: IPv4/IPv6 정규화·형식 검증
-    N-->>H: 검증된 접속 IP
-    H->>D: knox_id 컬럼에 IP와 이력 저장
-    N-->>B: knoxId
+    N->>D: user_ip_mapping에서 IP로 knox_id 조회
+    opt 미등록 IP
+        N-->>B: 최초 등록 필요
+        B->>N: knox_id 입력
+        N->>D: IP와 knox_id 쌍 등록
+    end
+    N-->>H: 등록된 knox_id
+    H->>D: knox_id와 이력 저장
+    N-->>B: knoxId, ipAddress, registrationRequired
 ```
 
 - 프록시가 `x-forwarded-for`/`x-real-ip`를 신뢰 가능한 값으로 덮어쓰는 운영 구성이 필요합니다.
-- PASS, HIT, 클릭이력의 `knox_id`는 브라우저 요청값을 사용하지 않고 서버가 확인한 접속 IP를 사용합니다.
+- PASS, HIT, 클릭이력의 `knox_id`는 서버가 접속 IP로 `user_ip_mapping`에서 조회한 ID를 사용합니다. 미등록 IP는 이력 저장을 차단합니다. 등록 절차와 테이블은 [사용자 식별](docs/features/current-user.md)을 참조합니다.
 - My EQP 등록은 현재 접속 IP 한 건만 사용하며 브라우저의 `knoxIds` 입력은 허용하지 않습니다.
 - Mailing 등록은 요청으로 받은 `knoxId/knoxIds`를 형식 검증 후 사용합니다.
 - 일반 로그인 세션이나 JWT 기반 인증 계층은 현재 코드에 없습니다.

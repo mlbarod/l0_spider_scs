@@ -8,6 +8,17 @@ export const LANGUAGE_OPTIONS = Object.freeze([
 ])
 
 const ko = {
+  "User registration": "사용자 등록",
+  "Enter your knox_id only once on your first visit. You will be recognized automatically on future visits.": "knox_id는 최초 접속 시 한 번만 입력하면 됩니다. 이후 접속부터는 자동으로 인식됩니다.",
+  "Use 1–128 letters, numbers, dots, underscores or hyphens. Do not enter an email address.": "영문·숫자·점·밑줄·하이픈 1~128자를 입력하세요. 이메일 주소는 입력하지 마세요.",
+  "Register and continue": "등록 후 시작하기",
+  "Check registration again": "등록 상태 다시 확인",
+  "Checking user registration…": "사용자 등록 확인 중…",
+  "Unable to identify the current user.": "접속 사용자를 확인할 수 없습니다.",
+  "Enter a knox_id of 1–128 letters, numbers, dots, underscores or hyphens.": "knox_id는 영문·숫자·점·밑줄·하이픈 1~128자로 입력하세요.",
+  "Another knox_id is already registered. Contact the administrator.": "다른 knox_id가 이미 등록되어 있습니다. 관리자에게 문의하세요.",
+  "Unable to access user registration. Please try again or contact the administrator.": "사용자 등록 정보를 확인할 수 없습니다. 다시 시도하거나 관리자에게 문의하세요.",
+  "Register your knox_id before saving history.": "이력을 저장하려면 먼저 knox_id를 등록하세요.",
   "Select Line Name, SDWT, PRC_Group, main_seq, and met_seq to view Defect results.": "Line Name, SDWT, PRC_Group, main_seq, met_seq를 선택해 Defect 결과를 확인합니다.",
   "Defect data is not connected yet.": "Defect 데이터 연결을 기다리고 있습니다.",
   "In grouped view, show the similarity chart to the right.": "모아보기에서 동일성 차트를 오른쪽에 표시합니다.",
@@ -282,6 +293,17 @@ const ko = {
 }
 
 const zhCN = {
+  "User registration": "用户登记",
+  "Enter your knox_id only once on your first visit. You will be recognized automatically on future visits.": "仅需在首次访问时输入一次 knox_id。之后访问时将自动识别。",
+  "Use 1–128 letters, numbers, dots, underscores or hyphens. Do not enter an email address.": "请输入 1–128 个字母、数字、点、下划线或连字符。请勿输入电子邮件地址。",
+  "Register and continue": "登记并继续",
+  "Check registration again": "重新检查登记状态",
+  "Checking user registration…": "正在检查用户登记…",
+  "Unable to identify the current user.": "无法识别当前用户。",
+  "Enter a knox_id of 1–128 letters, numbers, dots, underscores or hyphens.": "knox_id 必须为 1–128 个字母、数字、点、下划线或连字符。",
+  "Another knox_id is already registered. Contact the administrator.": "已登记其他 knox_id。请联系管理员。",
+  "Unable to access user registration. Please try again or contact the administrator.": "无法访问用户登记信息。请重试或联系管理员。",
+  "Register your knox_id before saving history.": "保存记录前请先登记 knox_id。",
   "Select Line Name, SDWT, PRC_Group, main_seq, and met_seq to view Defect results.": "选择 Line Name、SDWT、PRC_Group、main_seq 和 met_seq 查看 Defect 结果。",
   "Defect data is not connected yet.": "正在等待连接 Defect 数据。",
   "In grouped view, show the similarity chart to the right.": "在分组视图中，在右侧显示相似性图表。",
