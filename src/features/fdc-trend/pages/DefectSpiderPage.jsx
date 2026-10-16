@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, ArrowUp } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -11,69 +11,55 @@ import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
 import { DefectScatterChart } from "../components/DefectScatterChart"
 import { defectChartTitle } from "../utils/defectScatter.mjs"
-import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { formatLineDisplayName } from "../utils/lineDisplay.mjs"
-import { FilterCard, SelectRow } from "./FdcTrendPage"
 
-const DEFECT_FILTERS = [
-  { key: "prc_group", title: "PRC_Group" },
-  { key: "main_seq", title: "main_seq" },
-  { key: "met_seq", title: "met_seq" },
-]
+function DefectFilterRow({ title, options, selected, onSelect, placeholder }) {
+  return (
+    <div role="group" aria-label={title} className="flex items-start gap-4 py-2">
+      <h2 className="w-24 shrink-0 pt-1.5 text-sm font-semibold">{title}</h2>
+      <div className="flex min-w-0 flex-wrap gap-2">
+        {options.length ? options.map(({ value, label }) => (
+          <Button key={JSON.stringify(value)} type="button"
+            variant={selected === value ? "default" : "outline"}
+            className={`h-auto rounded-full px-[15px] text-xs leading-[18px] font-normal shadow-none transition-colors active:scale-95 ${selected === value
+              ? "bg-[#0066cc] py-[7.5px] text-white hover:bg-[#0071e3]"
+              : "border-[#0066cc] bg-white py-[6.5px] text-[#0066cc] hover:bg-[#f5f5f7] hover:text-[#0066cc]"}`}
+            aria-pressed={selected === value} onClick={() => onSelect(value)}>
+            {label}
+          </Button>
+        )) : <p className="py-1.5 text-sm text-muted-foreground">{placeholder}</p>}
+      </div>
+    </div>
+  )
+}
 
-function DefectDataFilters({ line, pathSdwt, onLoadInfoChange }) {
-  const [selected, setSelected] = useState({ prc_group: "", main_seq: "", met_seq: "" })
-  const [queries, setQueries] = useState({ prc_group: "", main_seq: "", met_seq: "" })
-  const filtersQuery = useQuery({
-    queryKey: ["defect-filters", line, pathSdwt, selected.prc_group, selected.main_seq, selected.met_seq],
-    queryFn: ({ signal }) => fetchDefectFilters({
-      line, pathSdwt, prcGroup: selected.prc_group, mainSeq: selected.main_seq, metSeq: selected.met_seq, signal,
-    }),
-    enabled: Boolean(line && pathSdwt),
+function DefectGroupCharts({ line, pathSdwt, prcGroup }) {
+  const selection = { line, pathSdwt, prcGroup, mainSeq: null, metSeq: null }
+  const filesQuery = useQuery({
+    queryKey: ["defect-filters", line, pathSdwt, prcGroup, null, null],
+    queryFn: ({ signal }) => fetchDefectFilters({ ...selection, signal }),
   })
-  const filters = filtersQuery.isSuccess ? filtersQuery.data.filters : {}
-  useEffect(() => {
-    onLoadInfoChange({ line, pathSdwt, status: filtersQuery.status, files: filtersQuery.isSuccess ? filtersQuery.data.files : [], selected })
-  }, [line, pathSdwt, filtersQuery.status, filtersQuery.isSuccess, filtersQuery.data, selected, onLoadInfoChange])
-
-  return DEFECT_FILTERS.map(({ key, title }, index) => {
-    const values = filters[key] ?? []
-    const options = values.map((value) => ({ value, label: value }))
-    if (index > 0 && values.length) options.unshift({ value: null, label: "ALL" })
-    const ready = Boolean(line && pathSdwt && (index === 0 || selected[DEFECT_FILTERS[index - 1].key] !== ""))
-    const query = queries[key].trim().toLowerCase()
-    return (
-      <FilterCard
-        key={key}
-        title={title}
-        badge={options.length || null}
-        disabled={!ready || !options.length}
-        placeholder={filtersQuery.isError && index === 0 ? (
-          <div className="space-y-2 text-xs text-destructive" role="alert">
-            <p>{filtersQuery.error.message}</p>
-            <Button type="button" size="sm" variant="outline" disabled={filtersQuery.isFetching} onClick={() => filtersQuery.refetch()}>Retry</Button>
+  return (
+    <section className="min-w-0 space-y-3" aria-label={`PRC Group ${prcGroup}`}>
+      <h3 className="text-sm font-semibold">{prcGroup}</h3>
+      {filesQuery.isError ? (
+        <div className="flex items-center gap-3 text-sm text-destructive" role="alert">
+          <p>{filesQuery.error.message}</p>
+          <Button type="button" size="sm" variant="outline" disabled={filesQuery.isFetching} onClick={() => filesQuery.refetch()}>Retry</Button>
+        </div>
+      ) : filesQuery.isPending ? (
+        <p className="text-sm text-muted-foreground" role="status">선택 조건의 파일 목록을 확인 중입니다.</p>
+      ) : filesQuery.data.files?.length ? (
+        <div className="overflow-x-auto">
+          <div className="grid min-w-[640px] grid-cols-2 gap-4">
+            {filesQuery.data.files.map((pair) => (
+              <DefectChartTrellis key={JSON.stringify([pair.path, pair.main_seq, pair.met_seq])} pair={pair} selection={selection} />
+            ))}
           </div>
-        ) : !ready ? "이전 필터를 먼저 선택하세요." : filtersQuery.isPending ? "Loading…" : "No matching items."}
-        isActive={options.some(({ value }) => value === selected[key])}
-        isLoading={ready && filtersQuery.isFetching}
-        query={queries[key]}
-        onQueryChange={(value) => setQueries((current) => ({ ...current, [key]: value }))}
-      >
-        {options.filter(({ label }) => label.toLowerCase().includes(query)).map(({ value, label }) => (
-          <SelectRow
-            key={JSON.stringify(value)}
-            label={label}
-            selected={selected[key] === value}
-            onClick={() => {
-              const cleared = Object.fromEntries(DEFECT_FILTERS.slice(index + 1).map((filter) => [filter.key, ""]))
-              setSelected((current) => ({ ...current, ...cleared, [key]: value }))
-              setQueries((current) => ({ ...current, ...cleared }))
-            }}
-          />
-        ))}
-      </FilterCard>
-    )
-  })
+        </div>
+      ) : <p className="text-sm text-muted-foreground">선택 조건에 해당하는 파일이 없습니다.</p>}
+    </section>
+  )
 }
 
 function DefectChartTrellis({ pair, selection }) {
@@ -132,8 +118,7 @@ export function DefectSpiderPage() {
   const pageRef = useRef(null)
   const [selectedLine, setSelectedLine] = useState("")
   const [selectedTeam, setSelectedTeam] = useState("")
-  const [loadInfo, setLoadInfo] = useState(null)
-  const [queries, setQueries] = useState({ line: "", team: "" })
+  const [selectedGroup, setSelectedGroup] = useState(null)
   const mappingQuery = useQuery({
     queryKey: ["l0-spider-line-mapping"],
     queryFn: fetchLineMapping,
@@ -149,14 +134,14 @@ export function DefectSpiderPage() {
   const activeTeam = teams.some(({ value }) => value === selectedTeam)
     ? selectedTeam
     : (teams[0]?.value ?? "")
-  const filteredLines = lines.filter((line) => (
-    formatLineDisplayName(line).toLowerCase().includes(queries.line.trim().toLowerCase())
-  ))
-  const filteredTeams = teams.filter(({ label }) => (
-    label.toLowerCase().includes(queries.team.trim().toLowerCase())
-  ))
-  const currentLoadInfo = loadInfo?.line === activeLine && loadInfo?.pathSdwt === activeTeam
-    ? loadInfo : null
+  const filtersQuery = useQuery({
+    queryKey: ["defect-filters", activeLine, activeTeam],
+    queryFn: ({ signal }) => fetchDefectFilters({ line: activeLine, pathSdwt: activeTeam, signal }),
+    enabled: Boolean(activeLine && activeTeam),
+  })
+  const groups = filtersQuery.isSuccess ? filtersQuery.data.filters.prc_group ?? [] : []
+  const activeGroup = groups.includes(selectedGroup) ? selectedGroup : null
+  const visibleGroups = activeGroup === null ? groups : [activeGroup]
 
   return (
     <div ref={pageRef} className="relative flex h-full min-h-0 min-w-0 flex-col overflow-y-auto bg-muted/30">
@@ -165,7 +150,7 @@ export function DefectSpiderPage() {
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Defect SPIDER</h1>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Select Line Name, SDWT, PRC_Group, main_seq, and met_seq to view Defect results.
+              Select Line Name, SDWT, and PRC Group to view charts for each main_seq and met_seq.
             </p>
           </div>
           <Button type="button" variant="outline" size="sm" asChild>
@@ -178,54 +163,32 @@ export function DefectSpiderPage() {
       </header>
 
       <section className="shrink-0 border-b border-[#e0e0e0] bg-[#f5f5f7]">
-        <ResizableFilterArea defaultHeight={332} minHeight={160} maxHeight={720}>
-          <div className="h-full overflow-x-auto px-6 py-2">
-            <div className="grid h-full min-w-[1080px] grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)_minmax(0,1.45fr)_minmax(0,1.2fr)_minmax(0,1.2fr)] gap-4">
-              <FilterCard
-                title="Line Name"
-                badge={lines.length || null}
-                disabled={!lines.length}
-                placeholder={mappingQuery.isPending ? "Loading…" : "No lines are available."}
-                isActive={Boolean(activeLine)}
-                isLoading={mappingQuery.isFetching && !lines.length}
-                query={queries.line}
-                onQueryChange={(line) => setQueries((current) => ({ ...current, line }))}
-              >
-                {filteredLines.map((line) => (
-                  <SelectRow
-                    key={line}
-                    label={formatLineDisplayName(line)}
-                    selected={activeLine === line}
-                    onClick={() => {
-                      setSelectedLine(line)
-                      setSelectedTeam("")
-                      setQueries((current) => ({ ...current, team: "" }))
-                    }}
-                  />
-                ))}
-              </FilterCard>
-              <FilterCard
-                title="SDWT"
-                badge={teams.length || null}
-                disabled={!activeLine}
-                placeholder={activeLine ? "No matching items." : "Select Line Name first"}
-                isActive={Boolean(activeTeam)}
-                query={queries.team}
-                onQueryChange={(team) => setQueries((current) => ({ ...current, team }))}
-              >
-                {filteredTeams.map(({ value, label }) => (
-                  <SelectRow
-                    key={value}
-                    label={label}
-                    selected={activeTeam === value}
-                    onClick={() => setSelectedTeam(value)}
-                  />
-                ))}
-              </FilterCard>
-              <DefectDataFilters key={JSON.stringify([activeLine, activeTeam])} line={activeLine} pathSdwt={activeTeam} onLoadInfoChange={setLoadInfo} />
-            </div>
+        <div className="divide-y px-6 py-2">
+          <DefectFilterRow title="Line Name" options={lines.map((line) => ({ value: line, label: formatLineDisplayName(line) }))}
+            selected={activeLine} placeholder={mappingQuery.isPending ? "Loading…" : "No lines are available."}
+            onSelect={(line) => {
+              setSelectedLine(line)
+              setSelectedTeam("")
+              setSelectedGroup(null)
+            }} />
+          <DefectFilterRow title="SDWT" options={teams} selected={activeTeam}
+            placeholder={activeLine ? "No matching items." : "Select Line Name first"}
+            onSelect={(team) => {
+              setSelectedTeam(team)
+              setSelectedGroup(null)
+            }} />
+          <DefectFilterRow title="PRC Group"
+            options={groups.length ? [{ value: null, label: "ALL" }, ...groups.map((group) => ({ value: group, label: group }))] : []}
+            selected={activeGroup} onSelect={setSelectedGroup}
+            placeholder={!activeTeam ? "Select SDWT first" : filtersQuery.isError ? "PRC Group을 불러올 수 없습니다."
+              : filtersQuery.isPending ? "Loading…" : "No matching items."} />
+        </div>
+        {filtersQuery.isError ? (
+          <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive" role="alert">
+            <span>{filtersQuery.error.message}</span>
+            <Button type="button" size="sm" variant="outline" disabled={filtersQuery.isFetching} onClick={() => filtersQuery.refetch()}>Retry</Button>
           </div>
-        </ResizableFilterArea>
+        ) : null}
         {mappingQuery.isError ? (
           <div className="flex items-center justify-between gap-3 border-t px-6 py-2 text-xs text-destructive" role="alert">
             <span>Reference mapping error: {mappingQuery.error.message}</span>
@@ -242,28 +205,19 @@ export function DefectSpiderPage() {
             <h2 className="text-base font-semibold">Scatter chart</h2>
             <p className="mt-1 text-xs text-muted-foreground">eqp_ch별 이상감지 RAW데이터와 이상감지 스탭 ALL RAW데이터를 겹쳐 표시합니다.</p>
           </header>
-          {currentLoadInfo?.status === "success" && currentLoadInfo.files?.length ? (
-            <div className="overflow-x-auto p-4">
-              <div className="grid min-w-[640px] grid-cols-2 gap-4">
-                {currentLoadInfo.files.map((pair) => (
-                  <DefectChartTrellis
-                    key={JSON.stringify([activeLine, activeTeam, pair.path, pair.main_seq, pair.met_seq])}
-                    pair={pair}
-                    selection={{ line: activeLine, pathSdwt: activeTeam,
-                      prcGroup: currentLoadInfo.selected.prc_group,
-                      mainSeq: currentLoadInfo.selected.main_seq,
-                      metSeq: currentLoadInfo.selected.met_seq }}
-                  />
-                ))}
-              </div>
+          {visibleGroups.length ? (
+            <div className="space-y-6 p-4">
+              {visibleGroups.map((prcGroup) => (
+                <DefectGroupCharts key={JSON.stringify([activeLine, activeTeam, prcGroup])}
+                  line={activeLine} pathSdwt={activeTeam} prcGroup={prcGroup} />
+              ))}
             </div>
           ) : (
             <p className="p-6 text-sm text-muted-foreground">
-              {currentLoadInfo?.status === "pending" ? "선택 조건의 파일 목록을 확인 중입니다."
-                : currentLoadInfo?.status === "error" ? "필터의 오류 안내를 확인하세요."
-                : currentLoadInfo?.selected && Object.values(currentLoadInfo.selected).every((value) => value !== "")
-                  ? "선택 조건에 해당하는 파일이 없습니다."
-                  : "PRC_Group, main_seq, met_seq를 선택하세요. ALL을 선택하면 해당 단계의 전체 값을 조회합니다."}
+              {!activeTeam ? "Line Name과 SDWT를 선택하세요."
+                : filtersQuery.isPending ? "PRC Group 목록을 확인 중입니다."
+                : filtersQuery.isError ? "필터의 오류 안내를 확인하세요."
+                : "선택 조건에 해당하는 PRC Group이 없습니다."}
             </p>
           )}
         </section>
