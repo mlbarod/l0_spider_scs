@@ -516,7 +516,7 @@ export function MyEqpRegistrationPage({ embedded = false }) {
                 <h1 className="text-lg font-semibold tracking-tight">MY EQP Registration</h1>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Register equipment and monitoring periods for Equipment Anomaly Detection.
+                Register equipment and monitoring periods for Equipment-Level In-SPEC Anomaly Detection.
               </p>
             </div>
           </div>
@@ -739,7 +739,7 @@ export function MyEqpRegistrationPage({ embedded = false }) {
                   className="h-12 text-base font-semibold"
                 />
                 <p className="mt-2 text-xs text-muted-foreground">
-                  You can designate multiple users. Each user can view these MY EQP conditions in Equipment Anomaly Detection.
+                  You can designate multiple users. Each user can view these MY EQP conditions in Equipment-Level In-SPEC Anomaly Detection.
                 </p>
               </div>
 

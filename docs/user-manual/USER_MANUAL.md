@@ -1,13 +1,13 @@
 # SPIDER User Manual
 
 > Baseline date: 2026-08-30
-> Currently available: Dashboard, Equipment Anomaly Detection, Similarity Anomaly Detection, User Manual
+> Currently available: Dashboard, Equipment-Level In-SPEC Anomaly Detection, Similarity Anomaly Detection, User Manual
 
 ## Contents
 
 1. [Access and Feature Status](#1-access-and-feature-status)
 2. [Using the Dashboard](#2-using-the-dashboard)
-3. [Equipment Anomaly Detection](#3-equipment-anomaly-detection)
+3. [Equipment-Level In-SPEC Anomaly Detection](#3-equipment-level-in-spec-anomaly-detection)
 4. [Similarity Anomaly Detection](#4-similarity-anomaly-detection)
 5. [Planned Features](#5-planned-features)
 6. [Troubleshooting and Precautions](#6-troubleshooting-and-precautions)
@@ -18,7 +18,7 @@ Select a feature card on the SPIDER home screen. Only cards marked `Live` are cu
 
 | Status | Features |
 |---|---|
-| Live | Equipment Anomaly Detection, Similarity Anomaly Detection, Saved History Board, MY EQP Registration, User Manual |
+| Live | Equipment-Level In-SPEC Anomaly Detection, Similarity Anomaly Detection, Saved History Board, MY EQP Registration, User Manual |
 | In Development | Defect SPIDER |
 
 The `Line Anomaly Dashboard` below the home screen is live. Planned feature cards are hidden from the home screen.
@@ -37,7 +37,7 @@ The Dashboard shows anomaly status and recent trends by Line.
 
 If `Last algorithm run time` at the top of the home screen shows `Unavailable`, contact the operator to check the data status instead of repeatedly refreshing.
 
-## 3. Equipment Anomaly Detection
+## 3. Equipment-Level In-SPEC Anomaly Detection
 
 ### 3.1 Filter Order
 
@@ -94,7 +94,7 @@ Use the page buttons when there are many results. `Retry` reloads the latest pat
 1. Open MY EQP Registration and select Line, SDWT, PRC Group, then one or more EQPs. ALL selects the current equipment list in that group.
 2. Enter the monitoring period in days and an optional Comment (up to 90 characters).
 3. Enter each viewer/recipient knox_id and press Enter. Your current ID is selected initially.
-4. Save MY EQP. Each designated user can view the registered equipment under MY EQP in Equipment Anomaly Detection for the selected Line.
+4. Save MY EQP. Each designated user can view the registered equipment under MY EQP in Equipment-Level In-SPEC Anomaly Detection for the selected Line.
 5. Use Delete in the registration list to remove your own condition. Other recipients retain their registrations.
 
 Expired registrations remain visible in the registration list but do not appear in MY EQP anomaly queries. This screen saves recipient information; it does not send email or create a delivery schedule.

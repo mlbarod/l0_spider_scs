@@ -1977,7 +1977,7 @@ export function FdcTrendPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold tracking-tight">Equipment Anomaly Detection</h1>
+              <h1 className="text-lg font-semibold tracking-tight">Equipment-Level In-SPEC Anomaly Detection</h1>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Select a line, team, and sensor grade to automatically view CRITICAL charts with all remaining filters set to ALL.

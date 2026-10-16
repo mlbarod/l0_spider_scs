@@ -12,7 +12,7 @@ import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
 const spiderApps = [
   {
     icon: Activity,
-    title: "Equipment Anomaly Detection",
+    title: "Equipment-Level In-SPEC Anomaly Detection",
     subtitle: "Review anomaly trends by equipment using STEP and FDC sensors.",
     category: "FDC Trend",
     href: "/self-equipment",
@@ -200,7 +200,7 @@ export function L0SpiderHomePage() {
             SCS ETCH SPIDER
           </h1>
           <p className="mt-5 max-w-full break-keep text-[21px] font-normal leading-[1.4] tracking-[-0.23px] text-[#333333] sm:text-[24px]">
-            Start L0 process anomaly detection and Hard Limit recommendations from one screen.
+            Start in-SPEC process and inter-equipment anomaly detection from one screen.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <a href="#spider-apps" className="rounded-full bg-[#0066cc] px-[22px] py-[11px] text-[17px] text-white transition-colors active:scale-95 hover:bg-[#0071e3]">
