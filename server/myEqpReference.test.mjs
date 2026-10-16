@@ -1,12 +1,14 @@
 import assert from "node:assert/strict"
 import test from "node:test"
+import { fileURLToPath } from "node:url"
 
 import {
   handleMyEqpReferenceRequest,
   normalizeMyEqpReferenceRows,
+  readMyEqpReferenceRows,
 } from "./myEqpReference.mjs"
 
-test("chamber_mapping 응답은 기존 API의 네 컬럼만 노출한다", () => {
+test("파일 기준정보 응답은 기존 API의 네 컬럼만 노출한다", () => {
   const rows = normalizeMyEqpReferenceRows([{
     main: " EQP01 ",
     disp_name: " A ",
@@ -51,4 +53,14 @@ test("My EQP 기준정보 API는 쓰기 요청을 거부한다", async () => {
   assert.equal(response.statusCode, 405)
   assert.equal(response.headers.Allow, "GET, HEAD")
   assert.equal(JSON.parse(response.body).error, "Method not allowed")
+})
+
+test("자설비와 동일한 Parquet에서 등록 후보를 읽고 불완전한 행과 추가 컬럼은 제외한다", async () => {
+  const filePath = fileURLToPath(new URL("../tests/fixtures/my-eqp-reference.parquet", import.meta.url))
+  assert.deepEqual(await readMyEqpReferenceRows(filePath), [
+    { main: "EQP01", disp_name: "A", sdwt_prod: "Team A", prc_group: "ETCH" },
+    { main: "EQP02", disp_name: "B", sdwt_prod: "Team A", prc_group: "ETCH" },
+    { main: "OTHER", disp_name: "C", sdwt_prod: "Team B", prc_group: "OTHER" },
+  ])
+  await assert.rejects(readMyEqpReferenceRows(`${filePath}.missing`), { code: "ENOENT" })
 })

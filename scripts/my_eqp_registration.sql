@@ -15,5 +15,5 @@ CREATE TABLE IF NOT EXISTS `myeqp_regist` (
 
 -- 기존 테이블에 is_public이 없는 경우에만 관리자가 별도 검토 후 적용:
 -- ALTER TABLE `myeqp_regist` ADD COLUMN `is_public` TINYINT(1) NOT NULL DEFAULT 0;
--- 기준정보 조회에는 chamber_mapping의 eqp_id, disp_name, sdwt_prod,
--- prc_group, fdc_bin_prop 컬럼이 필요합니다(기존 l0_spider와 동일).
+-- 기준정보는 자설비와 동일한 erdtsum_info.parque 파일에서 조회합니다.
+-- main, disp_name, sdwt_prod, prc_group 컬럼이 필요합니다.

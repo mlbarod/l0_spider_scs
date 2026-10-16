@@ -33,7 +33,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 import { fetchLineMapping } from "../api/mappingConfigApi"
-import { areDbConnectionsEnabled, isLineMappingQueryReady } from "../api/mappingContract.mjs"
+import { areDbConnectionsEnabled, getSelfEquipmentFileConnectionState, isLineMappingQueryReady } from "../api/mappingContract.mjs"
 import { fetchCurrentUser } from "../api/currentUserApi"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import {
@@ -308,7 +308,7 @@ export function MyEqpRegistrationPage({ embedded = false }) {
     queryFn: fetchMyEqpReference,
     staleTime: 5 * 60 * 1000,
     retry: false,
-    enabled: mappingReady && areDbConnectionsEnabled(mappingQuery.data),
+    enabled: mappingReady && getSelfEquipmentFileConnectionState(mappingQuery) === "enabled",
   })
   const registrationMutation = useMutation({
     mutationFn: createMyEqpRegistration,
@@ -371,7 +371,6 @@ export function MyEqpRegistrationPage({ embedded = false }) {
     const seen = new Set()
     return sdwtReferenceRows
       .filter((row) => row.prc_group === activePrcGroup)
-      // The reference API exposes chamber_mapping.eqp_id as main.
       .map((row) => ({ ...row, label: `${row.main}_${row.disp_name}` }))
       .filter((row) => {
         if (seen.has(row.label)) return false

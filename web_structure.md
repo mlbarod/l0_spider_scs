@@ -446,10 +446,10 @@ flowchart LR
     MYNODE["myEqpRegistration.mjs"]
     PYMAIL["mailing_registration.py"]
     PYMY["my_eqp_registration.py"]
-    PYREF["my_eqp_reference.py"]
+    PYREF["myEqpReference.mjs → eqpReference.mjs"]
     EMAIL[("email")]
     REG[("myeqp_regist")]
-    REF[("erdtsum_info")]
+    REF[("erdtsum_info.parque")]
 
     HUB --> MAIL --> MAILAPI --> MAILNODE --> PYMAIL --> EMAIL
     HUB --> MY --> MYAPI --> MYNODE --> PYMY --> REG
@@ -486,7 +486,7 @@ flowchart LR
 | `/api/common-anomaly-data` | GET | `commonAnomalyApi.js` / 공통부 | `commonAnomalyData.mjs` | 공통부 `df_path.parquet` + `pass_history` |
 | `/api/common-anomaly-image` | GET, HEAD | 공통부 이미지 URL builder | `commonAnomalyData.mjs` | `{eqp}.png` stream |
 | `/api/common-anomaly-scatter-data` | GET | 공통부 동일성 차트 | `commonAnomalyData.mjs` | 공통부 `data.parquet` |
-| `/api/my-eqp-reference` | GET, HEAD | `myEqpReferenceApi.js` / My EQP 등록 | `myEqpReference.mjs` | `chamber_mapping` SELECT DISTINCT |
+| `/api/my-eqp-reference` | GET, HEAD | `myEqpReferenceApi.js` / My EQP 등록 | `myEqpReference.mjs` | `erdtsum_info.parque` 공통 파일 reader |
 | `/api/my-eqp-registration` | GET, POST, DELETE | `myEqpRegistrationApi.js` | `myEqpRegistration.mjs` | `myeqp_regist` |
 | `/api/mailing-registration` | GET, POST, DELETE | `mailingRegistrationApi.js` | `mailingRegistration.mjs` | `email` |
 
@@ -555,7 +555,6 @@ flowchart LR
 
 | 테이블 | 읽기/쓰기 | Python helper | API | 화면 및 목적 |
 | --- | --- | --- | --- | --- |
-| `chamber_mapping` | SELECT DISTINCT | `my_eqp_reference.py` | `/api/my-eqp-reference` | My EQP 등록 후보: `eqp_id`(API main), `disp_name`, `sdwt_prod`, `prc_group`; fdc_bin_prop ETCHER/STRIPPER |
 | `myeqp_regist` | SELECT, INSERT, DELETE | `my_eqp_registration.py` | `/api/my-eqp-registration`, 내부 MY EQP 조회 | 사용자별 EQP·기간·수신/열람 조건 |
 | `email` | SELECT, INSERT, UPDATE, DELETE | `mailing_registration.py` | `/api/mailing-registration` | Mailing 수신인의 SDWT·Grade 조건 |
 | `pass_history` | SELECT, INSERT, UPDATE, DELETE | `pass_history.py` | `/api/pass-history` | Self·공통부 SKIP·SKIP LIST |

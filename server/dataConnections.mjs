@@ -12,6 +12,7 @@ const DASHBOARD_READ_METHODS = new Map([
   ["/api/dashboard-latest-date", new Set(["GET", "HEAD"])],
 ])
 const SELF_EQUIPMENT_READ_METHODS = new Map([
+  ["/api/my-eqp-reference", new Set(["GET", "HEAD"])],
   ["/api/self-equipment-data", new Set(["GET"])],
   ["/api/erd-scatter-data", new Set(["GET"])],
 ])
@@ -29,7 +30,6 @@ const COMMON_ANOMALY_READ_METHODS = new Map([
   ["/api/common-anomaly-image", new Set(["GET", "HEAD"])],
 ])
 const DB_METHODS = new Map([
-  ["/api/my-eqp-reference", new Set(["GET", "HEAD"])],
   ["/api/my-eqp-registration", new Set(["GET", "POST", "DELETE"])],
   ["/api/my-eqp-equipment-data", new Set(["GET"])],
   ["/api/current-user", new Set(["GET", "POST"])],

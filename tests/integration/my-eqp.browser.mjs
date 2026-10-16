@@ -6,6 +6,7 @@ import { mkdtemp, writeFile, rm } from "node:fs/promises"
 import { createServer } from "node:net"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { fileURLToPath } from "node:url"
 import test from "node:test"
 import { chromium } from "playwright"
 import { handleMyEqpEquipmentDataRequest } from "../../server/myEqpEquipmentData.mjs"
@@ -55,8 +56,6 @@ db=sqlite3.connect(root/'synthetic.db')
 db.execute('CREATE TABLE user_ip_mapping (ip_address TEXT PRIMARY KEY, knox_id TEXT)')
 db.execute("INSERT INTO user_ip_mapping VALUES ('127.0.0.1','owner')")
 db.execute('CREATE TABLE myeqp_regist (line, sdwt, prc_group, eqp, exec_date, periode, comment, knox_id, is_public)')
-db.execute('CREATE TABLE chamber_mapping (eqp_id,disp_name,sdwt_prod,prc_group,fdc_bin_prop)')
-db.executemany('INSERT INTO chamber_mapping VALUES (?,?,?,?,?)', [('EQP01','A','Team A','ETCH','ETCHER'),('EQP02','B','Team A','ETCH','STRIPPER'),('OTHER','C','Team B','OTHER','ETCHER')])
 db.commit()
 `, root])
   const portFinder = createServer().listen(0, "127.0.0.1")
@@ -66,7 +65,8 @@ db.commit()
   const base = `http://127.0.0.1:${port}`
   const child = spawn(process.execPath, ["server.mjs"], {
     env: { ...process.env, HOST: "127.0.0.1", PORT: String(port), LIVE_RELOAD: "0", BUILD_ON_START: "0",
-      SCS_DATA_CONNECTIONS_ENABLED: "0", SCS_DB_CONNECTIONS_ENABLED: "1", SPIDER_MASTER_KNOX_IDS: "",
+      SCS_DATA_CONNECTIONS_ENABLED: "0", SCS_DB_CONNECTIONS_ENABLED: "1", SCS_SELF_EQUIPMENT_DATA_ENABLED: "1", SPIDER_MASTER_KNOX_IDS: "",
+      SCS_EQP_REFERENCE_PATH: fileURLToPath(new URL("../fixtures/my-eqp-reference.parquet", import.meta.url)),
       DB_INFO_PATH: join(root, "db.pkl"), PYTHONPATH: root, MAPPING_CONFIG_PATH: join(root, "mapping.json") },
     stdio: ["ignore", "pipe", "pipe"],
   })
@@ -79,6 +79,9 @@ db.commit()
   const refResponse = await fetch(`${base}/api/my-eqp-reference`)
   assert.equal(refResponse.status, 200)
   assert.equal((await refResponse.json()).rows.length, 3)
+  const headReference = await fetch(`${base}/api/my-eqp-reference`, { method: "HEAD" })
+  assert.equal(headReference.status, 200)
+  assert.equal(await headReference.text(), "")
   const noRegistration = await fetch(`${base}/api/my-eqp-equipment-data?line=L1`)
   assert.equal(noRegistration.status, 200)
   assert.deepEqual((await noRegistration.json()).rows, [])
@@ -163,5 +166,16 @@ db.commit()
   await page.screenshot({ path: "/tmp/scs-my-eqp-chinese.png", fullPage: true })
   await page.setViewportSize({ width: 390, height: 844 })
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+  // Reference candidates remain available when registration DB access is disabled.
+  await page.route("**/api/mapping-config", route => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({ ...mapping, capabilities: { ...mapping.capabilities, dbConnections: false, selfEquipmentDb: false } }),
+  }))
+  await page.evaluate(() => localStorage.setItem("l0-spider-language", "en"))
+  await page.addInitScript(() => localStorage.setItem("l0-spider-language", "en"))
+  await page.goto(`${base}/registration`)
+  await page.getByRole("button", { name: "ETCH", exact: true }).click()
+  await page.getByRole("button", { name: "EQP01_A", exact: true }).waitFor()
+  assert.equal(await page.getByRole("button", { name: "Save MY EQP", exact: true }).isDisabled(), true)
   assert.deepEqual(errors, [])
 })

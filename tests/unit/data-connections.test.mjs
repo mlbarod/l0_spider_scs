@@ -224,6 +224,8 @@ test("기본 실행은 Dashboard, 자설비, 동일성과 공통부 이상감지
     ["HEAD", "/api/dashboard-latest-date"],
     ["GET", "/api/mapping-config"],
     ["GET", "/api/self-equipment-data"],
+    ["GET", "/api/my-eqp-reference"],
+    ["HEAD", "/api/my-eqp-reference"],
     ["GET", "/api/erd-scatter-data"],
     ["GET", "/api/latest-commonality-path"],
     ["HEAD", "/api/latest-commonality-path"],
@@ -275,8 +277,6 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
   const environment = { DB_INFO_PATH: "/synthetic/db_info.pkl" }
   for (const [method, pathname] of [
     ["GET", "/api/my-eqp-equipment-data"],
-    ["GET", "/api/my-eqp-reference"],
-    ["HEAD", "/api/my-eqp-reference"],
     ["GET", "/api/my-eqp-registration"],
     ["POST", "/api/my-eqp-registration"],
     ["DELETE", "/api/my-eqp-registration"],
@@ -357,6 +357,7 @@ test("이력 삭제 요청은 DB가 준비되면 권한 handler로 전달하고 
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
   for (const pathname of [
     "/api/self-equipment-data",
+    "/api/my-eqp-reference",
     "/api/erd-scatter-data",
   ]) {
     const response = createResponse()
@@ -424,5 +425,21 @@ test("공통부 이상감지 read API는 환경변수 0으로 명시적으로 �
       () => {},
     ), true, pathname)
     assert.equal(response.statusCode, 503, pathname)
+  }
+})
+
+test("MY EQP 기준정보는 DB 상태와 무관하게 자설비 파일 연결 설정을 따른다", () => {
+  for (const enabled of ["0", "1"]) {
+    for (const method of ["GET", "HEAD"]) {
+      for (const readable of [false, true]) {
+        assert.equal(blockDisabledDataRequest(
+          { method, url: "/api/my-eqp-reference" },
+          createResponse(),
+          { SCS_SELF_EQUIPMENT_DATA_ENABLED: enabled, SCS_DB_CONNECTIONS_ENABLED: "1" },
+          () => {},
+          () => readable,
+        ), enabled === "0")
+      }
+    }
   }
 })
