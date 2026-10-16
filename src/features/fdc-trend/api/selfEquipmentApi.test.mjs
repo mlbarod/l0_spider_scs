@@ -231,3 +231,22 @@ test("EQP ALL SKIP 대상 조회는 sensor ALL을 허용하지 않는다", async
   )
   assert.equal(fetchCalled, false)
 })
+
+test("MY EQP ALL SKIP은 전용 API를 사용하고 원래 SDWT를 보존한다", async context => {
+  const previous = globalThis.fetch
+  context.after(() => { globalThis.fetch = previous })
+  globalThis.fetch = async input => {
+    const url = new URL(input, "http://synthetic.test")
+    assert.equal(url.pathname, "/api/my-eqp-equipment-data")
+    assert.equal(url.searchParams.has("pathSdwt"), false)
+    assert.equal(url.searchParams.get("chStep"), "ALL")
+    assert.equal(url.searchParams.get("sensor"), "TEMP")
+    return { ok: true, json: async () => ({ rows: [
+      { file_path: "/synthetic/a", sdwt: "Team A", eqp: "EQP01-A.png", sensor: "TEMP", step: "10" },
+      { file_path: "/synthetic/b", sdwt: "Team B", eqp: "EQP01-A.png", sensor: "TEMP", step: "20" },
+    ] }) }
+  }
+  const targets = await fetchEqpAllSkipTargets({ isMyEqp: true, line: "L1", pathSdwt: "__MY_EQP__", sdwt: "MY EQP", priorities: ["A"], sensor: "TEMP", eqpCh: "EQP01-A.png" })
+  assert.deepEqual(targets.map(row => row.sdwt), ["Team A", "Team B"])
+  assert.deepEqual(targets.map(row => row.filePath), ["/synthetic/a", "/synthetic/b"])
+})

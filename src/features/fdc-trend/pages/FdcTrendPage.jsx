@@ -40,6 +40,7 @@ import { cn } from "@/lib/utils"
 
 import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
+import { fetchMyEqpRegistrations } from "../api/myEqpRegistrationApi"
 import { fetchCurrentUser } from "../api/currentUserApi"
 import { useHitHistorySave } from "../hooks/useHitHistorySave"
 import { HistorySavedDialog } from "../components/HistorySavedDialog"
@@ -63,6 +64,7 @@ import {
   fetchErdScatterData,
   fetchEqpAllSkipTargets,
   fetchSelfEquipmentData,
+  fetchMyEqpEquipmentData,
   getErdChartRequest,
   getSelfEquipmentHistoryFilePath,
   getSelfEquipmentHistoryFilePaths,
@@ -93,6 +95,7 @@ const ALL_EQP_CHANNELS = "ALL"
 const ALL_SENSORS = "ALL"
 const ALL_CH_STEPS = "ALL"
 const ALL_STEPS = "ALL"
+const MY_EQP_TEAM = "__MY_EQP__"
 const SKIP_LIST_TEAM = "__SKIP_LIST__"
 const SKIP_LIST_LABEL = "SKIP LIST"
 const SCATTER_CHART_MARGIN = Object.freeze({ top: 42, right: 18, bottom: 28, left: 16 })
@@ -1579,24 +1582,37 @@ export function FdcTrendPage() {
     [lineMapping],
   )
   const activeLine = lines.includes(selectedLine) ? selectedLine : (lines[0] ?? "")
+  const myEqpRegistrationsQuery = useQuery({
+    queryKey: ["my-eqp-registrations", activeLine, true],
+    queryFn: () => fetchMyEqpRegistrations({ line: activeLine, activeOnly: true }),
+    enabled: Boolean(mappingReady && selfEquipmentDbEnabled && activeLine),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    retry: false,
+  })
+  const hasActiveMyEqp = Boolean(myEqpRegistrationsQuery.data?.length)
   const teamOptions = useMemo(
     () => [
       ...Object.entries(lineMapping)
         .filter(([, line]) => line === activeLine)
         .map(([key]) => ({ key, label: sdwtMapping[key] ?? key })),
+      ...(hasActiveMyEqp ? [{ key: MY_EQP_TEAM, label: "MY EQP" }] : []),
       ...(activeLine ? [{ key: SKIP_LIST_TEAM, label: SKIP_LIST_LABEL }] : []),
     ],
-    [activeLine, lineMapping, sdwtMapping],
+    [activeLine, hasActiveMyEqp, lineMapping, sdwtMapping],
   )
   const resolvedSelectedTeam = resolveSelfEquipmentTeam(teamOptions, [selectedTeam])
   const activeTeam = resolvedSelectedTeam
     ? resolvedSelectedTeam
+    : [MY_EQP_TEAM, "MY EQP"].includes(selectedTeam)
+    ? ""
     : (teamOptions[0]?.key ?? "")
   const activeTeamLabel = teamOptions.find((team) => team.key === activeTeam)?.label ?? ""
   const isSkipList = activeTeam === SKIP_LIST_TEAM
+  const isMyEqp = activeTeam === MY_EQP_TEAM
   const priorities = useMemo(() => expandPriorities(selectedGrades), [selectedGrades])
   const dataQueryKey = [
-    isSkipList ? "skip-list-data" : "self-equipment-data",
+    isSkipList ? "skip-list-data" : isMyEqp ? "my-eqp-equipment-data" : "self-equipment-data",
     activeLine,
     activeTeam,
     activeTeamLabel,
@@ -1617,6 +1633,8 @@ export function FdcTrendPage() {
           sensor: selectedSensor,
           chStep: selectedChStep,
         })
+      : isMyEqp
+      ? fetchMyEqpEquipmentData({ line: activeLine, priorities, prcGroup: selectedDesc, eqpCh: selectedEqpCh, sensor: selectedSensor, chStep: selectedChStep })
       : fetchSelfEquipmentData({
           line: activeLine,
           pathSdwt: activeTeam,
@@ -1670,6 +1688,7 @@ export function FdcTrendPage() {
     enabled: Boolean(
       mappingReady
       && !isSkipList
+      && !isMyEqp
       && activeLine
       && activeTeamLabel
       && activeDesc
@@ -1740,6 +1759,7 @@ export function FdcTrendPage() {
     if (isSkipList) return new Map()
     return new Map(chartGroups.map((group) => [group.eqp, async (sensor) => {
       return fetchEqpAllSkipTargets({
+        isMyEqp,
         line: activeLine,
         pathSdwt: activeTeam,
         sdwt: activeTeamLabel,
@@ -1755,6 +1775,7 @@ export function FdcTrendPage() {
     activeTeam,
     activeTeamLabel,
     chartGroups,
+    isMyEqp,
     isSkipList,
     priorities,
   ])
@@ -1768,12 +1789,12 @@ export function FdcTrendPage() {
     queries.team,
   )
   const gradeOptions = useMemo(() => {
-    if (!isSkipList) return SENSOR_GRADES
+    if (!isSkipList && !isMyEqp) return SENSOR_GRADES
     return Array.from(new Set(
       (dataQuery.data?.availablePriorities ?? EMPTY_LIST)
         .map((priority) => (["A", "B"].includes(priority) ? "A/B" : priority)),
     )).filter((grade) => SENSOR_GRADES.includes(grade))
-  }, [dataQuery.data?.availablePriorities, isSkipList])
+  }, [dataQuery.data?.availablePriorities, isMyEqp, isSkipList])
   const filteredGrades = filterItems(
     gradeOptions.map((grade) => ({ value: grade, label: grade })),
     queries.grade,
@@ -1896,7 +1917,7 @@ export function FdcTrendPage() {
     const clickedAt = new Date().toISOString()
     try {
       const queryKey = [
-        "self-equipment-data",
+        isMyEqp ? "my-eqp-equipment-data" : "self-equipment-data",
         activeLine,
         activeTeam,
         activeTeamLabel,
@@ -1908,7 +1929,7 @@ export function FdcTrendPage() {
       ]
       const payload = await queryClient.fetchQuery({
         queryKey,
-        queryFn: () => fetchSelfEquipmentData({
+        queryFn: () => (isMyEqp ? fetchMyEqpEquipmentData : fetchSelfEquipmentData)({
           line: activeLine,
           pathSdwt: activeTeam,
           sdwt: activeTeamLabel,
@@ -2213,6 +2234,12 @@ export function FdcTrendPage() {
             {dataQuery.error.message}
           </div>
         ) : null}
+        {myEqpRegistrationsQuery.isError ? (
+          <p role="alert" className="text-sm text-destructive">{myEqpRegistrationsQuery.error.message}</p>
+        ) : null}
+        {isMyEqp && !dataQuery.isFetching && !dataQuery.isError && dataQuery.data?.counts?.matchedRegistrationRows === 0 ? (
+          <p className="rounded-lg border p-4 text-sm text-muted-foreground">No anomalies match your registered MY EQP equipment.</p>
+        ) : null}
         {!isSkipList && passHistoryQuery.isError ? (
           <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             Unable to load PASS history: {passHistoryQuery.error.message}
@@ -2333,7 +2360,7 @@ export function FdcTrendPage() {
                                   ? row.pass_history
                                   : passHistoryByKey.get(buildChartPassHistoryKey(activeLine, row))}
                                 allSkipLoadTargets={allSkipLoadTargetsByEqp.get(group.eqp) ?? null}
-                                dataQueryKeyPrefix="self-equipment-data"
+                                dataQueryKeyPrefix={isMyEqp ? "my-eqp-equipment-data" : "self-equipment-data"}
                               />
                             </div>
                             {group.gathered && showThreeDayIdentity ? (

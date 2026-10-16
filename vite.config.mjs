@@ -9,6 +9,9 @@ import {
   handleDashboardLatestDateRequest,
 } from "./server/dashboardData.mjs"
 import { handleDashboardStatsRequest } from "./server/dashboardStats.mjs"
+import { handleMyEqpRegistrationRequest } from "./server/myEqpRegistration.mjs"
+import { handleMyEqpReferenceRequest } from "./server/myEqpReference.mjs"
+import { handleMyEqpEquipmentDataRequest } from "./server/myEqpEquipmentData.mjs"
 import { handleCurrentUserRequest } from "./server/currentUser.mjs"
 import { handleClickedCategoryHistoryRequest } from "./server/clickedCategoryHistory.mjs"
 import {
@@ -65,6 +68,19 @@ function mappingConfigApi() {
 
         if (url.pathname === "/api/dashboard-latest-date") {
           handleDashboardLatestDateRequest(req, res)
+          return
+        }
+
+        if (url.pathname === "/api/my-eqp-registration") {
+          handleMyEqpRegistrationRequest(req, res, url)
+          return
+        }
+        if (url.pathname === "/api/my-eqp-reference") {
+          handleMyEqpReferenceRequest(req, res)
+          return
+        }
+        if (url.pathname === "/api/my-eqp-equipment-data") {
+          handleMyEqpEquipmentDataRequest(req, res, url)
           return
         }
 

@@ -8,7 +8,6 @@ import { cn } from "@/lib/utils"
 
 import { fetchDashboardStats } from "../api/dashboardApi"
 import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
-import { getUnderConstructionPath } from "../utils/underConstructionApps.mjs"
 
 const spiderApps = [
   {
@@ -43,9 +42,9 @@ const spiderApps = [
     title: "MY EQP Registration",
     subtitle: "Register MY EQP equipment for each user.",
     category: "Registration",
-    href: getUnderConstructionPath("my-eqp-registration"),
+    href: "/registration",
     active: true,
-    status: "Planned",
+    status: "Live",
   },
   {
     icon: BookOpen,

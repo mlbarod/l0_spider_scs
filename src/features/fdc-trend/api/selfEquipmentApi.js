@@ -89,7 +89,20 @@ export async function fetchSelfEquipmentData({
   return payload
 }
 
+export async function fetchMyEqpEquipmentData({ line, priorities = [], desc, prcGroup, eqpCh, sensor, chStep }) {
+  const params = new URLSearchParams({ line })
+  priorities.forEach(priority => params.append("priority", priority))
+  for (const [key, value] of Object.entries({ desc, prcGroup, eqpCh, sensor, chStep })) {
+    if (value) params.set(key, value)
+  }
+  const response = await fetch(`/api/my-eqp-equipment-data?${params}`, { headers: { Accept: "application/json" } })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(getApiErrorMessage(payload, "Unable to load MY EQP anomaly data."))
+  return payload
+}
+
 export async function fetchEqpAllSkipTargets({
+  isMyEqp = false,
   line,
   pathSdwt,
   sdwt,
@@ -111,7 +124,9 @@ export async function fetchEqpAllSkipTargets({
     sensor: targetSensor,
     chStep: "ALL",
   }
-  const payload = await fetchSelfEquipmentData({ ...filters, pathSdwt, sdwt })
+  const payload = isMyEqp
+    ? await fetchMyEqpEquipmentData(filters)
+    : await fetchSelfEquipmentData({ ...filters, pathSdwt, sdwt })
 
   return (Array.isArray(payload.rows) ? payload.rows : [])
     .map((row) => ({

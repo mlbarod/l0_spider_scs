@@ -8,6 +8,7 @@ import { L0SpiderHomePage } from "./pages/L0SpiderHomePage"
 import { SpiderComingSoonPage } from "./pages/SpiderComingSoonPage"
 import { SpiderFeaturePage } from "./pages/SpiderFeaturePage"
 import { UserManualPage } from "./pages/UserManualPage"
+import { MyEqpRegistrationPage } from "./pages/MyEqpRegistrationPage"
 import { HitHistoryPage } from "./pages/HitHistoryPage"
 
 const fdcTrendChildren = [
@@ -21,7 +22,7 @@ const fdcTrendChildren = [
   },
   {
     path: "registration",
-    element: <SpiderComingSoonPage appId="my-eqp-registration" />,
+    element: <MyEqpRegistrationPage />,
   },
   {
     path: "matching-anomaly",
@@ -48,12 +49,16 @@ const fdcTrendChildren = [
     element: <Navigate to="/defect-spider" replace />,
   },
   {
+    path: "under-construction/my-eqp-registration",
+    element: <Navigate to="/registration" replace />,
+  },
+  {
     path: "under-construction/:appId",
     element: <SpiderComingSoonPage />,
   },
   {
     path: "recipients",
-    element: <SpiderComingSoonPage appId="my-eqp-registration" />,
+    element: <MyEqpRegistrationPage />,
   },
   {
     path: "defect-spider",

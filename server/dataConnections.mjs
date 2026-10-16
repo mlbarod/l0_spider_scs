@@ -29,6 +29,9 @@ const COMMON_ANOMALY_READ_METHODS = new Map([
   ["/api/common-anomaly-image", new Set(["GET", "HEAD"])],
 ])
 const DB_METHODS = new Map([
+  ["/api/my-eqp-reference", new Set(["GET", "HEAD"])],
+  ["/api/my-eqp-registration", new Set(["GET", "POST", "DELETE"])],
+  ["/api/my-eqp-equipment-data", new Set(["GET"])],
   ["/api/current-user", new Set(["GET", "POST"])],
   ["/api/hit-history", new Set(["GET", "POST", "DELETE"])],
   ["/api/clicked-category-history", new Set(["POST"])],

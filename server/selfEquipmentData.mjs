@@ -376,7 +376,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
   const priorities = new Set(filters.priorities)
   const baseRows = rows.filter((row) => (
     row.line_rev === filters.line
-    && row.sdwt === filters.sdwt
+    && (filters.includeAllSdwt || row.sdwt === filters.sdwt)
     && priorities.has(row.priority)
   ))
   const steps = sortByLabel(aggregateBy(baseRows, "recipe_id", (recipeId, recipeRows) => ({

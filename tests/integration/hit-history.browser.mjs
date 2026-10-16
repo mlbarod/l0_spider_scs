@@ -189,7 +189,7 @@ test("HTTP 환경에서 차트 PNG 저장·재시도·확대 상태 보존·게�
 })
 
 
-test("中文首页仅保留 MY EQP 开发计划，管理员确认删除与普通用户权限", async () => {
+test("中文首页提供 MY EQP 登记入口，管理员确认删除与普通用户权限", async () => {
   const browser = await chromium.launch({ headless: true,
     ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
   })
@@ -226,8 +226,8 @@ test("中文首页仅保留 MY EQP 开发计划，管理员确认删除与普通
     })
     await page.goto("http://history.test/")
     await page.getByRole("link").filter({ hasText: "历史记录看板" }).waitFor()
-    assert.equal(await page.locator('a[href="/under-construction/my-eqp-registration"]').count(), 1)
-    assert.equal(await page.locator('a[href^="/under-construction/"]').count(), 1)
+    assert.equal(await page.locator('a[href="/registration"]').count(), 1)
+    assert.equal(await page.locator('a[href^="/under-construction/"]').count(), 0)
     assert.equal(await page.locator('a[href="/defect-spider"]').count(), 1)
     await page.getByRole("link").filter({ hasText: "历史记录看板" }).click()
     await page.getByRole("heading", { name: "历史记录看板", exact: true }).waitFor()

@@ -274,6 +274,12 @@ test("기본 실행은 Dashboard, 자설비, 동일성과 공통부 이상감지
 test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한적으로 연다", () => {
   const environment = { DB_INFO_PATH: "/synthetic/db_info.pkl" }
   for (const [method, pathname] of [
+    ["GET", "/api/my-eqp-equipment-data"],
+    ["GET", "/api/my-eqp-reference"],
+    ["HEAD", "/api/my-eqp-reference"],
+    ["GET", "/api/my-eqp-registration"],
+    ["POST", "/api/my-eqp-registration"],
+    ["DELETE", "/api/my-eqp-registration"],
     ["GET", "/api/current-user"],
     ["POST", "/api/current-user"],
     ["GET", "/api/hit-history"],
@@ -294,8 +300,6 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
 
   for (const [method, pathname] of [
     ["DELETE", "/api/mailing-registration"],
-    ["GET", "/api/my-eqp-equipment-data"],
-    ["POST", "/api/my-eqp-registration"],
     ["GET", "/api/common-commonality-data"],
   ]) {
     const response = createResponse()

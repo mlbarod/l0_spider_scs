@@ -18,10 +18,10 @@ Select a feature card on the SPIDER home screen. Only cards marked `Live` are cu
 
 | Status | Features |
 |---|---|
-| Live | Equipment Anomaly Detection, Similarity Anomaly Detection, User Manual |
-| Planned | Common Area Anomaly Detection, Common Area Similarity Detection, FDC Hard Limit Recommendations, MY EQP Registration, Defect SPIDER, L1 SPIDER, L3 SPIDER |
+| Live | Equipment Anomaly Detection, Similarity Anomaly Detection, Saved History Board, MY EQP Registration, User Manual |
+| In Development | Defect SPIDER |
 
-The `Line Anomaly Dashboard` below the home screen is live. Selecting a `Planned` card opens a preparation notice instead of a feature screen.
+The `Line Anomaly Dashboard` below the home screen is live. Planned feature cards are hidden from the home screen.
 
 ## 2. Using the Dashboard
 
@@ -89,17 +89,15 @@ Before running an action, verify the target EQP, Sensor, and scope. Do not creat
 
 Use the page buttons when there are many results. `Retry` reloads the latest path using the current filters.
 
-## 5. Planned Features
+## 5. MY EQP Registration
 
-The following features appear on the home screen but are not currently available.
+1. Open MY EQP Registration and select Line, SDWT, PRC Group, then one or more EQPs. ALL selects the current equipment list in that group.
+2. Enter the monitoring period in days and an optional Comment (up to 90 characters).
+3. Enter each viewer/recipient knox_id and press Enter. Your current ID is selected initially.
+4. Save MY EQP. Each designated user can view the registered equipment under MY EQP in Equipment Anomaly Detection for the selected Line.
+5. Use Delete in the registration list to remove your own condition. Other recipients retain their registrations.
 
-- Common Area Anomaly Detection
-- Common Area Similarity Detection
-- FDC Hard Limit Recommendations
-- MY EQP Registration
-- Defect SPIDER, L1 SPIDER, L3 SPIDER
-
-Knowing the MY EQP Registration route or a legacy screen address does not mean registration, queries, or email delivery are currently supported. Mailing Report generation and scheduled delivery are also outside the current service scope.
+Expired registrations remain visible in the registration list but do not appear in MY EQP anomaly queries. This screen saves recipient information; it does not send email or create a delivery schedule.
 
 ## 6. Troubleshooting and Precautions
 

@@ -4,7 +4,7 @@
 
 자설비 이상감지는 `/self-equipment`와 `/fdc_trend/self-equipment`에서 제공되는 운영 기능이다. 일반 자설비의 필터, scatter·동일성 chart, 변경점, SKIP·HIT·click 이력을 다룬다.
 
-MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP 흐름은 현재 계약이 아니다. 메인 화면의 `MY EQP 등록`은 개발예정 카드다.
+MY EQP 등록·조회와 `/api/my-eqp-*`, `myeqp_regist`를 지원한다. 등록 방법과 사용자별 조회 범위는 [MY EQP](my-eqp.md)를 따른다. 기존 `step=ALL` Mailing 링크 설계는 추가하지 않는다.
 
 ## 2. 사용자 흐름
 

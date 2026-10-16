@@ -4,7 +4,7 @@
 > 기준일/브랜치: 2026-08-27 / `main`<br>
 > 기준 파일: `server.mjs`, `vite.config.mjs`, `src/`, `server/`, `scripts/`, `src/config/spiderDataPaths.mjs`
 
-> 현재 범위: [ADR-004](docs/decisions/ADR-004-scs-my-eqp-scope.md)에 따라 SCS는 My EQP 기능을 제공하지 않습니다. 이 문서 아래의 My EQP 상세 기술은 제거 전 구조의 역사적 기록이며 현재 route·API 계약이 아닙니다.
+> MY EQP 등록·조회는 복원되었습니다. 현재 기능·DB 준비 계약은 [MY EQP](docs/features/my-eqp.md)를 기준으로 합니다. 아래 과거 Mailing 통합 설계는 현재 메일 제공 범위를 뜻하지 않습니다.
 
 현재 SCS 분리 checkout은 별도 환경변수 없이 Dashboard, mapping, 자설비 index/chart, 동일성과 공통부 이상감지 read allowlist를
 연다. 각 `SCS_*_DATA_ENABLED=0`은 대응 allowlist를 차단하고,
@@ -253,8 +253,8 @@ flowchart TD
 | `/matching-anomaly` | `CommonalityAnomalyPage.jsx` | 동일성 디렉터리 기반 필터와 `img.png` 카드 | 운영 파일 |
 | `/common-anomaly` | `SpiderComingSoonPage.jsx` | 공통부 이상감지 개발 예정 안내 | 빌드 리소스 |
 | `/common-commonality-anomaly` | `CommonalityAnomalyPage.jsx` | 공통부 동일성 EQP_MODEL 필터와 `img.png` 카드 | 운영 파일 |
-| `/registration` | `SpiderComingSoonPage.jsx` | MY EQP 등록 개발 예정 안내 | 빌드 리소스 |
-| `/recipients` | `SpiderComingSoonPage.jsx` | `/registration`과 같은 개발 예정 안내 | 빌드 리소스 |
+| `/registration` | `MyEqpRegistrationPage.jsx` | MY EQP 등록·조회·삭제 | DB |
+| `/recipients` | `MyEqpRegistrationPage.jsx` | `/registration`과 같은 MY EQP 등록 화면 | DB |
 | `/manual` | `UserManualPage.jsx` | `docs/user-manual/USER_MANUAL.md`를 HTML로 렌더링 | 빌드 리소스 |
 | `/defect-spider`, `/l1-spider`, `/l3-spider` | `SpiderFeaturePage.jsx` | 직접 URL 접근 시 mock 기반 공통 화면 | mock/prototype |
 | `/under-construction/:appId` | `SpiderComingSoonPage.jsx` | 개발 예정 App의 개발 대기 안내 | 빌드 리소스 |
@@ -262,7 +262,7 @@ flowchart TD
 추가 사항:
 
 - `/fdc_trend/self-equipment`처럼 모든 내부 경로는 `/fdc_trend` prefix로도 접근할 수 있습니다.
-- 메인 화면의 개발예정 카드는 MY EQP 등록만 유지하며 `/under-construction/my-eqp-registration` 안내 화면으로 이동합니다. 다른 개발예정 App 카드는 노출하지 않고 기존 직접 접속 경로는 유지합니다.
+- MY EQP 등록 카드는 `/registration`으로 연결됩니다. 과거 `/under-construction/my-eqp-registration`도 등록 화면으로 이동합니다. 다른 개발예정 App 카드는 노출하지 않습니다.
 - `SpiderFeaturePage.jsx`가 지원하는 `hardSpec`, `yieldSpec`, `recipients` 타입 중 일부는 현재 route에 직접 연결되어 있지 않은 prototype 코드입니다.
 
 ## 5. 화면 → API → 서버 → 저장소 연결
@@ -357,7 +357,7 @@ flowchart LR
     NODE --> SKIP
 ```
 
-- handler는 접속 IP가 `knox_id` 컬럼에 저장된 활성 `myeqp_regist`와 최신 `path_xian` index를 결합한다.
+- `myEqpEquipmentData.mjs` handler는 접속 IP로 조회한 등록 knox_id의 활성 `myeqp_regist`와 SCS team ERD index·eqp reference를 결합한다.
 - team ERD 경로 table의 동일 `file_path` row에서 `ver`만 보조 참조한다. SKIP·EQP ALL SKIP·HIT·클릭이력은 최신 index/chart row의 확정 필드를 DB record로 전달하며, `file_path`는 원본 식별값으로 함께 전달하되 계층을 다시 파싱하지 않는다.
 - 코드는 연결됐으며 실제 운영 DB·file 결합 결과는 `Unknown`이다.
 
@@ -470,7 +470,7 @@ flowchart LR
 | `/api/current-user` | GET | `currentUserApi.js` / 자설비·공통부·등록 | `currentUser.mjs` | 접속 IP를 검증해 기존 `knoxId` 필드로 반환 |
 | `/api/mapping-config` | GET, HEAD | `mappingConfigApi.js` / 대부분의 필터 화면 | `mappingConfig.mjs` | `mapping_config.json` |
 | `/api/self-equipment-data` | GET | `selfEquipmentApi.js` / 일반 자설비 | `selfEquipmentData.mjs` | 최신 `path_xian/{latest_date}` + 활성 PASS 제외 |
-| `/api/my-eqp-equipment-data` | GET | `selfEquipmentApi.js` / MY EQP | `selfEquipmentData.mjs` | 활성 등록·mapping·index·PASS 결합 |
+| `/api/my-eqp-equipment-data` | GET | `selfEquipmentApi.js` / MY EQP | `myEqpEquipmentData.mjs` | 활성 등록·mapping·index·PASS 결합 |
 | `/api/erd-scatter-data` | GET | `selfEquipmentApi.js` / 자설비 Scatter·동일성 | `selfEquipmentData.mjs` | ERD `data.parquet`, `{eqp}.parquet` |
 | `/api/erd-file` | GET, HEAD | `buildErdFileUrl` 보유, 현재 주 화면 미사용 | `selfEquipmentData.mjs` | ERD 이미지 stream |
 | `/api/pass-history` | GET | Self·공통부 | `passHistory.mjs` | SKIP LIST·활성 PASS |
@@ -486,7 +486,7 @@ flowchart LR
 | `/api/common-anomaly-data` | GET | `commonAnomalyApi.js` / 공통부 | `commonAnomalyData.mjs` | 공통부 `df_path.parquet` + `pass_history` |
 | `/api/common-anomaly-image` | GET, HEAD | 공통부 이미지 URL builder | `commonAnomalyData.mjs` | `{eqp}.png` stream |
 | `/api/common-anomaly-scatter-data` | GET | 공통부 동일성 차트 | `commonAnomalyData.mjs` | 공통부 `data.parquet` |
-| `/api/my-eqp-reference` | GET, HEAD | `myEqpReferenceApi.js` / My EQP 등록 | `myEqpReference.mjs` | `erdtsum_info` SELECT DISTINCT |
+| `/api/my-eqp-reference` | GET, HEAD | `myEqpReferenceApi.js` / My EQP 등록 | `myEqpReference.mjs` | `chamber_mapping` SELECT DISTINCT |
 | `/api/my-eqp-registration` | GET, POST, DELETE | `myEqpRegistrationApi.js` | `myEqpRegistration.mjs` | `myeqp_regist` |
 | `/api/mailing-registration` | GET, POST, DELETE | `mailingRegistrationApi.js` | `mailingRegistration.mjs` | `email` |
 
@@ -555,7 +555,7 @@ flowchart LR
 
 | 테이블 | 읽기/쓰기 | Python helper | API | 화면 및 목적 |
 | --- | --- | --- | --- | --- |
-| `erdtsum_info` | SELECT DISTINCT | `my_eqp_reference.py` | `/api/my-eqp-reference` | My EQP 등록 후보: `main`, `disp_name`, `sdwt_prod`, `prc_group` |
+| `chamber_mapping` | SELECT DISTINCT | `my_eqp_reference.py` | `/api/my-eqp-reference` | My EQP 등록 후보: `eqp_id`(API main), `disp_name`, `sdwt_prod`, `prc_group`; fdc_bin_prop ETCHER/STRIPPER |
 | `myeqp_regist` | SELECT, INSERT, DELETE | `my_eqp_registration.py` | `/api/my-eqp-registration`, 내부 MY EQP 조회 | 사용자별 EQP·기간·수신/열람 조건 |
 | `email` | SELECT, INSERT, UPDATE, DELETE | `mailing_registration.py` | `/api/mailing-registration` | Mailing 수신인의 SDWT·Grade 조건 |
 | `pass_history` | SELECT, INSERT, UPDATE, DELETE | `pass_history.py` | `/api/pass-history` | Self·공통부 SKIP·SKIP LIST |
