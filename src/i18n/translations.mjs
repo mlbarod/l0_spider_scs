@@ -8,6 +8,9 @@ export const LANGUAGE_OPTIONS = Object.freeze([
 ])
 
 const ko = {
+  "OK": "확인",
+  "Go to Saved History Board": "이력저장 게시판으로 이동",
+  "The chart and its image have been saved. You can view them on the Saved History Board.": "차트 이력과 이미지가 저장되었습니다. 이력저장 게시판에서 확인할 수 있습니다.",
   "No image was stored with this history record.": "이 이력에는 저장된 이미지가 없습니다.",
   "Unable to load the saved chart image.": "저장된 차트 이미지를 불러오지 못했습니다.",
   "Retry image": "이미지 다시 불러오기",

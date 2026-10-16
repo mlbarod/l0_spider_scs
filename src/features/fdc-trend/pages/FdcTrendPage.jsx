@@ -42,6 +42,7 @@ import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { fetchCurrentUser } from "../api/currentUserApi"
 import { useHitHistorySave } from "../hooks/useHitHistorySave"
+import { HistorySavedDialog } from "../components/HistorySavedDialog"
 import { renderChartPng } from "../utils/historyChartImage"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import {
@@ -1513,6 +1514,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
           ) : null}
         </div>
       </footer>
+      <HistorySavedDialog open={saveHitHistoryMutation.successOpen} onOpenChange={saveHitHistoryMutation.setSuccessOpen} />
     </article>
   )
 })

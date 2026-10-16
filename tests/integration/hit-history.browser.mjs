@@ -76,7 +76,7 @@ test("이력 게시판 진입·검색·페이지·상세·오류 복구와 모�
   }
 })
 
-test("실제 차트 PNG 생성·재시도·확대 상태 보존·게시판 이미지 표시", async () => {
+test("HTTP 환경에서 차트 PNG 저장·재시도·확대 상태 보존·게시판 이미지 표시", async () => {
   const browser = await chromium.launch({ headless: true,
     ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
   })
@@ -120,11 +120,14 @@ test("실제 차트 PNG 생성·재시도·확대 상태 보존·게시판 이�
         return json({ ok: true, records, total: records.length, page: 1, pageSize: 20 })
       }
       if (url.pathname.startsWith("/api/")) return json({ ok: true, records: [], rows: [], points: [], groups: [] })
-      if (url.origin !== "https://snapshot.test") return route.abort()
+      if (url.origin !== "http://snapshot.test") return route.abort()
       const file = url.pathname.startsWith("/assets/") ? url.pathname.slice(1) : "index.html"
       return route.fulfill({ body: await readFile(resolve("dist", file)), contentType: file.endsWith(".js") ? "text/javascript" : file.endsWith(".css") ? "text/css" : "text/html" })
     })
-    await page.goto("https://snapshot.test/self-equipment")
+    await page.goto("http://snapshot.test/self-equipment")
+    assert.deepEqual(await page.evaluate(() => ({ secure: window.isSecureContext,
+      randomUUID: typeof crypto.randomUUID, getRandomValues: typeof crypto.getRandomValues,
+    })), { secure: false, randomUUID: "undefined", getRandomValues: "function" })
     await page.getByRole("switch").click()
     const grade = page.locator('[data-slot="card"]').filter({ has: page.getByText("Sensor Grade", { exact: true }) }).first()
     await grade.getByRole("button", { name: "A/B", exact: true }).click()
@@ -132,9 +135,15 @@ test("실제 차트 PNG 생성·재시도·확대 상태 보존·게시판 이�
     const save = page.getByRole("button", { name: "Save History", exact: true })
     await save.click()
     await page.getByText("Failed to fetch", { exact: true }).waitFor()
+    assert.equal(await page.getByRole("dialog", { name: "History saved", exact: true }).count(), 0)
     await save.click()
-    await page.getByText("History saved", { exact: true }).waitFor()
+    const successDialog = page.getByRole("dialog", { name: "History saved", exact: true })
+    await successDialog.waitFor()
+    assert.equal(await successDialog.getByRole("link", { name: "Go to Saved History Board" }).getAttribute("href"), "/history")
+    await successDialog.getByRole("button", { name: "OK", exact: true }).click()
+    await successDialog.waitFor({ state: "hidden" })
     assert.equal(posts.length, 2)
+    assert.match(posts[0].requestId, /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/)
     assert.deepEqual(posts[0], posts[1], "재시도 시 PNG·저장시각·요청 ID 유지")
     const png = Buffer.from(posts[1].image.split(",")[1], "base64")
     assert.equal(png.subarray(0, 8).toString("hex"), "89504e470d0a1a0a")
@@ -154,7 +163,10 @@ test("실제 차트 PNG 생성·재시도·확대 상태 보존·게시판 이�
     assert.equal(posts[2].image, posts[0].image, "확대 중에도 전체 범위 PNG를 저장")
     assert.notEqual(posts[2].requestId, posts[0].requestId)
     assert.deepEqual(await chart.locator(".recharts-xAxis .recharts-cartesian-axis-tick-value").allTextContents(), zoomTicks)
-    await page.goto("https://snapshot.test/history")
+    await successDialog.waitFor()
+    await successDialog.getByRole("link", { name: "Go to Saved History Board" }).click()
+    await page.getByRole("heading", { name: "Saved History Board", exact: true }).waitFor()
+    assert.equal(new URL(page.url()).pathname, "/history")
     await page.getByRole("button", { name: "synthetic / A / data.parquet", exact: true }).first().click()
     const image = page.getByRole("dialog").getByRole("img", { name: "Saved chart image" })
     await image.waitFor()

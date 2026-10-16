@@ -19,6 +19,7 @@ import {
 } from "../api/commonAnomalyApi"
 import { fetchCurrentUser } from "../api/currentUserApi"
 import { useHitHistorySave } from "../hooks/useHitHistorySave"
+import { HistorySavedDialog } from "../components/HistorySavedDialog"
 import { loadChartPng } from "../utils/historyChartImage"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
@@ -286,6 +287,7 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
           </Button>
         </div>
       </footer>
+      <HistorySavedDialog open={saveHitHistoryMutation.successOpen} onOpenChange={saveHitHistoryMutation.setSuccessOpen} />
     </article>
   )
 })

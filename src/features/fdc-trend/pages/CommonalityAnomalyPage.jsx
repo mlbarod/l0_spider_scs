@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 
 import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
 import { useHitHistorySave } from "../hooks/useHitHistorySave"
+import { HistorySavedDialog } from "../components/HistorySavedDialog"
 import { loadChartPng } from "../utils/historyChartImage"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import {
@@ -232,6 +233,7 @@ function CommonalityImageCard({ row, config, lineId }) {
           Save History
         </Button>
       </footer>
+      <HistorySavedDialog open={saveHitHistoryMutation.successOpen} onOpenChange={saveHitHistoryMutation.setSuccessOpen} />
     </article>
   )
 }
