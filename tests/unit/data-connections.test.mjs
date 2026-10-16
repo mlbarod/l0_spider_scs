@@ -328,6 +328,28 @@ test("이력 API가 차단돼도 history debug 로그를 남기지 않고 안전
   assert.doesNotMatch(logs.join("\n"), /synthetic|DB_INFO_PATH/)
 })
 
+test("이력 삭제 요청은 DB가 준비되면 권한 handler로 전달하고 DB 비활성·미준비 시 차단한다", () => {
+  for (const [environment, readable, expectedBlocked] of [
+    [{}, true, false],
+    [{ SCS_DATA_CONNECTIONS_ENABLED: "0" }, true, false],
+    [{ SCS_DB_CONNECTIONS_ENABLED: "1" }, true, false],
+    [{ SCS_DB_CONNECTIONS_ENABLED: "0" }, true, true],
+    [{}, false, true],
+  ]) {
+    const response = createResponse()
+    const blocked = blockDisabledDataRequest(
+      { method: "DELETE", url: "/api/hit-history", headers: { host: "localhost" } },
+      response,
+      { DB_INFO_PATH: "/synthetic/db_info.pkl", ...environment },
+      () => {},
+      () => readable,
+    )
+    assert.equal(blocked, expectedBlocked, JSON.stringify({ environment, readable }))
+    assert.equal(response.statusCode, expectedBlocked ? 503 : null)
+    if (expectedBlocked) assert.equal(JSON.parse(response.body).code, "DATA_CONNECTIONS_DISABLED")
+  }
+})
+
 test("자설비 read API는 환경변수 0으로 명시적으로 차단할 수 있다", () => {
   for (const pathname of [
     "/api/self-equipment-data",
