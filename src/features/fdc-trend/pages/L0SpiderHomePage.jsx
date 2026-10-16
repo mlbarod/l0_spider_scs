@@ -199,7 +199,7 @@ export function L0SpiderHomePage() {
           <h1 className="max-w-4xl text-[28px] font-semibold leading-[1.07] tracking-[-0.28px] text-[#1d1d1f] min-[420px]:text-[34px] min-[641px]:text-[40px] min-[1069px]:text-[56px]">
             SCS ETCH SPIDER
           </h1>
-          <p className="mt-5 max-w-2xl text-[21px] font-normal leading-[1.4] tracking-[-0.23px] text-[#333333] sm:text-[24px]">
+          <p className="mt-5 max-w-full break-keep text-[21px] font-normal leading-[1.4] tracking-[-0.23px] text-[#333333] sm:text-[24px]">
             Start L0 process anomaly detection and Hard Limit recommendations from one screen.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
