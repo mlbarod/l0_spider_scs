@@ -21,9 +21,9 @@ function DefectFilterRow({ title, options, selected, onSelect, placeholder }) {
         {options.length ? options.map(({ value, label }) => (
           <Button key={JSON.stringify(value)} type="button"
             variant={selected === value ? "default" : "outline"}
-            className={`h-auto rounded-full px-[15px] text-xs leading-[18px] font-normal shadow-none transition-colors active:scale-95 ${selected === value
+            className={`h-auto rounded-full px-[15px] text-xs leading-[18px] font-bold shadow-none transition-colors active:scale-95 ${selected === value
               ? "bg-[#0066cc] py-[7.5px] text-white hover:bg-[#0071e3]"
-              : "border-[#0066cc] bg-white py-[6.5px] text-[#0066cc] hover:bg-[#f5f5f7] hover:text-[#0066cc]"}`}
+              : "border-[#c7c7cc] bg-white py-[6.5px] text-black hover:bg-[#f5f5f7] hover:text-black"}`}
             aria-pressed={selected === value} onClick={() => onSelect(value)}>
             {label}
           </Button>
