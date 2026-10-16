@@ -90,10 +90,10 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 ## 8. 이력저장 게시판
 
 - 홈의 `이력저장 게시판` App(`/history`, `/fdc_trend/history`)에서 기존 `hit_history` 이력을 최신 저장순으로 조회한다. 차트의 이력 저장 버튼은 기존 POST와 사용자 식별 방식을 그대로 사용한다. 메일 발송 기능은 제공하지 않는다.
-- Line·SDWT·등록자는 정확히 일치하는 값으로, 차트 경로는 포함 검색으로 조회한다. 저장일 기간은 시작일과 종료일을 모두 포함한다. 페이지당 20건을 표시한다.
-- GET `/api/hit-history`는 `lineId`, `sdwt`, `knoxId`, `search`, `dateFrom`, `dateTo`, `page`, `pageSize`를 받고 `{ ok, records, total, page, pageSize }`를 반환한다. `records`는 기존 6개 DB 컬럼과 nullable `image_id`를 반환하며 이미지 바이너리는 목록에 포함하지 않는다. 날짜 오류·역전된 기간·페이지 범위 오류는 400이다. `pageSize`는 1~100, 기본 20이다.
+- Line·SDWT·등록자는 정확히 일치하는 값으로 조회한다. 차트 경로는 화면 및 조회 API 응답에서 제공하지 않으며 경로 검색도 지원하지 않는다. 저장일 기간은 시작일과 종료일을 모두 포함한다. 페이지당 20건을 표시한다.
+- GET `/api/hit-history`는 `lineId`, `sdwt`, `knoxId`, `dateFrom`, `dateTo`, `page`, `pageSize`를 받고 `{ ok, records, total, page, pageSize }`를 반환한다. `records`는 `update_date`, `line_id`, `sdwt`, `knox_id`, `exec_date`, nullable `image_id`만 반환하며 이미지 바이너리는 목록에 포함하지 않는다. 날짜 오류·역전된 기간·페이지 범위 오류는 400이다. `pageSize`는 1~100, 기본 20이다.
 - 기존 PASS 조회와 동일하게 DB gate 아래에서 공유 이력을 조회한다. 저장자의 `knox_id`는 계속 서버에서 확인한다.
-- 상세에는 저장 당시 PNG와 저장일시·등록자·Line·SDWT·차트 기준일·원본 경로를 표시한다. 기존 경로 저장 계약(`/` → `#`)은 유지한다. 이미지가 없는 과거 이력은 메타데이터만 표시하고 이미지를 임의로 복원하지 않는다.
+- 상세에는 저장 당시 PNG와 저장일시·등록자·Line·SDWT·차트 기준일을 표시한다. DB 내부의 기존 경로 저장 계약(`/` → `#`)은 유지한다. 이미지가 없는 과거 이력은 메타데이터만 표시하고 이미지를 임의로 복원하지 않는다.
 - 배포 전에 관리자가 `scripts/hit_history_image.sql`을 1회 실행한다. 기존 `hit_history` 데이터·컬럼을 유지하면서 nullable `image_id`와 고유 인덱스·외래키를 추가하고, PNG 바이너리는 새 `hit_history_image.image_png` (`MEDIUMBLOB`)에 보관한다. 기본 테이블도 없는 신규 DB만 먼저 `scripts/hit_history.sql`을 실행한다. 앱은 DDL을 실행하지 않는다. 미적용 상태에서는 새 게시판 조회·이미지 저장이 실패하므로 SQL 적용 후 배포한다.
 - 두 테이블은 InnoDB여야 한다. 이미지 저장 시 서버가 엔진을 확인하며, 이미지와 이력을 한 트랜잭션으로 커밋한다. 한쪽이라도 저장에 실패하면 롤백한다. 기존 테이블이 다른 엔진이면 관리자가 별도 검토해야 하며 앱에서 자동 변환하지 않는다.
 - 원본 L0 SPIDER와 동일하게 자설비 차트는 화면 확대 상태를 바꾸지 않고 전체 범위로 별도 렌더링하여 600×240 PNG를 만든다. 기존 PNG 차트는 동일 출처 이미지 API에서 읽어 저장한다. 이미지 생성·읽기 실패 시 새 이력을 등록하지 않는다.

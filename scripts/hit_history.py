@@ -140,12 +140,9 @@ def list_history(connection, payload):
     if payload.get("dateTo"):
         conditions.append("`exec_date` < DATE_ADD(%s, INTERVAL 1 DAY)")
         values.append(payload["dateTo"])
-    if payload.get("search"):
-        conditions.append("LOCATE(%s, `file_path`) > 0")
-        values.append(payload["search"].replace("/", "#"))
     where = " WHERE " + " AND ".join(conditions) if conditions else ""
     page, page_size = payload["page"], payload["pageSize"]
-    columns = ("update_date", "line_id", "sdwt", "file_path", "knox_id", "exec_date", "image_id")
+    columns = ("update_date", "line_id", "sdwt", "knox_id", "exec_date", "image_id")
     with connection.cursor() as cursor:
         cursor.execute("SELECT COUNT(*) FROM `hit_history`" + where, tuple(values))
         total = cursor.fetchone()[0]

@@ -14,10 +14,11 @@ test("이력 게시판 검색 기간과 페이지 범위를 검증한다", () =>
   assert.equal(query.page, 2)
   assert.equal(query.pageSize, 50)
   assert.equal(buildHitHistoryQuery(new URLSearchParams()).pageSize, 20)
+  assert.equal(Object.hasOwn(buildHitHistoryQuery(new URLSearchParams("search=/private/path")), "search"), false)
   for (const invalid of [
     "dateFrom=2026-02-29", "dateTo=invalid", "dateFrom=2026-10-16&dateTo=2026-10-15",
     "page=0", "page=1.5", "page=1000001", "pageSize=101", "pageSize=-1", "pageSize=bad",
-    `search=${"a".repeat(257)}`,
+    `lineId=${"a".repeat(257)}`,
   ]) {
     assert.throws(() => buildHitHistoryQuery(new URLSearchParams(invalid)), invalid)
   }

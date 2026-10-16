@@ -90,12 +90,14 @@ class HistoryTest(unittest.TestCase):
         self.assertEqual(result["total"], 2)
         result = self.query(lineId="L1", sdwt="T1", knoxId="alice")
         self.assertEqual(result["total"], 1)
-        self.assertEqual(result["records"][0]["file_path"], "#chart#100%_TEMP")
+        self.assertEqual(result["records"][0]["knox_id"], "alice")
+        self.assertNotIn("file_path", result["records"][0])
+        self.assertEqual(self.connection.db.execute("SELECT file_path FROM hit_history WHERE line_id='L1' AND knox_id='alice'").fetchone()[0], "#chart#100%_TEMP")
 
-    def test_literal_search_and_sql_parameters(self):
-        self.assertEqual(self.query(search="/chart/100%_")["total"], 1)
+    def test_path_search_disabled_and_sql_parameters(self):
+        self.assertEqual(self.query(search="/chart/100%_")["total"], 3)
         self.assertEqual(self.query(lineId="L1' OR 1=1 --")["total"], 0)
-        self.assertEqual(self.query(search="' OR 1=1 --")["total"], 0)
+        self.assertEqual(self.query(search="' OR 1=1 --")["total"], 3)
         self.assertEqual(self.query(lineId="L")["total"], 0)
 
     def snapshot_record(self):

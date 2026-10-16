@@ -248,7 +248,7 @@ export function buildHitHistoryRecord({
 
 export function buildHitHistoryQuery(searchParams) {
   const query = { action: "list" }
-  for (const key of ["lineId", "sdwt", "knoxId", "search"]) {
+  for (const key of ["lineId", "sdwt", "knoxId"]) {
     query[key] = normalizeText(searchParams.get(key))
     if (query[key].length > 256) throw new Error("The search value is too long.")
   }

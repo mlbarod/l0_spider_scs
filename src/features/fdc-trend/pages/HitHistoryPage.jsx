@@ -9,19 +9,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { fetchHitHistory, hitHistoryImageUrl } from "../api/hitHistoryApi"
 
-const EMPTY_FILTERS = { lineId: "", sdwt: "", knoxId: "", search: "", dateFrom: "", dateTo: "" }
+const EMPTY_FILTERS = { lineId: "", sdwt: "", knoxId: "", dateFrom: "", dateTo: "" }
 const FILTER_FIELDS = [
   ["lineId", "Line Name", "text"],
   ["sdwt", "SDWT", "text"],
   ["knoxId", "Saved by", "text"],
-  ["search", "Chart path search", "search"],
   ["dateFrom", "Saved from", "date"],
   ["dateTo", "Saved until", "date"],
 ]
-
-function originalPath(record) {
-  return String(record.file_path ?? "").replaceAll("#", "/")
-}
 
 function HistoryImage({ imageId }) {
   const [failed, setFailed] = useState(false)
@@ -121,9 +116,9 @@ export function HitHistoryPage() {
                   <TableCell className="whitespace-nowrap">{record.update_date || "—"}</TableCell>
                   <TableCell>{record.knox_id || "—"}</TableCell>
                   <TableCell>
-                    <button className="max-w-80 truncate text-left text-primary underline underline-offset-4"
-                      title={originalPath(record)} onClick={() => setSelected(record)}>
-                      {originalPath(record).split("/").slice(-3).join(" / ") || "History details"}
+                    <button className="text-left text-primary underline underline-offset-4"
+                      onClick={() => setSelected(record)}>
+                      History details
                     </button>
                   </TableCell>
                 </TableRow>
@@ -142,14 +137,14 @@ export function HitHistoryPage() {
         <DialogContent className="sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>History details</DialogTitle>
-            <DialogDescription>Chart reference and user information recorded when saved.</DialogDescription>
+            <DialogDescription>Chart and user information recorded when saved.</DialogDescription>
           </DialogHeader>
           {selected ? <HistoryImage key={selected.image_id ?? "legacy"} imageId={selected.image_id} /> : null}
           {selected ? <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-5 gap-y-3 text-sm">
             {[
               ["Saved at", selected.exec_date], ["Saved by", selected.knox_id],
               ["Line Name", selected.line_id], ["SDWT", selected.sdwt],
-              ["Chart date", selected.update_date], ["Chart path", originalPath(selected)],
+              ["Chart date", selected.update_date],
             ].map(([label, value]) => (
               <div key={label} className="contents"><dt className="text-muted-foreground">{label}</dt><dd className="break-all">{value || "—"}</dd></div>
             ))}

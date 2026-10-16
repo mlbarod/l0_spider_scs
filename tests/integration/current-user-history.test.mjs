@@ -61,7 +61,8 @@ class Connection:
         elif sql.startswith("SELECT COUNT(*) FROM \\x60hit_history\\x60"):
             self.row = (1,)
         elif "FROM \\x60hit_history\\x60" in sql:
-            self.rows = [json.loads((root / "history.json").read_text())]
+            saved = json.loads((root / "history.json").read_text())
+            self.rows = [tuple(saved[index] if len(saved) > index else None for index in (0, 1, 2, 4, 5, 6))]
         else:
             raise RuntimeError("Unexpected synthetic SQL")
     def fetchone(self): return self.row
@@ -109,7 +110,8 @@ test("실제 helper 경로에서 최초 등록·재조회·이력 ID와 미등�
     assert.equal(res.status, 200)
     assert.equal(res.body.total, 1)
     assert.equal(res.body.records[0].knox_id, "registered.user")
-    assert.equal(res.body.records[0].file_path, "#synthetic#chart")
+    assert.equal(Object.hasOwn(res.body.records[0], "file_path"), false)
+    assert.doesNotMatch(JSON.stringify(res.body), /#synthetic#chart|\/synthetic\/chart/)
     assert.equal(res.body.records[0].update_date, "2026-10-15")
     res = response()
     await handleHitHistoryRequest({ method: "GET", url: "/api/hit-history?dateFrom=2026-02-30" }, res)
