@@ -257,6 +257,7 @@ test("기본 실행은 Dashboard, 자설비, 동일성과 공통부 이상감지
     ["HEAD", "/api/self-equipment-data"],
     ["HEAD", "/api/erd-scatter-data"],
     ["POST", "/api/pass-history"],
+    ["GET", "/api/hit-history"],
     ["POST", "/api/hit-history"],
   ]) {
     const response = createResponse()
@@ -275,6 +276,7 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
   for (const [method, pathname] of [
     ["GET", "/api/current-user"],
     ["POST", "/api/current-user"],
+    ["GET", "/api/hit-history"],
     ["POST", "/api/hit-history"],
     ["POST", "/api/clicked-category-history"],
     ["GET", "/api/pass-history"],

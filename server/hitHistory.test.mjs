@@ -4,8 +4,24 @@ import test from "node:test"
 import {
   buildHitHistoryDbRecord,
   buildHitHistoryRecord,
+  buildHitHistoryQuery,
   parseHitHistoryPath,
 } from "./hitHistory.mjs"
+
+test("이력 게시판 검색 기간과 페이지 범위를 검증한다", () => {
+  const query = buildHitHistoryQuery(new URLSearchParams("lineId= L1 &dateFrom=2024-02-29&page=2&pageSize=50"))
+  assert.equal(query.lineId, "L1")
+  assert.equal(query.page, 2)
+  assert.equal(query.pageSize, 50)
+  assert.equal(buildHitHistoryQuery(new URLSearchParams()).pageSize, 20)
+  for (const invalid of [
+    "dateFrom=2026-02-29", "dateTo=invalid", "dateFrom=2026-10-16&dateTo=2026-10-15",
+    "page=0", "page=1.5", "page=1000001", "pageSize=101", "pageSize=-1", "pageSize=bad",
+    `search=${"a".repeat(257)}`,
+  ]) {
+    assert.throws(() => buildHitHistoryQuery(new URLSearchParams(invalid)), invalid)
+  }
+})
 
 test("자설비 이력저장은 chart row 날짜와 SDWT로 HIT record를 만들고 file_path 형식에 의존하지 않는다", () => {
   const record = buildHitHistoryRecord({

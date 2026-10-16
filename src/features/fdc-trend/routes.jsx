@@ -8,6 +8,7 @@ import { L0SpiderHomePage } from "./pages/L0SpiderHomePage"
 import { SpiderComingSoonPage } from "./pages/SpiderComingSoonPage"
 import { SpiderFeaturePage } from "./pages/SpiderFeaturePage"
 import { UserManualPage } from "./pages/UserManualPage"
+import { HitHistoryPage } from "./pages/HitHistoryPage"
 
 const fdcTrendChildren = [
   {
@@ -33,6 +34,10 @@ const fdcTrendChildren = [
   {
     path: "common-commonality-anomaly",
     element: <CommonalityAnomalyPage variant="commonCommonality" />,
+  },
+  {
+    path: "history",
+    element: <HitHistoryPage />,
   },
   {
     path: "manual",

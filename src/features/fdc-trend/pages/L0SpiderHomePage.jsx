@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Activity, ArrowRight, BookOpen, CalendarClock, ChartNoAxesCombined, Gauge, GitCompareArrows, Mail, Network, Radar, ScanSearch, Users } from "lucide-react"
+import { Activity, ArrowRight, BookOpen, CalendarClock, ChartNoAxesCombined, Gauge, GitCompareArrows, History, Mail, Network, Radar, ScanSearch, Users } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
@@ -58,8 +58,13 @@ const spiderApps = [
     gridClassName: "2xl:col-start-1 2xl:row-start-2",
   },
   {
-    key: "yield-hard-limit-placeholder",
-    empty: true,
+    icon: History,
+    title: "Saved History Board",
+    subtitle: "Review records added with each chart's Save History button.",
+    category: "History",
+    href: "/history",
+    active: true,
+    status: "Live",
   },
   {
     icon: Mail,

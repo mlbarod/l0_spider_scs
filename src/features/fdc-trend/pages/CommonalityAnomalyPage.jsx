@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, Check, ChevronRight, FileWarning, Loader2 } from "lucide-react"
 import { Link } from "react-router-dom"
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
-import { createHitHistory } from "../api/hitHistoryApi"
+import { useHitHistorySave } from "../hooks/useHitHistorySave"
+import { loadChartPng } from "../utils/historyChartImage"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import {
   buildCommonalityImageUrl,
@@ -179,19 +180,14 @@ function CommonalityImageCard({ row, config, lineId }) {
   const detailText = row.eqpModel
     ? `${row.grade} · ${row.eqpModel}`
     : `${row.grade} · ${row.stepSeq} · ${row.ppid}`
-  const saveHitHistoryMutation = useMutation({
-    mutationFn: createHitHistory,
-    onSuccess: () => toast.success("History saved"),
-    onError: (error) => toast.error(error.message),
-  })
+  const saveHitHistoryMutation = useHitHistorySave()
   const handleHistorySave = () => {
-    saveHitHistoryMutation.mutate({
+    saveHitHistoryMutation.save({
       lineId,
       updateDate: row.latestDate,
       sdwt: row.sdwt,
       filePath: row.filePath,
-      execDate: new Date().toISOString(),
-    })
+    }, () => loadChartPng(imageUrl))
   }
 
   return (
@@ -228,7 +224,7 @@ function CommonalityImageCard({ row, config, lineId }) {
           size="sm"
           className="h-9 px-[0.9rem] text-sm"
           onClick={handleHistorySave}
-          disabled={saveHitHistoryMutation.isPending}
+          disabled={saveHitHistoryMutation.isPending || imageFailed}
         >
           {saveHitHistoryMutation.isPending
             ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />

@@ -18,7 +18,8 @@ import {
   fetchCommonSkipListData,
 } from "../api/commonAnomalyApi"
 import { fetchCurrentUser } from "../api/currentUserApi"
-import { createHitHistory } from "../api/hitHistoryApi"
+import { useHitHistorySave } from "../hooks/useHitHistorySave"
+import { loadChartPng } from "../utils/historyChartImage"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
 import { deletePassHistory, fetchPassHistory } from "../api/passHistoryApi"
@@ -199,17 +200,12 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
       prcGroup: row.prc_group,
     })
   }
-  const saveHitHistoryMutation = useMutation({
-    mutationFn: createHitHistory,
-    onSuccess: () => toast.success("History saved"),
-    onError: (error) => toast.error(error.message),
-  })
+  const saveHitHistoryMutation = useHitHistorySave()
   const handleHistorySave = () => {
-    saveHitHistoryMutation.mutate({
+    saveHitHistoryMutation.save({
       lineId,
       filePath: row.image_path,
-      execDate: new Date().toISOString(),
-    })
+    }, () => loadChartPng(imageUrl))
   }
 
   return (
@@ -281,7 +277,7 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
             size="sm"
             className="h-9 px-[0.9rem] text-sm"
             onClick={handleHistorySave}
-            disabled={saveHitHistoryMutation.isPending}
+            disabled={saveHitHistoryMutation.isPending || imageFailed}
           >
             {saveHitHistoryMutation.isPending
               ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />

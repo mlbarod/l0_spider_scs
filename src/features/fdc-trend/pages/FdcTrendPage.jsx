@@ -41,7 +41,8 @@ import { cn } from "@/lib/utils"
 import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { fetchCurrentUser } from "../api/currentUserApi"
-import { createHitHistory } from "../api/hitHistoryApi"
+import { useHitHistorySave } from "../hooks/useHitHistorySave"
+import { renderChartPng } from "../utils/historyChartImage"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import {
   areDbConnectionsEnabled,
@@ -1142,19 +1143,14 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const handleSkipDelete = () => {
     deleteSkipMutation.mutate({ lineId, filePath: historyFilePath, ...passHistoryFields })
   }
-  const saveHitHistoryMutation = useMutation({
-    mutationFn: createHitHistory,
-    onSuccess: () => toast.success("History saved"),
-    onError: (error) => toast.error(error.message),
-  })
+  const saveHitHistoryMutation = useHitHistorySave()
   const handleHistorySave = () => {
-    saveHitHistoryMutation.mutate({
+    saveHitHistoryMutation.save({
       lineId,
       updateDate: passHistoryFields.updateDate,
       sdwt: passHistoryFields.sdwt,
       filePath: historyFilePath,
-      execDate: new Date().toISOString(),
-    })
+    }, () => renderChartPng(renderScatterChart(null, buildRenderedScatterSeries(points, null))))
   }
 
   useEffect(() => {
@@ -1271,6 +1267,70 @@ const ErdScatterCard = memo(function ErdScatterCard({
     setZoomDomain(null)
   }
 
+  function renderScatterChart(domain, series) {
+    return (
+            <ResponsiveContainer width="100%" height="100%">
+              <ScatterChart
+                margin={SCATTER_CHART_MARGIN}
+              >
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="actTimeMs"
+                  type="number"
+                  name="act_time"
+                  height={SCATTER_X_AXIS_HEIGHT}
+                  domain={domain?.x ?? baseDomain.x}
+                  allowDataOverflow={Boolean(domain)}
+                  scale="time"
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  tickFormatter={formatActTimeTick}
+                  label={{ value: "act_time", position: "insideBottom", offset: -18, fontSize: 11 }}
+                />
+                <YAxis
+                  dataKey="value"
+                  type="number"
+                  name={axisColumn}
+                  width={SCATTER_Y_AXIS_WIDTH}
+                  domain={domain?.y ?? baseDomain.y}
+                  allowDataOverflow={Boolean(domain)}
+                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
+                  tickFormatter={(value) => Number(value).toFixed(2)}
+                />
+                <RechartsTooltip
+                  content={<ScatterPointTooltip axisColumn={axisColumn} />}
+                  cursor={false}
+                  isAnimationActive={false}
+                  animationDuration={0}
+                  wrapperStyle={{ transition: "none", willChange: "auto" }}
+                />
+                {changeHistory.map((history, index) => (
+                  <ReferenceLine
+                    key={`${history.dateMs}-${index}`}
+                    x={history.dateMs}
+                    stroke="#16a34a"
+                    strokeDasharray="6 4"
+                    strokeWidth={1.5}
+                    ifOverflow="extendDomain"
+                    label={<ChangeHistoryLabel history={history} />}
+                  />
+                ))}
+                <Scatter
+                  data={series.previous}
+                  dataKey={ERD_SCATTER_SERIES_DATA_KEYS.previous}
+                  fill="#9ca3af"
+                  isAnimationActive={false}
+                />
+                <Scatter
+                  data={series.recent}
+                  dataKey={ERD_SCATTER_SERIES_DATA_KEYS.recent}
+                  fill="#ef4444"
+                  isAnimationActive={false}
+                />
+              </ScatterChart>
+            </ResponsiveContainer>
+    )
+  }
+
   return (
     <article ref={cardRef} className="grid min-h-[400px] min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-xl border bg-card">
       <header className="border-b bg-muted/35 px-4 py-3">
@@ -1331,65 +1391,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               className="pointer-events-none absolute left-0 top-0 z-10 hidden border border-primary bg-primary/10 will-change-transform"
               aria-hidden="true"
             />
-            <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart
-                margin={SCATTER_CHART_MARGIN}
-              >
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="actTimeMs"
-                  type="number"
-                  name="act_time"
-                  height={SCATTER_X_AXIS_HEIGHT}
-                  domain={zoomDomain?.x ?? baseDomain.x}
-                  allowDataOverflow={Boolean(zoomDomain)}
-                  scale="time"
-                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                  tickFormatter={formatActTimeTick}
-                  label={{ value: "act_time", position: "insideBottom", offset: -18, fontSize: 11 }}
-                />
-                <YAxis
-                  dataKey="value"
-                  type="number"
-                  name={axisColumn}
-                  width={SCATTER_Y_AXIS_WIDTH}
-                  domain={zoomDomain?.y ?? baseDomain.y}
-                  allowDataOverflow={Boolean(zoomDomain)}
-                  tick={{ fontSize: 10, fill: "var(--muted-foreground)" }}
-                  tickFormatter={(value) => Number(value).toFixed(2)}
-                />
-                <RechartsTooltip
-                  content={<ScatterPointTooltip axisColumn={axisColumn} />}
-                  cursor={false}
-                  isAnimationActive={false}
-                  animationDuration={0}
-                  wrapperStyle={{ transition: "none", willChange: "auto" }}
-                />
-                {changeHistory.map((history, index) => (
-                  <ReferenceLine
-                    key={`${history.dateMs}-${index}`}
-                    x={history.dateMs}
-                    stroke="#16a34a"
-                    strokeDasharray="6 4"
-                    strokeWidth={1.5}
-                    ifOverflow="extendDomain"
-                    label={<ChangeHistoryLabel history={history} />}
-                  />
-                ))}
-                <Scatter
-                  data={renderedPointSeries.previous}
-                  dataKey={ERD_SCATTER_SERIES_DATA_KEYS.previous}
-                  fill="#9ca3af"
-                  isAnimationActive={false}
-                />
-                <Scatter
-                  data={renderedPointSeries.recent}
-                  dataKey={ERD_SCATTER_SERIES_DATA_KEYS.recent}
-                  fill="#ef4444"
-                  isAnimationActive={false}
-                />
-              </ScatterChart>
-            </ResponsiveContainer>
+            {renderScatterChart(zoomDomain, renderedPointSeries)}
           </div>
         ) : (
           <div className="px-4 text-center text-sm text-muted-foreground">
@@ -1501,7 +1503,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
               size="sm"
               className="h-9 px-[0.9rem] text-sm"
               onClick={handleHistorySave}
-              disabled={saveHitHistoryMutation.isPending}
+              disabled={saveHitHistoryMutation.isPending || chartQuery.isLoading || chartQuery.isError || !points.length}
             >
               {saveHitHistoryMutation.isPending
                 ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />

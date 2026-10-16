@@ -30,7 +30,7 @@ const COMMON_ANOMALY_READ_METHODS = new Map([
 ])
 const DB_METHODS = new Map([
   ["/api/current-user", new Set(["GET", "POST"])],
-  ["/api/hit-history", new Set(["POST"])],
+  ["/api/hit-history", new Set(["GET", "POST"])],
   ["/api/clicked-category-history", new Set(["POST"])],
   ["/api/pass-history", new Set(["GET", "POST", "DELETE"])],
 ])

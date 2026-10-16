@@ -17,12 +17,13 @@ function request(method = "GET", body = {}) {
   })
 }
 function response() {
-  return { writeHead(status) { this.status = status }, end(body) { this.body = JSON.parse(body) } }
+  return { writeHead(status, headers) { this.status = status; this.headers = headers }, end(body) { this.body = Buffer.isBuffer(body) ? body : JSON.parse(body) } }
 }
 
 // Replace only the Python DB driver. Exercise real Node handlers and helper subprocesses.
 // All files/configuration are synthetic and isolated under a temporary directory.
 const driver = `
+import base64
 import json
 import os
 from pathlib import Path
@@ -33,7 +34,7 @@ class Connection:
     def cursor(self): return self
     def commit(self): pass
     def rollback(self): pass
-    def execute(self, sql, params):
+    def execute(self, sql, params=()):
         if os.environ.get("CURRENT_USER_TEST_DB_FAILURE") == "1":
             raise RuntimeError("synthetic private connection details")
         state_path = root / "users.json"
@@ -45,9 +46,26 @@ class Connection:
             self.row = (users[params[0]],) if params[0] in users else None
         elif "INSERT INTO \\x60hit_history\\x60" in sql:
             (root / "history.json").write_text(json.dumps(params))
+        elif "information_schema.TABLES" in sql:
+            self.rows = [("InnoDB",), ("InnoDB",)]
+        elif "INSERT INTO \\x60hit_history_image\\x60" in sql:
+            image_path = root / "image.json"
+            self.rowcount = 0 if image_path.exists() else 1
+            if self.rowcount:
+                image_path.write_text(json.dumps([params[0], base64.b64encode(params[1]).decode(), params[4]]))
+        elif "SELECT \\x60fingerprint\\x60" in sql:
+            self.row = (json.loads((root / "image.json").read_text())[2],)
+        elif "SELECT i.\\x60image_png\\x60" in sql:
+            image = json.loads((root / "image.json").read_text())
+            self.row = (base64.b64decode(image[1]),) if image[0] == params[0] else None
+        elif sql.startswith("SELECT COUNT(*) FROM \\x60hit_history\\x60"):
+            self.row = (1,)
+        elif "FROM \\x60hit_history\\x60" in sql:
+            self.rows = [json.loads((root / "history.json").read_text())]
         else:
             raise RuntimeError("Unexpected synthetic SQL")
     def fetchone(self): return self.row
+    def fetchall(self): return self.rows
 
 def connect(**kwargs):
     assert kwargs["host"] == "synthetic.invalid"
@@ -86,7 +104,51 @@ test("실제 helper 경로에서 최초 등록·재조회·이력 ID와 미등�
     assert.equal(res.status, 200)
     const saved = JSON.parse(await readFile(join(root, "history.json"), "utf8"))
     assert.equal(saved[4], "registered.user")
+    res = response()
+    await handleHitHistoryRequest({ method: "GET", url: "/api/hit-history?page=1&pageSize=20" }, res)
+    assert.equal(res.status, 200)
+    assert.equal(res.body.total, 1)
+    assert.equal(res.body.records[0].knox_id, "registered.user")
+    assert.equal(res.body.records[0].file_path, "#synthetic#chart")
+    assert.equal(res.body.records[0].update_date, "2026-10-15")
+    res = response()
+    await handleHitHistoryRequest({ method: "GET", url: "/api/hit-history?dateFrom=2026-02-30" }, res)
+    assert.equal(res.status, 400)
+    const imageBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a5XcAAAAASUVORK5CYII="
+    const snapshotInput = {
+      knoxId: "forged.user", lineId: "L1", sdwt: "TEAM", updateDate: "2026-10-15",
+      filePath: "/synthetic/chart", execDate: "2026-10-15 10:00:00",
+      image: `data:image/png;base64,${imageBase64}`, requestId: "12345678-abcd-abcd-abcd-123456789012",
+    }
+    res = response()
+    await handleHitHistoryRequest(request("POST", snapshotInput), res)
+    assert.equal(res.status, 200)
+    assert.equal(res.body.created, true)
+    const imageId = res.body.imageId
+    assert.match(imageId, /^[a-f0-9]{64}$/)
+    const withImage = JSON.parse(await readFile(join(root, "history.json"), "utf8"))
+    assert.equal(withImage[4], "registered.user")
+    assert.equal(withImage[6], imageId)
+    res = response()
+    await handleHitHistoryRequest(request("POST", snapshotInput), res)
+    assert.equal(res.body.created, false)
+    res = response()
+    await handleHitHistoryRequest(request("POST", { ...snapshotInput, sdwt: "OTHER" }), res)
+    assert.equal(res.status, 409)
+    res = response()
+    await handleHitHistoryRequest({ method: "GET", url: `/api/hit-history?imageId=${imageId}` }, res)
+    assert.equal(res.status, 200)
+    assert.equal(res.headers["Content-Type"], "image/png")
+    assert.equal(res.headers["X-Content-Type-Options"], "nosniff")
+    assert.deepEqual(res.body, Buffer.from(imageBase64, "base64"))
+    res = response()
+    await handleHitHistoryRequest({ method: "GET", url: `/api/hit-history?imageId=${"0".repeat(64)}` }, res)
+    assert.equal(res.status, 404)
     process.env.CURRENT_USER_TEST_DB_FAILURE = "1"
+    res = response()
+    await handleHitHistoryRequest({ method: "GET", url: "/api/hit-history" }, res)
+    assert.equal(res.status, 500)
+    assert.doesNotMatch(JSON.stringify(res.body), /synthetic private/)
     for (const handler of [handleCurrentUserRequest, handleHitHistoryRequest, handlePassHistoryRequest, handleClickedCategoryHistoryRequest]) {
       res = response()
       await handler(request("POST", { knoxId: "forged.user" }), res)

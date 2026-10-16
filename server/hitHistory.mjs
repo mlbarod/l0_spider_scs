@@ -7,6 +7,7 @@ import { commonCommonalityRootPath } from "./latestCommonCommonalityPath.mjs"
 import { commonalityRootPath } from "./latestCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
+import { buildHitHistoryImage, MAX_HISTORY_REQUEST_BYTES } from "./hitHistoryImage.mjs"
 
 const helperPath = fileURLToPath(new URL("../scripts/hit_history.py", import.meta.url))
 
@@ -141,23 +142,29 @@ export function parseHitHistoryPath(filePath, {
 }
 
 async function readJsonBody(req) {
-  let body = ""
+  const chunks = []
+  let size = 0
   for await (const chunk of req) {
-    body += chunk
-    if (body.length > 64 * 1024) throw new Error("The request payload is too large.")
+    size += Buffer.byteLength(chunk)
+    if (size > MAX_HISTORY_REQUEST_BYTES) throw Object.assign(new TypeError("이력 저장 요청이 너무 큽니다."), { status: 413 })
+    chunks.push(Buffer.from(chunk))
   }
+  const body = Buffer.concat(chunks).toString("utf8")
   if (!body.trim()) return {}
   try {
-    return JSON.parse(body)
+    const input = JSON.parse(body)
+    if (!input || typeof input !== "object" || Array.isArray(input)) throw new Error()
+    return input
   } catch {
-    throw new Error("The request JSON is invalid.")
+    throw new TypeError("The request JSON is invalid.")
   }
 }
 
 function runHitHistoryHelper(payload) {
   return new Promise((resolvePromise, reject) => {
-    const dbRecord = buildHitHistoryDbRecord(payload)
-    const helperPayload = { ...payload, execDate: dbRecord.exec_date }
+    const helperPayload = ["list", "image"].includes(payload.action)
+      ? payload
+      : { ...payload, execDate: buildHitHistoryDbRecord(payload).exec_date }
     const child = spawn("python3", ["-B", helperPath], {
       env: process.env,
       stdio: ["pipe", "pipe", "ignore"],
@@ -189,12 +196,13 @@ function runHitHistoryHelper(payload) {
         return
       }
       if (!result.ok) {
-        reject(new Error(result.error || "Unable to save HIT history."))
+        reject(Object.assign(new Error(result.error || "Unable to save HIT history."), { code: result.code }))
         return
       }
       resolvePromise(result)
     })
 
+    child.stdin.on("error", reject)
     child.stdin.end(JSON.stringify(helperPayload))
   })
 }
@@ -238,13 +246,62 @@ export function buildHitHistoryRecord({
   }
 }
 
+export function buildHitHistoryQuery(searchParams) {
+  const query = { action: "list" }
+  for (const key of ["lineId", "sdwt", "knoxId", "search"]) {
+    query[key] = normalizeText(searchParams.get(key))
+    if (query[key].length > 256) throw new Error("The search value is too long.")
+  }
+  for (const key of ["dateFrom", "dateTo"]) {
+    query[key] = normalizeText(searchParams.get(key))
+    if (query[key] && !isValidDateOnly(query[key])) throw new Error("The search date is invalid.")
+  }
+  if (query.dateFrom && query.dateTo && query.dateFrom > query.dateTo) {
+    throw new Error("The start date must not be after the end date.")
+  }
+  query.page = Number(searchParams.get("page") ?? 1)
+  query.pageSize = Number(searchParams.get("pageSize") ?? 20)
+  if (!Number.isSafeInteger(query.page) || query.page < 1 || query.page > 1000000
+    || !Number.isInteger(query.pageSize) || query.pageSize < 1 || query.pageSize > 100) {
+    throw new Error("The requested page is invalid.")
+  }
+  return query
+}
+
 export async function handleHitHistoryRequest(req, res) {
-  if (req.method !== "POST") {
+  if (!["GET", "POST"].includes(req.method)) {
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
     return
   }
 
   try {
+    if (req.method === "GET") {
+      const searchParams = new URL(req.url, "http://localhost").searchParams
+      if (searchParams.has("imageId")) {
+        const imageId = searchParams.get("imageId")
+        if (!/^[a-f0-9]{64}$/.test(imageId)) throw new TypeError("이미지 ID를 확인해 주세요.")
+        const result = await runHitHistoryHelper({ action: "image", imageId })
+        const image = Buffer.from(result.imageBase64, "base64")
+        res.writeHead(200, {
+          "Content-Type": "image/png", "Content-Length": image.length,
+          "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+          "Content-Security-Policy": "default-src 'none'; sandbox",
+          "Content-Disposition": 'inline; filename="chart.png"',
+        })
+        res.end(image)
+        return
+      }
+      let query
+      try {
+        query = buildHitHistoryQuery(searchParams)
+      } catch (error) {
+        sendJson(res, 400, { ok: false, error: error.message })
+        return
+      }
+      const result = await runHitHistoryHelper(query)
+      sendJson(res, 200, result)
+      return
+    }
     const remoteIp = getRemoteIp(req)
     if (!remoteIp) {
       sendJson(res, 400, { ok: false, error: "Unable to identify the current user." })
@@ -258,10 +315,23 @@ export async function handleHitHistoryRequest(req, res) {
       ...body,
       knoxId: currentUser.knoxId,
     })
-    const result = await runHitHistoryHelper(record)
+    const snapshot = buildHitHistoryImage(body, currentUser.knoxId)
+    const result = await runHitHistoryHelper({ ...record, ...snapshot })
     sendJson(res, 200, result)
   } catch (error) {
     if (sendCurrentUserError(res, error)) return
+    if (error instanceof TypeError) {
+      sendJson(res, error.status ?? 400, { ok: false, error: error.message })
+      return
+    }
+    if (error.code === "HISTORY_IMAGE_NOT_FOUND") {
+      sendJson(res, 404, { ok: false, error: "저장된 차트 이미지가 없습니다." })
+      return
+    }
+    if (error.code === "HISTORY_REQUEST_CONFLICT") {
+      sendJson(res, 409, { ok: false, error: "이미 다른 내용으로 저장한 요청입니다. 게시판에서 확인해 주세요." })
+      return
+    }
     const errorPayload = createSafeApiError({
       code: "HIT_HISTORY_REQUEST_FAILED",
       message: "Unable to process the HIT history request.",
