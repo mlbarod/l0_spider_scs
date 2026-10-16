@@ -4,6 +4,7 @@ SQLite executes the queries after translating only MySQL placeholders/date synta
 """
 import importlib.util
 import base64
+import hashlib
 from pathlib import Path
 import sqlite3
 import unittest
@@ -20,6 +21,8 @@ class Connection:
     def __init__(self):
         self.db = sqlite3.connect(":memory:")
         self.db.execute("PRAGMA foreign_keys=ON")
+        self.db.create_function("SHA2", 2, lambda value, bits: hashlib.sha256(value.encode()).hexdigest())
+        self.db.create_function("CONCAT_WS", -1, lambda sep, *values: sep.join(values))
         self.db.create_function("LOCATE", 2, lambda needle, value: value.find(needle) + 1)
         self.db.execute("CREATE TABLE hit_history_image (image_id TEXT PRIMARY KEY, image_png BLOB, byte_size, image_sha256, fingerprint)")
         self.db.execute("CREATE TABLE hit_history (update_date, line_id, sdwt, file_path, knox_id, exec_date, image_id TEXT UNIQUE REFERENCES hit_history_image(image_id))")
@@ -136,6 +139,43 @@ class HistoryTest(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "InnoDB"):
             history.insert_history(self.connection, self.snapshot_record(), {"imageId": "a" * 64, "imageBase64": PNG})
         self.assertEqual(self.query()["total"], 3)
+
+    def test_delete_legacy_exact_duplicate_and_missing(self):
+        record = self.snapshot_record()
+        history.insert_history(self.connection, record)
+        history.insert_history(self.connection, record)
+        target = self.query()["records"][0]["record_id"]
+        self.assertEqual(history.delete_history(self.connection, target)["affectedRows"], 1)
+        self.assertEqual(self.query()["total"], 4)
+        history.delete_history(self.connection, target)
+        self.assertEqual(self.query()["total"], 3)
+        with self.assertRaisesRegex(history.HistoryError, "HISTORY_NOT_FOUND"):
+            history.delete_history(self.connection, target)
+        self.assertEqual(self.query()["total"], 3)
+
+    def test_delete_only_selected_image_and_history(self):
+        record = self.snapshot_record()
+        for image_id in ("a" * 64, "b" * 64):
+            history.insert_history(self.connection, record, {"imageId": image_id, "imageBase64": PNG})
+        target = next(row for row in self.query()["records"] if row["image_id"] == "a" * 64)
+        history.delete_history(self.connection, target["record_id"])
+        self.assertEqual(self.query()["total"], 4)
+        with self.assertRaisesRegex(history.HistoryError, "HISTORY_IMAGE_NOT_FOUND"):
+            history.read_image(self.connection, "a" * 64)
+        self.assertEqual(history.read_image(self.connection, "b" * 64)["imageBase64"], PNG)
+
+    def test_delete_rollback_on_image_failure_and_nontransactional_table(self):
+        history.insert_history(self.connection, self.snapshot_record(), {"imageId": "a" * 64, "imageBase64": PNG})
+        target = self.query()["records"][0]["record_id"]
+        self.connection.db.execute("CREATE TRIGGER fail_delete BEFORE DELETE ON hit_history_image BEGIN SELECT RAISE(ABORT, 'synthetic failure'); END")
+        with self.assertRaises(sqlite3.IntegrityError):
+            history.delete_history(self.connection, target)
+        self.assertEqual(self.query()["total"], 4)
+        self.assertEqual(history.read_image(self.connection, "a" * 64)["imageBase64"], PNG)
+        self.connection.engines = [("MyISAM",), ("InnoDB",)]
+        with self.assertRaisesRegex(RuntimeError, "InnoDB"):
+            history.delete_history(self.connection, target)
+        self.assertEqual(self.query()["total"], 4)
 
     def test_invalid_png_does_not_insert(self):
         with self.assertRaises(ValueError):

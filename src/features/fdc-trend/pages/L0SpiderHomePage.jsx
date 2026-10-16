@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import { Activity, ArrowRight, BookOpen, CalendarClock, ChartNoAxesCombined, Gauge, GitCompareArrows, History, Mail, Network, Radar, ScanSearch, Users } from "lucide-react"
+import { Activity, ArrowRight, BookOpen, CalendarClock, ChartNoAxesCombined, History, Mail, ScanSearch, Users } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
@@ -28,34 +28,6 @@ const spiderApps = [
     href: "/matching-anomaly",
     active: true,
     status: "Live",
-  },
-  {
-    icon: Network,
-    title: "Common Area Anomaly Detection",
-    subtitle: "Review anomalies across shared equipment and process sections in one view.",
-    category: "Common",
-    href: getUnderConstructionPath("common-anomaly"),
-    active: true,
-    status: "Planned",
-  },
-  {
-    icon: GitCompareArrows,
-    title: "Common Area Similarity Detection",
-    subtitle: "Compare signal distributions by common-area EQP Model to find anomalous patterns.",
-    category: "Common Matching",
-    href: getUnderConstructionPath("common-commonality"),
-    active: true,
-    status: "Planned",
-  },
-  {
-    icon: Gauge,
-    title: "FDC Hard Limit Recommendations",
-    subtitle: "Recommend Hard Limit candidates based on FDC distributions.",
-    category: "Limit",
-    href: getUnderConstructionPath("fdc-hard-limit"),
-    active: true,
-    status: "Planned",
-    gridClassName: "2xl:col-start-1 2xl:row-start-2",
   },
   {
     icon: History,
@@ -95,24 +67,6 @@ const spiderSuites = [
     href: "/defect-spider",
     active: true,
     status: "In Development",
-  },
-  {
-    icon: Radar,
-    title: "L1 SPIDER",
-    subtitle: "Track L1 equipment and process signals.",
-    category: "Level 1",
-    href: getUnderConstructionPath("l1-spider"),
-    active: true,
-    status: "Planned",
-  },
-  {
-    icon: Network,
-    title: "L3 SPIDER",
-    subtitle: "Review L3-linked metrics and anomaly flows.",
-    category: "Level 3",
-    href: getUnderConstructionPath("l3-spider"),
-    active: true,
-    status: "Planned",
   },
 ]
 

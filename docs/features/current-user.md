@@ -22,10 +22,10 @@ DB 연결이 활성화된 서비스에 처음 접속하면 `knox_id` 등록 화�
 `GET /api/current-user`:
 
 ```json
-{"ok":true,"ipAddress":"192.0.2.10","knoxId":null,"registrationRequired":true}
+{"ok":true,"ipAddress":"192.0.2.10","knoxId":null,"registrationRequired":true,"canDeleteHistory":false}
 ```
 
-등록된 경우 `knoxId`에 계정 문자열, `registrationRequired`에 `false`를 반환한다.
+등록된 경우 `knoxId`에 계정 문자열, `registrationRequired`에 `false`를 반환한다. GET·POST 응답의 `canDeleteHistory`는 서버의 마스터 권한 여부를 나타내며 미등록 사용자는 `false`다.
 
 `POST /api/current-user`는 `Content-Type: application/json`과 `{"knoxId":"example.user"}`를 받는다. IP는 요청 본문을 사용하지 않고 서버가 인식한 접속 주소만 사용한다. 성공 응답은 등록된 GET 응답과 같다.
 
@@ -35,6 +35,12 @@ DB 연결이 활성화된 서비스에 처음 접속하면 `knox_id` 등록 화�
 - 413: 4 KiB를 초과하는 등록 본문
 - 503 `CURRENT_USER_DB_FAILED`: DB 또는 테이블 접근 오류
 - 이력 변경 API: 미등록 IP는 428 `USER_REGISTRATION_REQUIRED`, 사용자 조회 DB 오류는 503. 요청의 `knoxId`로 우회하지 않는다.
+
+## 마스터 권한
+
+서버 환경변수 `SPIDER_MASTER_KNOX_IDS=master.one,master.two`로 이력저장 게시판 삭제 권한자를 지정한다. 기본은 빈 목록이며 대소문자를 구분한다. 삭제 때마다 서버에서 IP 매핑을 다시 조회하므로 요청 본문의 ID나 화면의 권한값으로 권한을 얻을 수 없다.
+
+설정 전에 관리자가 대상 ID의 기존 IP 매핑을 확인해야 한다. 이미 마스터로 설정한 ID를 새로운 IP에서 임의로 최초 등록하는 요청은 403 `MASTER_REGISTRATION_RESTRICTED`로 거부한다. 마스터의 새 IP 등록·정정은 관리자가 매핑을 관리하며 기존 IP·ID의 재등록은 허용한다.
 
 ## 식별의 한계
 

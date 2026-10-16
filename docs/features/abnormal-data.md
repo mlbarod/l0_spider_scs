@@ -10,8 +10,8 @@
 |---|---|---|---|
 | 자설비 이상감지 | 운영중 | `/self-equipment` | `/api/self-equipment-data`, `/api/erd-scatter-data`, `/api/erd-file` |
 | 동일성 이상감지 | 운영중 | `/matching-anomaly` | `/api/commonality-data`, `/api/commonality-image` |
-| 공통부 이상감지 | 개발예정 | 메인에서는 `/under-construction/common-anomaly`; `/common-anomaly`도 개발예정 화면 | `/api/common-anomaly-*`는 잔여 구현 |
-| 공통부 동일성 | 개발예정 | 메인에서는 `/under-construction/common-commonality`; `/common-commonality-anomaly`는 직접 접속 가능한 호환 화면 | `/api/common-commonality-*`는 잔여 구현 |
+| 공통부 이상감지 | 개발예정 | 메인 카드 미노출; `/common-anomaly`도 개발예정 화면 | `/api/common-anomaly-*`는 잔여 구현 |
+| 공통부 동일성 | 개발예정 | 메인 카드 미노출; `/common-commonality-anomaly`는 직접 접속 가능한 호환 화면 | `/api/common-commonality-*`는 잔여 구현 |
 
 Defect/L1/L3 직접 route는 mock data 기반 화면이 남아 있지만 공식 운영 기능이 아니다.
 

@@ -58,11 +58,20 @@ class Connection:
         elif "SELECT i.\\x60image_png\\x60" in sql:
             image = json.loads((root / "image.json").read_text())
             self.row = (base64.b64decode(image[1]),) if image[0] == params[0] else None
+        elif sql.startswith("SELECT \\x60image_id\\x60 FROM \\x60hit_history\\x60"):
+            saved = json.loads((root / "history.json").read_text())
+            self.row = (saved[6],) if params[0] == "a" * 64 else None
+        elif sql.startswith("DELETE FROM \\x60hit_history\\x60"):
+            (root / "deleted.json").write_text(json.dumps(params))
+            self.rowcount = 1
+        elif sql.startswith("DELETE FROM \\x60hit_history_image\\x60"):
+            (root / "image.json").unlink()
+            self.rowcount = 1
         elif sql.startswith("SELECT COUNT(*) FROM \\x60hit_history\\x60"):
             self.row = (1,)
         elif "FROM \\x60hit_history\\x60" in sql:
             saved = json.loads((root / "history.json").read_text())
-            self.rows = [tuple(saved[index] if len(saved) > index else None for index in (0, 1, 2, 4, 5, 6))]
+            self.rows = [tuple(saved[index] if len(saved) > index else None for index in (0, 1, 2, 4, 5, 6)) + ("a" * 64,)]
         else:
             raise RuntimeError("Unexpected synthetic SQL")
     def fetchone(self): return self.row
@@ -75,13 +84,14 @@ def connect(**kwargs):
 
 test("실제 helper 경로에서 최초 등록·재조회·이력 ID와 미등록/장애 차단을 검증한다", async () => {
   const root = await mkdtemp(join(tmpdir(), "spider-current-user-test-"))
-  const keys = ["DB_INFO_PATH", "PYTHONPATH", "CURRENT_USER_TEST_DB_FAILURE"]
+  const keys = ["DB_INFO_PATH", "PYTHONPATH", "CURRENT_USER_TEST_DB_FAILURE", "SPIDER_MASTER_KNOX_IDS"]
   const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]))
   try {
     await writeFile(join(root, "pymysql.py"), driver)
     process.env.DB_INFO_PATH = join(root, "synthetic.pkl")
     process.env.PYTHONPATH = root
     delete process.env.CURRENT_USER_TEST_DB_FAILURE
+    delete process.env.SPIDER_MASTER_KNOX_IDS
     execFileSync("python3", ["-B", "-c", "import os,pickle; pickle.dump(dict(DB_HOST='synthetic.invalid',DB_PORT=3306,DB_NAME='synthetic',DB_USER='synthetic',DB_PASSWORD='synthetic'),open(os.environ['DB_INFO_PATH'],'wb'))"])
     for (const handler of [handleHitHistoryRequest, handlePassHistoryRequest, handleClickedCategoryHistoryRequest]) {
       const res = response()
@@ -146,6 +156,16 @@ test("실제 helper 경로에서 최초 등록·재조회·이력 ID와 미등�
     res = response()
     await handleHitHistoryRequest({ method: "GET", url: `/api/hit-history?imageId=${"0".repeat(64)}` }, res)
     assert.equal(res.status, 404)
+    res = response()
+    await handleHitHistoryRequest(request("DELETE", { recordId: "a".repeat(64), knoxId: "master.user" }), res)
+    assert.equal(res.status, 403)
+    process.env.SPIDER_MASTER_KNOX_IDS = "registered.user"
+    res = response()
+    await handleHitHistoryRequest(request("DELETE", { recordId: "a".repeat(64) }), res)
+    assert.equal(res.status, 200)
+    assert.equal(res.body.affectedRows, 1)
+    assert.deepEqual(JSON.parse(await readFile(join(root, "deleted.json"), "utf8")), ["a".repeat(64)])
+    await assert.rejects(readFile(join(root, "image.json")), { code: "ENOENT" })
     process.env.CURRENT_USER_TEST_DB_FAILURE = "1"
     res = response()
     await handleHitHistoryRequest({ method: "GET", url: "/api/hit-history" }, res)

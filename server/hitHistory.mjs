@@ -8,6 +8,7 @@ import { commonalityRootPath } from "./latestCommonalityPath.mjs"
 import { parsePassHistoryPath } from "./passHistory.mjs"
 import { createSafeApiError } from "./safeApiError.mjs"
 import { buildHitHistoryImage, MAX_HISTORY_REQUEST_BYTES } from "./hitHistoryImage.mjs"
+import { isMasterUser } from "./masterPermissions.mjs"
 
 const helperPath = fileURLToPath(new URL("../scripts/hit_history.py", import.meta.url))
 
@@ -141,12 +142,12 @@ export function parseHitHistoryPath(filePath, {
   return { updateDate, sdwt }
 }
 
-async function readJsonBody(req) {
+async function readJsonBody(req, maxBytes = MAX_HISTORY_REQUEST_BYTES) {
   const chunks = []
   let size = 0
   for await (const chunk of req) {
     size += Buffer.byteLength(chunk)
-    if (size > MAX_HISTORY_REQUEST_BYTES) throw Object.assign(new TypeError("이력 저장 요청이 너무 큽니다."), { status: 413 })
+    if (size > maxBytes) throw Object.assign(new TypeError("이력 저장 요청이 너무 큽니다."), { status: 413 })
     chunks.push(Buffer.from(chunk))
   }
   const body = Buffer.concat(chunks).toString("utf8")
@@ -162,7 +163,7 @@ async function readJsonBody(req) {
 
 function runHitHistoryHelper(payload) {
   return new Promise((resolvePromise, reject) => {
-    const helperPayload = ["list", "image"].includes(payload.action)
+    const helperPayload = ["list", "image", "delete"].includes(payload.action)
       ? payload
       : { ...payload, execDate: buildHitHistoryDbRecord(payload).exec_date }
     const child = spawn("python3", ["-B", helperPath], {
@@ -268,19 +269,49 @@ export function buildHitHistoryQuery(searchParams) {
   return query
 }
 
-export async function handleHitHistoryRequest(req, res) {
-  if (!["GET", "POST"].includes(req.method)) {
+export async function handleHitHistoryRequest(req, res, {
+  runHelper = runHitHistoryHelper, resolveUser = resolveCurrentUser,
+} = {}) {
+  if (!["GET", "POST", "DELETE"].includes(req.method)) {
     sendJson(res, 405, { ok: false, error: "Method not allowed" })
     return
   }
 
   try {
+    if (req.method === "DELETE") {
+      const headers = req.headers ?? {}
+      let validOrigin = true
+      if (headers.origin) {
+        try {
+          const origin = new URL(headers.origin)
+          validOrigin = ["http:", "https:"].includes(origin.protocol) && origin.host === headers.host
+        } catch { validOrigin = false }
+      }
+      if (!validOrigin || headers["sec-fetch-site"] === "cross-site") {
+        sendJson(res, 403, { ok: false, error: "History deletion must be submitted from this site." })
+        return
+      }
+      const currentUser = await resolveUser(getRemoteIp(req))
+      if (!isMasterUser(currentUser.knoxId)) {
+        sendJson(res, 403, { ok: false, error: "Only master users can delete saved history." })
+        return
+      }
+      if (headers["content-type"]?.split(";")[0].trim().toLowerCase() !== "application/json") {
+        throw new TypeError("The request JSON is invalid.")
+      }
+      const body = await readJsonBody(req, 4096)
+      if (typeof body.recordId !== "string" || !/^[a-f0-9]{64}$/.test(body.recordId)) {
+        throw new TypeError("The history record ID is invalid.")
+      }
+      sendJson(res, 200, await runHelper({ action: "delete", recordId: body.recordId }))
+      return
+    }
     if (req.method === "GET") {
       const searchParams = new URL(req.url, "http://localhost").searchParams
       if (searchParams.has("imageId")) {
         const imageId = searchParams.get("imageId")
         if (!/^[a-f0-9]{64}$/.test(imageId)) throw new TypeError("이미지 ID를 확인해 주세요.")
-        const result = await runHitHistoryHelper({ action: "image", imageId })
+        const result = await runHelper({ action: "image", imageId })
         const image = Buffer.from(result.imageBase64, "base64")
         res.writeHead(200, {
           "Content-Type": "image/png", "Content-Length": image.length,
@@ -298,7 +329,7 @@ export async function handleHitHistoryRequest(req, res) {
         sendJson(res, 400, { ok: false, error: error.message })
         return
       }
-      const result = await runHitHistoryHelper(query)
+      const result = await runHelper(query)
       sendJson(res, 200, result)
       return
     }
@@ -309,14 +340,14 @@ export async function handleHitHistoryRequest(req, res) {
     }
     const [body, currentUser] = await Promise.all([
       readJsonBody(req),
-      resolveCurrentUser(remoteIp),
+      resolveUser(remoteIp),
     ])
     const record = buildHitHistoryRecord({
       ...body,
       knoxId: currentUser.knoxId,
     })
     const snapshot = buildHitHistoryImage(body, currentUser.knoxId)
-    const result = await runHitHistoryHelper({ ...record, ...snapshot })
+    const result = await runHelper({ ...record, ...snapshot })
     sendJson(res, 200, result)
   } catch (error) {
     if (sendCurrentUserError(res, error)) return
@@ -326,6 +357,10 @@ export async function handleHitHistoryRequest(req, res) {
     }
     if (error.code === "HISTORY_IMAGE_NOT_FOUND") {
       sendJson(res, 404, { ok: false, error: "저장된 차트 이미지가 없습니다." })
+      return
+    }
+    if (error.code === "HISTORY_NOT_FOUND") {
+      sendJson(res, 404, { ok: false, error: "The saved history record no longer exists." })
       return
     }
     if (error.code === "HISTORY_REQUEST_CONFLICT") {

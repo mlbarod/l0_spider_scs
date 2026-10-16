@@ -9,6 +9,14 @@ from datetime import datetime
 
 DB_INFO_PATH = os.environ.get("DB_INFO_PATH") or "/appdata/l0_spider_scs/db_info.pkl"
 
+# Existing installations may not have an id column. Hash all stored fields,
+# including the private path, without disclosing that path to the browser.
+RECORD_COLUMNS = ("update_date", "line_id", "sdwt", "file_path", "knox_id", "exec_date", "image_id")
+RECORD_ID_SQL = "SHA2(CONCAT_WS(':', " + ", ".join(
+    f"CASE WHEN `{column}` IS NULL THEN '~' ELSE HEX(`{column}`) END"
+    for column in RECORD_COLUMNS
+) + "), 256)"
+
 
 class HistoryError(Exception):
     pass
@@ -127,6 +135,30 @@ def read_image(connection, image_id):
         return {"ok": True, "imageBase64": base64.b64encode(row[0]).decode("ascii")}
 
 
+def delete_history(connection, record_id):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT ENGINE FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('hit_history', 'hit_history_image')")
+            engines = cursor.fetchall()
+            if len(engines) != 2 or any(str(row[0]).upper() != "INNODB" for row in engines):
+                raise RuntimeError("History snapshot tables must use InnoDB")
+            cursor.execute("SELECT `image_id` FROM `hit_history` WHERE " + RECORD_ID_SQL + " = %s LIMIT 1 FOR UPDATE", (record_id,))
+            row = cursor.fetchone()
+            if row is None:
+                raise HistoryError("HISTORY_NOT_FOUND")
+            # LIMIT 1 also preserves other rows when legacy records are identical.
+            cursor.execute("DELETE FROM `hit_history` WHERE " + RECORD_ID_SQL + " = %s LIMIT 1", (record_id,))
+            if cursor.rowcount != 1:
+                raise HistoryError("HISTORY_NOT_FOUND")
+            if row[0] is not None:
+                cursor.execute("DELETE FROM `hit_history_image` WHERE `image_id` = %s", (row[0],))
+        connection.commit()
+        return {"ok": True, "affectedRows": 1}
+    except Exception:
+        connection.rollback()
+        raise
+
+
 def list_history(connection, payload):
     conditions = []
     values = []
@@ -147,13 +179,13 @@ def list_history(connection, payload):
         cursor.execute("SELECT COUNT(*) FROM `hit_history`" + where, tuple(values))
         total = cursor.fetchone()[0]
         cursor.execute(
-            "SELECT " + ", ".join(f"`{column}`" for column in columns)
+            "SELECT " + ", ".join(f"`{column}`" for column in columns) + ", " + RECORD_ID_SQL + " AS `record_id`"
             + " FROM `hit_history`" + where
             + " ORDER BY `exec_date` DESC, `update_date` DESC, `line_id`, `sdwt`, `knox_id`, `file_path`"
             + " LIMIT %s OFFSET %s",
             tuple(values) + (page_size, (page - 1) * page_size),
         )
-        records = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        records = [dict(zip(columns + ("record_id",), row)) for row in cursor.fetchall()]
     return {"ok": True, "records": records, "total": total, "page": page, "pageSize": page_size}
 
 
@@ -166,6 +198,8 @@ def main():
                 result = list_history(connection, payload)
             elif payload.get("action") == "image":
                 result = read_image(connection, payload["imageId"])
+            elif payload.get("action") == "delete":
+                result = delete_history(connection, payload["recordId"])
             else:
                 result = insert_history(connection, build_db_record(payload), payload if payload.get("imageId") else None)
         write_json(result)

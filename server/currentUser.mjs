@@ -3,6 +3,7 @@ import { spawn } from "node:child_process"
 import { fileURLToPath } from "node:url"
 
 import { createSafeApiError } from "./safeApiError.mjs"
+import { isMasterUser } from "./masterPermissions.mjs"
 
 const helperPath = fileURLToPath(new URL("../scripts/current_user.py", import.meta.url))
 const errors = {
@@ -14,6 +15,7 @@ const errors = {
   USER_REGISTRATION_REQUIRED: [428, "Register your knox_id before saving history."],
   IP_ALREADY_REGISTERED: [409, "Another knox_id is already registered. Contact the administrator."],
   CURRENT_USER_DB_FAILED: [503, "Unable to access user registration. Please try again or contact the administrator."],
+  MASTER_REGISTRATION_RESTRICTED: [403, "Contact the administrator to register a master account on this IP."],
 }
 
 function userError(code) {
@@ -137,10 +139,18 @@ export async function handleCurrentUserRequest(req, res, { runHelper = runCurren
   }
 
   try {
-    const payload = req.method === "POST"
-      ? await runHelper({ action: "register", ipAddress: remoteIp, knoxId: await readRegistration(req) })
-      : await lookupCurrentUser(remoteIp, runHelper)
-    sendJson(res, 200, payload)
+    let payload
+    if (req.method === "POST") {
+      const knoxId = await readRegistration(req)
+      if (isMasterUser(knoxId)) {
+        const existing = await lookupCurrentUser(remoteIp, runHelper)
+        if (existing.registrationRequired || existing.knoxId !== knoxId) throw userError("MASTER_REGISTRATION_RESTRICTED")
+      }
+      payload = await runHelper({ action: "register", ipAddress: remoteIp, knoxId })
+    } else {
+      payload = await lookupCurrentUser(remoteIp, runHelper)
+    }
+    sendJson(res, 200, { ...payload, canDeleteHistory: !payload.registrationRequired && isMasterUser(payload.knoxId) })
   } catch (error) {
     if (!sendCurrentUserError(res, error)) sendCurrentUserError(res, userError("CURRENT_USER_DB_FAILED"))
   }

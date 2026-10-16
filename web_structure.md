@@ -262,8 +262,7 @@ flowchart TD
 추가 사항:
 
 - `/fdc_trend/self-equipment`처럼 모든 내부 경로는 `/fdc_trend` prefix로도 접근할 수 있습니다.
-- 메인 화면에서 `개발예정` 상태인 공통부 이상감지·MY EQP 등록 카드와 기존 개발 예정 카드는 `/under-construction/:appId` 안내 화면으로 이동합니다.
-- Hard Limit 추천 카드는 5열 기준 두 번째 줄 첫 칸에 배치됩니다.
+- 메인 화면의 개발예정 카드는 MY EQP 등록만 유지하며 `/under-construction/my-eqp-registration` 안내 화면으로 이동합니다. 다른 개발예정 App 카드는 노출하지 않고 기존 직접 접속 경로는 유지합니다.
 - `SpiderFeaturePage.jsx`가 지원하는 `hardSpec`, `yieldSpec`, `recipients` 타입 중 일부는 현재 route에 직접 연결되어 있지 않은 prototype 코드입니다.
 
 ## 5. 화면 → API → 서버 → 저장소 연결

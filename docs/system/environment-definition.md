@@ -28,6 +28,7 @@ Vite와 통합 서버의 API 범위는 동일하다. 환경 차이는 API 개수
 | `SCS_DEFECT_DATA_ENABLED` | Defect 이상감지 리스트 read gate; 미설정 시 활성 |
 | `SCS_DB_CONNECTIONS_ENABLED` | DB gate; `0`이면 비활성 |
 | `DB_INFO_PATH` | 기본 `/appdata/l0_spider_scs/db_info.pkl` |
+| `SPIDER_MASTER_KNOX_IDS` | 이력저장 게시물 삭제 권한을 가진 `knox_id`를 쉼표로 구분. 기본 빈 값(권한자 없음). 예: `master.one,master.two`. 대소문자를 구분하며 ID 주변 공백은 무시한다. 서버 환경변수로 지정하고 서버를 재시작한다. |
 
 `STEP_HMAC_KEY`는 현재 구현의 필수 환경변수가 아니다.
 

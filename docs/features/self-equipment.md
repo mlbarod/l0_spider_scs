@@ -26,7 +26,7 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 | `/api/erd-file` | 허용된 ERD 파일 제공 |
 | `/api/current-user` | IP에 연결된 knox_id 조회(GET)·최초 등록(POST) |
 | `/api/pass-history` | SKIP 이력 조회·변경 |
-| `/api/hit-history` | HIT 이력 기록(POST)·게시판 조회(GET) |
+| `/api/hit-history` | HIT 이력 기록(POST)·게시판 조회(GET)·마스터의 게시물 삭제(DELETE) |
 | `/api/clicked-category-history` | category click 이력 기록 |
 
 `npm run dev`와 `node server.mjs`는 같은 API handler를 등록한다. DB 이력 API는 DB gate와 `DB_INFO_PATH` readiness 영향을 받는다.
@@ -91,7 +91,7 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 
 - 홈의 `이력저장 게시판` App(`/history`, `/fdc_trend/history`)에서 기존 `hit_history` 이력을 최신 저장순으로 조회한다. 차트의 이력 저장 버튼은 기존 POST와 사용자 식별 방식을 그대로 사용한다. 메일 발송 기능은 제공하지 않는다.
 - Line·SDWT·등록자는 정확히 일치하는 값으로 조회한다. 차트 경로는 화면 및 조회 API 응답에서 제공하지 않으며 경로 검색도 지원하지 않는다. 저장일 기간은 시작일과 종료일을 모두 포함한다. 페이지당 20건을 표시한다.
-- GET `/api/hit-history`는 `lineId`, `sdwt`, `knoxId`, `dateFrom`, `dateTo`, `page`, `pageSize`를 받고 `{ ok, records, total, page, pageSize }`를 반환한다. `records`는 `update_date`, `line_id`, `sdwt`, `knox_id`, `exec_date`, nullable `image_id`만 반환하며 이미지 바이너리는 목록에 포함하지 않는다. 날짜 오류·역전된 기간·페이지 범위 오류는 400이다. `pageSize`는 1~100, 기본 20이다.
+- GET `/api/hit-history`는 `lineId`, `sdwt`, `knoxId`, `dateFrom`, `dateTo`, `page`, `pageSize`를 받고 `{ ok, records, total, page, pageSize }`를 반환한다. `records`는 `update_date`, `line_id`, `sdwt`, `knox_id`, `exec_date`, nullable `image_id`, 삭제용 `record_id`를 반환하며 이미지 바이너리는 목록에 포함하지 않는다. 날짜 오류·역전된 기간·페이지 범위 오류는 400이다. `pageSize`는 1~100, 기본 20이다.
 - 기존 PASS 조회와 동일하게 DB gate 아래에서 공유 이력을 조회한다. 저장자의 `knox_id`는 계속 서버에서 확인한다.
 - 상세에는 저장 당시 PNG와 저장일시·등록자·Line·SDWT·차트 기준일을 표시한다. DB 내부의 기존 경로 저장 계약(`/` → `#`)은 유지한다. 이미지가 없는 과거 이력은 메타데이터만 표시하고 이미지를 임의로 복원하지 않는다.
 - 배포 전에 관리자가 `scripts/hit_history_image.sql`을 1회 실행한다. 기존 `hit_history` 데이터·컬럼을 유지하면서 nullable `image_id`와 고유 인덱스·외래키를 추가하고, PNG 바이너리는 새 `hit_history_image.image_png` (`MEDIUMBLOB`)에 보관한다. 기본 테이블도 없는 신규 DB만 먼저 `scripts/hit_history.sql`을 실행한다. 앱은 DDL을 실행하지 않는다. 미적용 상태에서는 새 게시판 조회·이미지 저장이 실패하므로 SQL 적용 후 배포한다.
@@ -101,3 +101,6 @@ MY EQP 등록·조회, `/api/my-eqp-*`, `myeqp_regist`, `step=ALL` 기반 MY EQP
 - `requestId`와 서버에서 확인한 등록자로 이미지 ID를 정한다. 응답 유실 후 재시도는 동일 이미지·시각·요청 ID를 재사용하여 중복 등록을 막는다. 같은 요청 ID에 다른 내용이 오면 409를 반환한다. 정상 저장 후 다시 누르면 별도의 이력으로 등록된다.
 - GET `/api/hit-history?imageId={image_id}`는 연결된 PNG를 `image/png`로 반환한다. 미존재 이미지는 404이며 클라이언트가 임의의 파일 경로를 읽도록 허용하지 않는다. 이미지도 기존 게시판과 동일한 DB gate 및 공유 조회 범위를 따른다.
 - 운영 확인: 5MiB PNG 전송을 수용하도록 DB `max_allowed_packet`은 이스케이프 여유를 포함해 16MiB 이상을 검토하고, 프록시는 Base64 JSON 요청 약 7MiB 이상을 수용해야 한다. 이 작업에서는 운영 DB·프록시 설정을 변경하거나 DDL을 실행하지 않는다.
+
+- 마스터 권한자는 게시물의 `이력 삭제` 버튼과 확인 창으로 삭제한다. DELETE `/api/hit-history`는 JSON `{ "recordId": "목록의 record_id" }`를 받고 성공 시 `{ "ok": true, "affectedRows": 1 }`을 반환한다. 서버는 현재 IP에 등록된 ID와 `SPIDER_MASTER_KNOX_IDS`를 매 요청 대조하며 일반 사용자는 403, 미등록 사용자는 428, 없는 게시물은 404다. 다른 사이트의 요청은 거부한다.
+- 삭제는 이력 1행과 연결된 PNG를 한 트랜잭션으로 제거한다. 이미지 없는 과거 이력도 지원하며 모든 필드가 동일한 과거 행이 여러 개면 한 번에 1행만 삭제한다. 기존 `id` 컬럼이나 추가 DDL은 필요하지 않다. `record_id`는 비공개 경로를 포함한 전체 저장 필드의 해시로 식별하며 원문 경로는 반환하지 않는다. 두 테이블은 InnoDB여야 하고 DB 계정에 두 테이블의 DELETE 권한이 필요하다.

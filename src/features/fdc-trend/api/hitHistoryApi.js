@@ -18,6 +18,17 @@ export function hitHistoryImageUrl(imageId) {
   return `/api/hit-history?imageId=${encodeURIComponent(imageId)}`
 }
 
+export async function deleteHitHistory(recordId) {
+  const response = await fetch("/api/hit-history", {
+    method: "DELETE",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ recordId }),
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(getApiErrorMessage(payload, "Unable to delete saved history."))
+  return payload
+}
+
 export async function createHitHistory({ lineId, updateDate, sdwt, filePath, execDate, image, requestId }) {
   const body = { lineId, updateDate, sdwt, filePath, execDate, image, requestId }
   const response = await fetch("/api/hit-history", {

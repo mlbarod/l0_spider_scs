@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ArrowLeft, History, RefreshCw, Search } from "lucide-react"
 import { Link } from "react-router-dom"
 
@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { fetchHitHistory, hitHistoryImageUrl } from "../api/hitHistoryApi"
+import { deleteHitHistory, fetchHitHistory, hitHistoryImageUrl } from "../api/hitHistoryApi"
+import { fetchCurrentUser } from "../api/currentUserApi"
 
 const EMPTY_FILTERS = { lineId: "", sdwt: "", knoxId: "", dateFrom: "", dateTo: "" }
 const FILTER_FIELDS = [
@@ -40,6 +41,10 @@ export function HitHistoryPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const queryClient = useQueryClient()
+  const userQuery = useQuery({ queryKey: ["current-user"], queryFn: fetchCurrentUser, retry: false, staleTime: 60_000 })
+  const canDelete = userQuery.data?.canDeleteHistory === true
   const historyQuery = useQuery({
     queryKey: ["hit-history", filters, page],
     queryFn: ({ signal }) => fetchHitHistory({ ...filters, page, pageSize: 20, signal }),
@@ -48,6 +53,15 @@ export function HitHistoryPage() {
   const data = historyQuery.data
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / 20))
   const invalidDates = draft.dateFrom && draft.dateTo && draft.dateFrom > draft.dateTo
+  const deletion = useMutation({
+    mutationFn: deleteHitHistory,
+    onSuccess: async () => {
+      setDeleteTarget(null)
+      if (selected?.record_id === deleteTarget?.record_id) setSelected(null)
+      if (page > 1 && data?.records?.length === 1) setPage(page - 1)
+      await queryClient.invalidateQueries({ queryKey: ["hit-history"] })
+    },
+  })
 
   function applyFilters(event) {
     event.preventDefault()
@@ -108,6 +122,7 @@ export function HitHistoryPage() {
               <TableHeader><TableRow>
                 <TableHead>Saved at</TableHead><TableHead>Line Name</TableHead><TableHead>SDWT</TableHead>
                 <TableHead>Chart date</TableHead><TableHead>Saved by</TableHead><TableHead>Chart</TableHead>
+                {canDelete ? <TableHead>Delete history</TableHead> : null}
               </TableRow></TableHeader>
               <TableBody>{data.records.map((record, index) => (
                 <TableRow key={`${page}-${index}`}>
@@ -121,6 +136,10 @@ export function HitHistoryPage() {
                       History details
                     </button>
                   </TableCell>
+                  {canDelete ? <TableCell>
+                    <Button variant="destructive" size="sm" disabled={!record.record_id || deletion.isPending}
+                      onClick={() => { deletion.reset(); setDeleteTarget(record) }}>Delete history</Button>
+                  </TableCell> : null}
                 </TableRow>
               ))}</TableBody>
             </Table>
@@ -149,6 +168,22 @@ export function HitHistoryPage() {
               <div key={label} className="contents"><dt className="text-muted-foreground">{label}</dt><dd className="break-all">{value || "—"}</dd></div>
             ))}
           </dl> : null}
+        </DialogContent>
+      </Dialog>
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open && !deletion.isPending) setDeleteTarget(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete saved history?</DialogTitle>
+            <DialogDescription>This record and its saved chart image will be permanently deleted.</DialogDescription>
+          </DialogHeader>
+          {deleteTarget ? <p className="break-all text-sm">{deleteTarget.exec_date} · {deleteTarget.line_id} · {deleteTarget.sdwt} · {deleteTarget.knox_id}</p> : null}
+          {deletion.isError ? <p role="alert" className="text-sm text-destructive">{deletion.error.message}</p> : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" disabled={deletion.isPending} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button variant="destructive" disabled={deletion.isPending} onClick={() => deletion.mutate(deleteTarget.record_id)}>
+              {deletion.isPending ? "Deleting…" : "Delete history"}
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </main>

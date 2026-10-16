@@ -187,3 +187,72 @@ test("HTTP 환경에서 차트 PNG 저장·재시도·확대 상태 보존·게�
     await browser.close()
   }
 })
+
+
+test("中文首页仅保留 MY EQP 开发计划，管理员确认删除与普通用户权限", async () => {
+  const browser = await chromium.launch({ headless: true,
+    ...(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {}),
+  })
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
+    await page.addInitScript(() => localStorage.setItem("l0-spider-language", "zh-CN"))
+    let master = true, failDelete = true, total = 21
+    const deletes = [], errors = []
+    page.on("pageerror", error => errors.push(error.message))
+    await page.route("**/*", async route => {
+      const url = new URL(route.request().url())
+      const json = (body, status = 200) => route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) })
+      if (url.pathname === "/api/current-user") return json({ ok: true, knoxId: "synthetic.user", registrationRequired: false, canDeleteHistory: master })
+      if (url.pathname === "/api/hit-history") {
+        if (route.request().method() === "DELETE") {
+          deletes.push(route.request().postDataJSON())
+          if (failDelete) return json({ error: "Unable to delete saved history." }, 500)
+          total -= 1
+          return json({ ok: true, affectedRows: 1 })
+        }
+        const currentPage = Number(url.searchParams.get("page"))
+        const count = currentPage === 1 ? 20 : Math.max(0, total - 20)
+        return json({ ok: true, total, page: currentPage, pageSize: 20,
+          records: Array.from({ length: count }, (_, index) => ({
+            record_id: (currentPage === 1 ? "a" : "b").repeat(63) + index.toString(16).slice(-1),
+            update_date: "2026-10-15", exec_date: "2026-10-16 10:00:00", line_id: "L1", sdwt: "TEAM", knox_id: "other.user",
+          })),
+        })
+      }
+      if (url.pathname.startsWith("/api/")) return json({ ok: true, records: [], rows: [], lines: [] })
+      if (url.origin !== "http://history.test") return route.abort()
+      const file = url.pathname.startsWith("/assets/") ? url.pathname.slice(1) : "index.html"
+      return route.fulfill({ body: await readFile(resolve("dist", file)), contentType: file.endsWith(".js") ? "text/javascript" : file.endsWith(".css") ? "text/css" : "text/html" })
+    })
+    await page.goto("http://history.test/")
+    await page.getByRole("link").filter({ hasText: "历史记录看板" }).waitFor()
+    assert.equal(await page.locator('a[href="/under-construction/my-eqp-registration"]').count(), 1)
+    assert.equal(await page.locator('a[href^="/under-construction/"]').count(), 1)
+    assert.equal(await page.locator('a[href="/defect-spider"]').count(), 1)
+    await page.getByRole("link").filter({ hasText: "历史记录看板" }).click()
+    await page.getByRole("heading", { name: "历史记录看板", exact: true }).waitFor()
+    await page.getByRole("button", { name: "删除记录", exact: true }).first().waitFor()
+    await page.getByRole("button", { name: "下一页", exact: true }).click()
+    await page.getByText("2 / 2", { exact: true }).waitFor()
+    await page.getByRole("button", { name: "删除记录", exact: true }).click()
+    let dialog = page.getByRole("dialog")
+    await dialog.getByRole("heading", { name: "删除已保存的记录？" }).waitFor()
+    await dialog.getByRole("button", { name: "取消", exact: true }).click()
+    assert.equal(deletes.length, 0)
+    await page.getByRole("button", { name: "删除记录", exact: true }).click()
+    await dialog.getByRole("button", { name: "删除记录", exact: true }).click()
+    await dialog.getByRole("alert").filter({ hasText: "无法删除历史记录。" }).waitFor()
+    failDelete = false
+    await dialog.getByRole("button", { name: "删除记录", exact: true }).click()
+    await page.getByText("1 / 1", { exact: true }).waitFor()
+    await dialog.waitFor({ state: "detached" })
+    assert.deepEqual(deletes, [{ recordId: "b".repeat(63) + "0" }, { recordId: "b".repeat(63) + "0" }])
+    master = false
+    await page.reload()
+    await page.getByRole("button", { name: "记录详情", exact: true }).first().waitFor()
+    assert.equal(await page.getByRole("button", { name: "删除记录", exact: true }).count(), 0)
+    assert.deepEqual(errors, [])
+  } finally {
+    await browser.close()
+  }
+})
