@@ -27,6 +27,6 @@ test("한국어와 중국어 리소스는 같은 영어 원문 키를 빠짐없�
 
   assert.deepEqual(chineseKeys, koreanKeys)
   assert.ok(koreanKeys.length >= 250)
-  assert.equal(TRANSLATIONS.ko["Equipment Anomaly Detection"], "자설비 이상감지")
+  assert.equal(TRANSLATIONS.ko["Equipment Anomaly Detection"], "설비별 SPEC내 이상감지")
   assert.equal(TRANSLATIONS["zh-CN"]["Equipment Anomaly Detection"], "设备异常检测")
 })
