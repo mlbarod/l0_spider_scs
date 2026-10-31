@@ -1,3 +1,4 @@
+import { matchesFilterSearch, readFilterSearchParams } from "../src/features/fdc-trend/utils/filterSearch.mjs"
 import { createReadStream } from "node:fs"
 import { readdir, stat } from "node:fs/promises"
 import { join, relative, resolve, sep } from "node:path"
@@ -165,6 +166,7 @@ function sortValues(values) {
 }
 
 export function buildCommonCommonalityFilterPayload(index, filters) {
+  const search = filters.filterSearch ?? {}
   const eqpModels = sortValues(index.rows.map((row) => row.eqpModel))
   const selectedEqpModel = eqpModels.includes(filters.eqpModel) ? filters.eqpModel : ""
   const eqpModelRows = selectedEqpModel
@@ -175,7 +177,7 @@ export function buildCommonCommonalityFilterPayload(index, filters) {
     ? ALL_SENSORS
     : sensors.includes(filters.sensor) ? filters.sensor : ""
   const sensorRows = selectedSensor === ALL_SENSORS
-    ? eqpModelRows
+    ? eqpModelRows.filter((row) => matchesFilterSearch(row.sensor, search.sensor))
     : selectedSensor
     ? eqpModelRows.filter((row) => row.sensor === selectedSensor)
     : []
@@ -189,7 +191,7 @@ export function buildCommonCommonalityFilterPayload(index, filters) {
     ? filters.chStep
     : ""
   const rows = selectedChStep === ALL_CH_STEPS
-    ? sensorRows
+    ? sensorRows.filter((row) => matchesFilterSearch(row.chStep, search.chStep))
     : selectedChStep
     ? sensorRows.filter((row) => row.chStep === selectedChStep)
     : []
@@ -224,6 +226,7 @@ export async function handleCommonCommonalityDataRequest(req, res, url, options 
 
   try {
     const filters = {
+      filterSearch: readFilterSearchParams(url.searchParams),
       line: normalizeText(url.searchParams.get("line")),
       pathSdwt: normalizeText(url.searchParams.get("pathSdwt")),
       sdwt: normalizeText(url.searchParams.get("sdwt")),

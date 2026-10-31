@@ -1,3 +1,5 @@
+import { filterItems, filterItemsWithAll, getAllFilterSearch } from "../utils/filterSearch.mjs"
+import { FilterSearchInput } from "../components/FilterSearchInput"
 import { Fragment, memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
 import { ArrowLeft, ArrowUp, Check, ChevronRight, Loader2 } from "lucide-react"
 import { Link, useSearchParams } from "react-router-dom"
@@ -205,11 +207,10 @@ export function FilterCard({
         </div>
       </div>
       <div className="border-b border-[#e0e0e0] bg-white px-2 py-1.5">
-        <Input
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search…"
-          className="h-8 rounded-full border-[#e0e0e0] bg-white px-3 text-xs"
+        <FilterSearchInput
+          title={title}
+          query={query}
+          onQueryChange={onQueryChange}
           disabled={disabled}
         />
       </div>
@@ -1611,6 +1612,10 @@ export function FdcTrendPage() {
   const isSkipList = activeTeam === SKIP_LIST_TEAM
   const isMyEqp = activeTeam === MY_EQP_TEAM
   const priorities = useMemo(() => expandPriorities(selectedGrades), [selectedGrades])
+  const filterSearch = getAllFilterSearch(
+    { prcGroup: selectedDesc, eqpCh: selectedEqpCh, sensor: selectedSensor, chStep: selectedChStep },
+    { prcGroup: queries.step, eqpCh: queries.eqpCh, sensor: queries.sensor, chStep: queries.chStep },
+  )
   const dataQueryKey = [
     isSkipList ? "skip-list-data" : isMyEqp ? "my-eqp-equipment-data" : "self-equipment-data",
     activeLine,
@@ -1620,6 +1625,7 @@ export function FdcTrendPage() {
     selectedDesc,
     selectedEqpCh,
     selectedSensor,
+    filterSearch,
     selectedChStep,
   ]
   const dataQuery = useQuery({
@@ -1632,9 +1638,10 @@ export function FdcTrendPage() {
           eqpCh: selectedEqpCh,
           sensor: selectedSensor,
           chStep: selectedChStep,
+          filterSearch,
         })
       : isMyEqp
-      ? fetchMyEqpEquipmentData({ line: activeLine, priorities, prcGroup: selectedDesc, eqpCh: selectedEqpCh, sensor: selectedSensor, chStep: selectedChStep })
+      ? fetchMyEqpEquipmentData({ line: activeLine, priorities, prcGroup: selectedDesc, eqpCh: selectedEqpCh, sensor: selectedSensor, chStep: selectedChStep, filterSearch })
       : fetchSelfEquipmentData({
           line: activeLine,
           pathSdwt: activeTeam,
@@ -1644,6 +1651,7 @@ export function FdcTrendPage() {
           eqpCh: selectedEqpCh,
           sensor: selectedSensor,
           chStep: selectedChStep,
+          filterSearch,
         }),
     enabled: Boolean(
       mappingReady
@@ -1654,9 +1662,9 @@ export function FdcTrendPage() {
     ),
     placeholderData: (previousData, previousQuery) => {
       const previousKey = previousQuery?.queryKey ?? []
-      const sameFiltersExceptChStep = JSON.stringify(previousKey.slice(0, -1))
-        === JSON.stringify(dataQueryKey.slice(0, -1))
-      return sameFiltersExceptChStep ? previousData : undefined
+      const sameParentSelection = JSON.stringify(previousKey.slice(0, -2))
+        === JSON.stringify(dataQueryKey.slice(0, -2))
+      return sameParentSelection ? previousData : undefined
     },
   })
   const steps = dataQuery.data?.prcGroups ?? []
@@ -1674,6 +1682,7 @@ export function FdcTrendPage() {
     activeEqpCh,
     activeSensor,
     activeChStep,
+    JSON.stringify(filterSearch),
   ].join("\u0000")
   const expandedEqps = expandedChSteps.contextKey === gatherContextKey
     ? expandedChSteps.eqps
@@ -1702,7 +1711,7 @@ export function FdcTrendPage() {
       record,
     ]),
   ), [passHistoryQuery.data?.records])
-  const chStepIsSelected = Boolean(selectedChStep && activeChStep === selectedChStep)
+  const chStepIsSelected = Boolean(!dataQuery.isPlaceholderData && selectedChStep && activeChStep === selectedChStep)
   const dataRows = dataQuery.data?.rows
   const chartRows = useMemo(() => {
     if (!chStepIsSelected) return []
@@ -1799,7 +1808,7 @@ export function FdcTrendPage() {
     gradeOptions.map((grade) => ({ value: grade, label: grade })),
     queries.grade,
   )
-  const filteredSteps = filterItems(
+  const filteredSteps = filterItemsWithAll(
     [
       ...(!isSkipList && steps.length ? [{
         value: ALL_STEPS,
@@ -1808,13 +1817,14 @@ export function FdcTrendPage() {
       }] : []),
       ...steps.map((item) => ({
         value: item.prcGroup,
+        rowCount: item.rowCount,
         label: item.prcGroup,
         meta: `${item.rowCount.toLocaleString()} rows · ${item.equipmentCount.toLocaleString()} eqp`,
       })),
     ],
     queries.step,
   )
-  const filteredEqpChannels = filterItems(
+  const filteredEqpChannels = filterItemsWithAll(
     eqpChannels.length ? [
       {
         value: ALL_EQP_CHANNELS,
@@ -1823,13 +1833,14 @@ export function FdcTrendPage() {
       },
       ...eqpChannels.map((item) => ({
         value: item.eqpCh,
+        rowCount: item.rowCount,
         label: stripPngExtension(item.eqpCh),
         meta: `${item.rowCount.toLocaleString()} rows`,
       })),
     ] : [],
     queries.eqpCh,
   )
-  const filteredSensors = filterItems(
+  const filteredSensors = filterItemsWithAll(
     sensors.length ? [
       {
         value: ALL_SENSORS,
@@ -1838,13 +1849,14 @@ export function FdcTrendPage() {
       },
       ...sensors.map((item) => ({
         value: item.sensor,
+        rowCount: item.rowCount,
         label: item.sensor,
         meta: `${item.rowCount.toLocaleString()} rows`,
       })),
     ] : [],
     queries.sensor,
   )
-  const filteredChSteps = filterItems(
+  const filteredChSteps = filterItemsWithAll(
     chSteps.length ? [
       {
         value: ALL_CH_STEPS,
@@ -1853,6 +1865,7 @@ export function FdcTrendPage() {
       },
       ...(selectedSensor === ALL_SENSORS ? [] : chSteps.map((item) => ({
         value: item.step,
+        rowCount: item.rowCount,
         label: item.step.split("@")[0],
         meta: `${item.rowCount.toLocaleString()} rows · ${item.equipmentCount.toLocaleString()} eqp`,
       }))),
@@ -1901,6 +1914,7 @@ export function FdcTrendPage() {
     setQueries((current) => ({ ...current, grade: "", step: "", eqpCh: "", sensor: "", chStep: "" }))
     void saveChartSelectionHistory({
       grades: expandPriorities(nextGrades),
+      searches: {},
       prcGroup: ALL_STEPS,
       eqpCh: ALL_EQP_CHANNELS,
       sensor: ALL_SENSORS,
@@ -1913,7 +1927,9 @@ export function FdcTrendPage() {
     eqpCh = selectedEqpCh,
     sensor = selectedSensor,
     chStep,
+    searches = { prcGroup: queries.step, eqpCh: queries.eqpCh, sensor: queries.sensor, chStep: queries.chStep },
   }) => {
+    const historyFilterSearch = getAllFilterSearch({ prcGroup, eqpCh, sensor, chStep }, searches)
     const clickedAt = new Date().toISOString()
     try {
       const queryKey = [
@@ -1925,6 +1941,7 @@ export function FdcTrendPage() {
         prcGroup,
         eqpCh,
         sensor,
+        historyFilterSearch,
         chStep,
       ]
       const payload = await queryClient.fetchQuery({
@@ -1938,6 +1955,7 @@ export function FdcTrendPage() {
           eqpCh,
           sensor,
           chStep,
+          filterSearch: historyFilterSearch,
         }),
       })
       const filePaths = getSelfEquipmentHistoryFilePaths(payload.rows)
@@ -2394,11 +2412,4 @@ export function FdcTrendPage() {
       </Button>
     </div>
   )
-}
-
-function filterItems(items, query) {
-  const normalizedQuery = query.trim().toLowerCase()
-  return normalizedQuery
-    ? items.filter((item) => item.label.toLowerCase().includes(normalizedQuery))
-    : items
 }

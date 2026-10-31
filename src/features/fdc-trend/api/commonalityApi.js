@@ -1,3 +1,4 @@
+import { appendFilterSearchParams } from "../utils/filterSearch.mjs"
 import { getApiErrorMessage } from "./errorMessage.js"
 
 async function parseResponse(response) {
@@ -15,11 +16,13 @@ export async function fetchCommonalityData({
   stepSeq,
   sensor,
   chStep,
+  filterSearch,
 }) {
   const searchParams = new URLSearchParams({ line, pathSdwt, sdwt })
   if (stepSeq) searchParams.set("stepSeq", stepSeq)
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
+  appendFilterSearchParams(searchParams, filterSearch)
   const response = await fetch(`/api/commonality-data?${searchParams.toString()}`, {
     headers: { Accept: "application/json" },
   })

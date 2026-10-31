@@ -25,7 +25,7 @@ MY EQP 전용 조회, `/api/my-eqp-*`, `step=ALL` 등록 설비 흐름은 현재
 
 동일성 화면은 Line과 SDWT를 매핑한 뒤 STEP(`stepSeq`), Sensor, `chStep` 조건으로 `/api/commonality-data`를 조회한다. 응답의 허용된 이미지 경로는 `/api/commonality-image`로 전달한다.
 
-STEP의 `ALL`(`stepSeq=ALL`)은 선택한 SDWT의 모든 STEP을 대상으로 Sensor와 `chStep` 후보 및 결과를 조회한다. 각 필터의 검색 칸은 포함·제외 모드를 지원하며, 빈 검색어는 두 모드 모두 전체 후보를 표시한다. 검색은 후보 목록만 좁히며 현재 선택값을 자동으로 변경하지 않는다.
+STEP의 `ALL`(`stepSeq=ALL`)은 선택한 SDWT의 모든 STEP을 대상으로 Sensor와 `chStep` 후보 및 결과를 조회한다. 각 필터의 검색 칸은 포함·제외 모드를 지원하며, 빈 검색어는 두 모드 모두 전체 후보를 표시한다. 검색은 개별 선택값을 자동으로 변경하지 않는다. `ALL`을 선택한 필터의 검색은 서버 조회에도 적용해 화면 후보와 차트 범위를 일치시킨다. 검색 결과가 없으면 빈 결과를 반환하며, 검색어를 지우면 전체 범위로 복원한다.
 
 파일 원천은 다음과 같다.
 

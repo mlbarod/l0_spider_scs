@@ -1,3 +1,4 @@
+import { matchesFilterSearch, readFilterSearchParams } from "../src/features/fdc-trend/utils/filterSearch.mjs"
 import { createReadStream } from "node:fs"
 import { stat } from "node:fs/promises"
 import { isAbsolute, join, resolve } from "node:path"
@@ -152,13 +153,14 @@ function sortValues(values) {
 }
 
 export function buildCommonalityFilterPayload(index, filters) {
+  const search = filters.filterSearch ?? {}
   const stepSeqs = sortValues(index.rows.map((row) => row.stepSeq))
   const requestedStepSeq = normalizeText(filters.stepSeq || filters.stepDesc)
   const selectedStepSeq = requestedStepSeq === ALL_STEPS && stepSeqs.length
     ? ALL_STEPS
     : stepSeqs.includes(requestedStepSeq) ? requestedStepSeq : ""
   const stepRows = selectedStepSeq === ALL_STEPS
-    ? index.rows
+    ? index.rows.filter((row) => matchesFilterSearch(row.stepSeq, search.stepSeq))
     : selectedStepSeq
     ? index.rows.filter((row) => row.stepSeq === selectedStepSeq)
     : []
@@ -167,7 +169,7 @@ export function buildCommonalityFilterPayload(index, filters) {
     ? ALL_SENSORS
     : sensors.includes(filters.sensor) ? filters.sensor : ""
   const sensorRows = selectedSensor === ALL_SENSORS
-    ? stepRows
+    ? stepRows.filter((row) => matchesFilterSearch(row.sensor, search.sensor))
     : selectedSensor
     ? stepRows.filter((row) => row.sensor === selectedSensor)
     : []
@@ -181,7 +183,7 @@ export function buildCommonalityFilterPayload(index, filters) {
     ? filters.chStep
     : ""
   const rows = selectedChStep === ALL_CH_STEPS
-    ? sensorRows
+    ? sensorRows.filter((row) => matchesFilterSearch(row.chStep, search.chStep))
     : selectedChStep
     ? sensorRows.filter((row) => row.chStep === selectedChStep)
     : []
@@ -218,6 +220,7 @@ export async function handleCommonalityDataRequest(req, res, url) {
 
   try {
     const filters = {
+      filterSearch: readFilterSearchParams(url.searchParams),
       line: normalizeText(url.searchParams.get("line")),
       pathSdwt: normalizeText(url.searchParams.get("pathSdwt")),
       sdwt: normalizeText(url.searchParams.get("sdwt")),

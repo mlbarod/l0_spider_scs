@@ -76,6 +76,8 @@ A no-data message does not always mean the query failed. First check whether sou
 
 Before running an action, verify the target EQP, Sensor, and scope. Do not create test SKIP records in the production DB.
 
+`ALL` queries only the items matching the current search. Changing the search while `ALL` is selected updates the charts and dependent filters. No matches means no charts.
+
 ## 4. Similarity Anomaly Detection
 
 1. Select `Similarity Anomaly Detection` from the home screen.
@@ -85,7 +87,7 @@ Before running an action, verify the target EQP, Sensor, and scope. Do not creat
 5. Select `Sensor` and `ch_step`.
 6. Review the similarity graphs in the results area.
 
-Choose `Include` or `Exclude` in each filter search box. `Exclude` shows only items that do not contain the entered text. Search is case-insensitive; clearing the text shows all candidates. Searching does not automatically change the current selection.
+Choose `Include` or `Exclude` in each filter search box. `Exclude` shows only items that do not contain the entered text. Search is case-insensitive; clearing the text shows all candidates. Searching does not automatically change the current selection. `ALL` queries only the items matching the current search. Changing the search while `ALL` is selected updates the charts and dependent filters. No matches means no charts.
 
 `ALL` for `ch_step` is a screen selection that groups multiple results for the current filters. It is different from the legacy MY EQP mailing link value `step=ALL`.
 

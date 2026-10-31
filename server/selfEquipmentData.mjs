@@ -1,3 +1,4 @@
+import { matchesFilterSearch, readFilterSearchParams } from "../src/features/fdc-trend/utils/filterSearch.mjs"
 import { createReadStream, existsSync, statSync } from "node:fs"
 import { dirname, join, relative, resolve, sep } from "node:path"
 
@@ -373,6 +374,7 @@ function sortByLabel(items, labelColumn) {
 }
 
 export function buildSelfEquipmentPayload(rows, filters) {
+  const search = filters.filterSearch ?? {}
   const priorities = new Set(filters.priorities)
   const baseRows = rows.filter((row) => (
     row.line_rev === filters.line
@@ -398,7 +400,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
     ? filters.desc
     : ""
   const stepRows = selectedPrcGroup === "ALL"
-    ? baseRows
+    ? baseRows.filter((row) => row.prc_group && matchesFilterSearch(row.prc_group, search.prcGroup))
     : selectedPrcGroup
     ? baseRows.filter((row) => row.prc_group === selectedPrcGroup)
     : selectedDesc
@@ -414,7 +416,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
     ? filters.eqpCh
     : ""
   const eqpChannelRows = selectedEqpCh === ALL_EQP_CHANNELS
-    ? stepRows
+    ? stepRows.filter((row) => row.eqp && matchesFilterSearch(String(row.eqp).replace(/\.png$/i, ""), search.eqpCh))
     : selectedEqpCh
     ? stepRows.filter((row) => row.eqp === selectedEqpCh)
     : []
@@ -429,7 +431,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
     ? filters.sensor
     : ""
   const sensorRows = selectedSensor === ALL_SENSORS
-    ? eqpChannelRows
+    ? eqpChannelRows.filter((row) => row.sensor && matchesFilterSearch(row.sensor, search.sensor))
     : selectedSensor
     ? eqpChannelRows.filter((row) => row.sensor === selectedSensor)
     : []
@@ -445,7 +447,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
     ? filters.chStep
     : ""
   const chartRows = selectedChStep === ALL_CH_STEPS
-    ? sensorRows
+    ? sensorRows.filter((row) => row.step && matchesFilterSearch(String(row.step).split("@")[0], search.chStep))
     : selectedChStep
     ? sensorRows.filter((row) => row.step === selectedChStep)
     : []
@@ -477,6 +479,7 @@ export function buildSelfEquipmentPayload(rows, filters) {
 
 function readFilters(url) {
   return {
+    filterSearch: readFilterSearchParams(url.searchParams),
     line: url.searchParams.get("line")?.trim() ?? "",
     pathSdwt: url.searchParams.get("pathSdwt")?.trim() ?? "",
     sdwt: url.searchParams.get("sdwt")?.trim() ?? "",

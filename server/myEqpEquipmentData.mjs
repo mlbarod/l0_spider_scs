@@ -1,3 +1,4 @@
+import { readFilterSearchParams } from "../src/features/fdc-trend/utils/filterSearch.mjs"
 import { getRemoteIp, resolveCurrentUser, sendCurrentUserError } from "./currentUser.mjs"
 import { assertKnownMappingLine, readLineMapping, requireLineMapping } from "./mappingConfig.mjs"
 import { listMyEqpRegistrationRecords } from "./myEqpRegistration.mjs"
@@ -36,6 +37,7 @@ export async function handleMyEqpEquipmentDataRequest(req, res, url, {
   if (req.method !== "GET") return sendJson(res, 405, { ok: false, error: "Method not allowed" })
   try {
     const filters = Object.fromEntries(["line", "desc", "prcGroup", "eqpCh", "sensor", "chStep"].map(key => [key, url.searchParams.get(key)?.trim() ?? ""]))
+    filters.filterSearch = readFilterSearchParams(url.searchParams)
     filters.priorities = url.searchParams.getAll("priority").map(value => value.trim()).filter(Boolean)
     const mapping = await requireLineMapping(mappingReader)
     assertKnownMappingLine(mapping, filters.line)

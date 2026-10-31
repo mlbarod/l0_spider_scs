@@ -35,6 +35,9 @@ MY EQP 등록·조회와 `/api/my-eqp-*`, `myeqp_regist`를 지원한다. 등록
 
 ## 4. 필터와 데이터 처리
 
+- 각 필터는 포함·제외 검색을 지원한다. `ALL`은 검색에 일치하는 후보만 조회하며, 검색 결과가 없으면 차트도 비어 있다. 검색어를 지우면 전체 범위로 돌아간다. 일반 자설비, MY EQP 및 SKIP LIST 조회에 적용한다.
+- 조회 API는 선택적으로 `{prcGroup|eqpCh|sensor|chStep}Search`와 같은 키의 `SearchMode`(`include`/`exclude`)를 받는다. 해당 필터가 `ALL`일 때만 적용하며 기존 단일값·직접 링크 동작은 유지한다. 동일성 조회는 `prcGroup` 대신 `stepSeq`를 사용한다.
+
 - `/api/self-equipment-data`의 기본 조건은 `line`, `pathSdwt`, `sdwt`이며 `priority`, `prcGroup`, `eqpCh`, `sensor`, `chStep`을 선택적으로 전달한다. `prcGroup=ALL`은 현재 Line·분임조·Grade 범위의 전체 그룹을 조회한다. 기존 API의 `desc` 조건도 호환을 위해 유지한다.
 - 화면의 PRC_Group은 분임조별 경로 테이블의 `sdwt`, `eqp`와 EQP 기준정보의 `sdwt_prod`, `main`을 결합해 얻은 `prc_group`을 사용한다. `eqp`는 첫 `-` 앞 값을 `main`과 비교한다. SDWT 기준정보가 없는 구형 축약 데이터에서는 `main`이 하나의 `prc_group`으로만 해석될 때에만 기존 EQP 단독 결합을 적용한다.
 - 일반 자설비와 SKIP LIST 모두 같은 `prc_group` 기준으로 이후 `eqp_ch`, `sensor`, `ch_step` 후보를 제한한다.

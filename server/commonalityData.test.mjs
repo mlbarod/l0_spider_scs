@@ -26,6 +26,26 @@ function createSourceRow(overrides = {}) {
   }
 }
 
+test("STEP·Sensor·ch_step ALL은 검색 후 남은 후보의 교집합만 그리고 검색 해제 시 복원한다", () => {
+  const rows = normalizeCommonalityPathRows([
+    createSourceRow({ step_seq: "100_KEEP", sensor: "KEEP", ch_step: "10@001" }),
+    createSourceRow({ step_seq: "200_SKIP", sensor: "KEEP", ch_step: "10@001" }),
+    createSourceRow({ step_seq: "100_KEEP", sensor: "DROP", ch_step: "10@001" }),
+    createSourceRow({ step_seq: "100_KEEP", sensor: "KEEP", ch_step: "20@002" }),
+  ], latest)
+  const index = { rows, folderSdwt: "SDWT-1", latestPath: latest }
+  const filters = { stepSeq: "ALL", sensor: "ALL", chStep: "ALL", filterSearch: {
+    stepSeq: { text: "skip", mode: "exclude" }, sensor: { text: "DROP", mode: "exclude" }, chStep: { text: "10@", mode: "include" },
+  } }
+  const result = buildCommonalityFilterPayload(index, filters)
+  assert.deepEqual(result.rows, [rows[0]])
+  assert.deepEqual(result.stepSeqs, ["100_KEEP", "200_SKIP"])
+  assert.deepEqual(result.sensors, ["DROP", "KEEP"])
+  assert.deepEqual(buildCommonalityFilterPayload(index, { ...filters, filterSearch: {} }).rows, rows)
+  assert.deepEqual(buildCommonalityFilterPayload(index, { ...filters, filterSearch: { stepSeq: { text: "missing", mode: "include" } } }).rows, [])
+  assert.equal(buildCommonalityFilterPayload(index, { ...filters, stepSeq: "200_SKIP", sensor: "KEEP", chStep: "10@001" }).rows[0], rows[1])
+})
+
 test("동일성 경로 테이블 행을 기존 화면 응답 구조로 변환한다", () => {
   const rows = normalizeCommonalityPathRows([
     createSourceRow(),

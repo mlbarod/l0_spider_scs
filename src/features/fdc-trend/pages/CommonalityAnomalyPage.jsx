@@ -14,7 +14,7 @@ import { useHitHistorySave } from "../hooks/useHitHistorySave"
 import { HistorySavedDialog } from "../components/HistorySavedDialog"
 import { loadChartPng } from "../utils/historyChartImage"
 import { FilterSearchInput } from "../components/FilterSearchInput"
-import { filterItems as filterValues } from "../utils/filterSearch.mjs"
+import { filterItems as filterValues, filterItemsWithAll, getAllFilterSearch } from "../utils/filterSearch.mjs"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import {
   buildCommonalityImageUrl,
@@ -302,6 +302,10 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
     ? selectedTeam
     : (teamOptions[0]?.key ?? "")
   const activeTeamLabel = teamOptions.find((team) => team.key === activeTeam)?.label ?? ""
+  const filterSearch = getAllFilterSearch(
+    { stepSeq: selectedStepDesc, sensor: selectedSensor, chStep: selectedChStep },
+    { stepSeq: queries.stepDesc, sensor: queries.sensor, chStep: queries.chStep },
+  )
   const dataQuery = useQuery({
     queryKey: [
       config.queryKey,
@@ -310,6 +314,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
       activeTeamLabel,
       selectedStepDesc,
       selectedSensor,
+      filterSearch,
       selectedChStep,
     ],
     queryFn: () => config.fetchData({
@@ -319,8 +324,14 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
       [config.categoryQueryKey]: selectedStepDesc,
       sensor: selectedSensor,
       chStep: selectedChStep,
+      filterSearch,
     }),
     enabled: Boolean(mappingReady && activeLine && activeTeam && activeTeamLabel),
+    placeholderData: (previousData, previousQuery) => {
+      const parentSelection = [config.queryKey, activeLine, activeTeam, activeTeamLabel, selectedStepDesc, selectedSensor]
+      return JSON.stringify(previousQuery?.queryKey?.slice(0, -2)) === JSON.stringify(parentSelection)
+        ? previousData : undefined
+    },
   })
   const stepDescs = dataQuery.data?.[config.categoryOptionKey] ?? EMPTY_LIST
   const sensors = dataQuery.data?.sensors ?? EMPTY_LIST
@@ -328,7 +339,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
   const activeStepDesc = dataQuery.data?.filters?.[config.categoryFilterKey] ?? ""
   const activeSensor = dataQuery.data?.filters?.sensor ?? ""
   const activeChStep = dataQuery.data?.filters?.chStep ?? ""
-  const imageRows = selectedChStep && activeChStep === selectedChStep
+  const imageRows = !dataQuery.isPlaceholderData && selectedChStep && activeChStep === selectedChStep
     ? dataQuery.data?.rows ?? EMPTY_LIST
     : EMPTY_LIST
   const totalImagePages = Math.ceil(imageRows.length / IMAGES_PER_PAGE)
@@ -353,7 +364,10 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
     [activeImagePage, totalImagePages],
   )
 
-  const setQuery = (key, value) => setQueries((current) => ({ ...current, [key]: value }))
+  const setQuery = (key, value) => {
+    setQueries((current) => ({ ...current, [key]: value }))
+    setImagePage(1)
+  }
   const resetStepFilters = () => {
     setSelectedStepDesc("")
     setSelectedSensor("")
@@ -363,6 +377,10 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
   }
   const handleChStepChange = async (chStep) => {
     const nextChStep = selectedChStep === chStep ? "" : chStep
+    const historyFilterSearch = getAllFilterSearch(
+      { stepSeq: selectedStepDesc, sensor: selectedSensor, chStep: nextChStep },
+      { stepSeq: queries.stepDesc, sensor: queries.sensor, chStep: queries.chStep },
+    )
     const clickedAt = new Date().toISOString()
     setSelectedChStep(nextChStep)
     setImagePage(1)
@@ -376,6 +394,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
         activeTeamLabel,
         selectedStepDesc,
         selectedSensor,
+        historyFilterSearch,
         nextChStep,
       ]
       const payload = await queryClient.fetchQuery({
@@ -387,6 +406,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
           [config.categoryQueryKey]: selectedStepDesc,
           sensor: selectedSensor,
           chStep: nextChStep,
+          filterSearch: historyFilterSearch,
         }),
       })
       const filePaths = buildHistoryFilePaths(payload.rows ?? [])
@@ -411,7 +431,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
     queries.line,
   )
   const filteredTeams = filterValues(teamOptions.map((team) => ({ label: team.label, value: team.key })), queries.team)
-  const filteredStepDescs = filterValues(
+  const filteredStepDescs = filterItemsWithAll(
     [
       ...(config === PAGE_VARIANTS.matching && stepDescs.length ? [{ label: "ALL", value: ALL_STEPS }] : []),
       ...stepDescs.filter((stepDesc) => config !== PAGE_VARIANTS.matching || stepDesc !== ALL_STEPS)
@@ -419,7 +439,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
     ],
     queries.stepDesc,
   )
-  const filteredSensors = filterValues(
+  const filteredSensors = filterItemsWithAll(
     sensors.length
       ? [
           { label: "ALL", value: ALL_SENSORS },
@@ -428,7 +448,7 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
       : [],
     queries.sensor,
   )
-  const filteredChSteps = filterValues(
+  const filteredChSteps = filterItemsWithAll(
     chSteps.length
       ? selectedSensor === ALL_SENSORS
         ? [{ label: "ALL", value: ALL_CH_STEPS }]

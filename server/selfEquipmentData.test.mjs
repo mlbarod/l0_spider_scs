@@ -28,6 +28,26 @@ import {
 
 const NOW = Date.parse("2026-07-16T12:00:00+09:00")
 
+test("자설비 ALL은 PRC·EQP·Sensor·ch_step의 표시 라벨 검색을 적용하며 빈 결과를 전체로 대체하지 않는다", () => {
+  const base = { line_rev: "P1L", sdwt: "SDWT-1", priority: "A", recipe_id: "R", prc_group: "KEEP", eqp: "EQ1.png", sensor: "TEMP", step: "10@MAIN", file_path: "/synthetic" }
+  const rows = [base, { ...base, prc_group: "DROP" }, { ...base, eqp: "EQ2.png" },
+    { ...base, sensor: "PRESSURE" }, { ...base, step: "20@MAIN" }, { ...base, sdwt: "OTHER" }]
+  const filters = { line: "P1L", sdwt: "SDWT-1", priorities: ["A"], prcGroup: "ALL", eqpCh: "ALL", sensor: "ALL", chStep: "ALL" }
+  const filterSearch = { prcGroup: { text: "drop", mode: "exclude" }, eqpCh: { text: "EQ2", mode: "exclude" },
+    sensor: { text: "temp", mode: "include" }, chStep: { text: "20", mode: "exclude" } }
+  const result = buildSelfEquipmentPayload(rows, { ...filters, filterSearch })
+  assert.equal(result.rows.length, 1)
+  assert.equal(result.rows[0].eqp, "EQ1.png")
+  assert.deepEqual(result.prcGroups.map((item) => item.prcGroup), ["DROP", "KEEP"])
+  assert.equal(buildSelfEquipmentPayload(rows, filters).rows.length, 5)
+  for (const key of Object.keys(filterSearch)) {
+    assert.deepEqual(buildSelfEquipmentPayload(rows, { ...filters, filterSearch: { [key]: { text: "missing", mode: "include" } } }).rows, [])
+  }
+  // These suffixes are not displayed in the filter labels.
+  assert.equal(buildSelfEquipmentPayload(rows, { ...filters, filterSearch: { eqpCh: { text: ".png", mode: "exclude" }, chStep: { text: "@MAIN", mode: "exclude" } } }).rows.length, 5)
+  assert.equal(buildSelfEquipmentPayload(rows, { ...filters, prcGroup: "DROP", eqpCh: "EQ2.png", filterSearch }).filters.prcGroup, "DROP")
+})
+
 function createRow(overrides = {}) {
   return {
     line_rev: "P1L",

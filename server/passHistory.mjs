@@ -1,3 +1,4 @@
+import { matchesFilterSearch, readFilterSearchParams } from "../src/features/fdc-trend/utils/filterSearch.mjs"
 import { spawn } from "node:child_process"
 import { relative, resolve, sep } from "node:path"
 import { fileURLToPath, URL } from "node:url"
@@ -217,7 +218,7 @@ export function buildPassHistoryFilterPayload(
     ? normalizeEqp(filters.eqpCh)
     : ""
   const eqpRecords = selectedEqpCh === ALL_VALUES
-    ? stepRecords
+    ? stepRecords.filter((record) => matchesFilterSearch(normalizeEqp(record.eqp), filters.filterSearch?.eqpCh))
     : selectedEqpCh
     ? stepRecords.filter((record) => normalizeEqp(record.eqp) === selectedEqpCh)
     : []
@@ -232,7 +233,7 @@ export function buildPassHistoryFilterPayload(
     ? filters.sensor
     : ""
   const sensorRecords = selectedSensor === ALL_VALUES
-    ? eqpRecords
+    ? eqpRecords.filter((record) => matchesFilterSearch(normalizeText(record.sensor), filters.filterSearch?.sensor))
     : selectedSensor
     ? eqpRecords.filter((record) => normalizeText(record.sensor) === selectedSensor)
     : []
@@ -247,7 +248,7 @@ export function buildPassHistoryFilterPayload(
     ? filters.chStep
     : ""
   const chartRecords = selectedChStep === ALL_VALUES
-    ? sensorRecords
+    ? sensorRecords.filter((record) => matchesFilterSearch(normalizeText(record.step).split("@")[0], filters.filterSearch?.chStep))
     : selectedChStep
     ? sensorRecords.filter((record) => normalizeText(record.step) === selectedChStep)
     : []
@@ -600,6 +601,7 @@ export async function handlePassHistoryRequest(req, res, url) {
           eqpCh: normalizeText(url.searchParams.get("eqpCh")),
           sensor: normalizeText(url.searchParams.get("sensor")),
           chStep: normalizeText(url.searchParams.get("chStep")),
+          filterSearch: readFilterSearchParams(url.searchParams),
         }, Date.now(), referenceRows))
         return
       }

@@ -1,3 +1,4 @@
+import { appendFilterSearchParams } from "../utils/filterSearch.mjs"
 import { getApiErrorMessage } from "./errorMessage.js"
 
 export function buildErdDataReferencePath(filePath) {
@@ -68,6 +69,7 @@ export async function fetchSelfEquipmentData({
   eqpCh,
   sensor,
   chStep,
+  filterSearch,
 }) {
   const searchParams = new URLSearchParams({ line, pathSdwt, sdwt })
   priorities.forEach((priority) => searchParams.append("priority", priority))
@@ -77,6 +79,7 @@ export async function fetchSelfEquipmentData({
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
 
+  appendFilterSearchParams(searchParams, filterSearch)
   const response = await fetch(`/api/self-equipment-data?${searchParams.toString()}`, {
     headers: { Accept: "application/json" },
   })
@@ -89,12 +92,13 @@ export async function fetchSelfEquipmentData({
   return payload
 }
 
-export async function fetchMyEqpEquipmentData({ line, priorities = [], desc, prcGroup, eqpCh, sensor, chStep }) {
+export async function fetchMyEqpEquipmentData({ line, priorities = [], desc, prcGroup, eqpCh, sensor, chStep, filterSearch }) {
   const params = new URLSearchParams({ line })
   priorities.forEach(priority => params.append("priority", priority))
   for (const [key, value] of Object.entries({ desc, prcGroup, eqpCh, sensor, chStep })) {
     if (value) params.set(key, value)
   }
+  appendFilterSearchParams(params, filterSearch)
   const response = await fetch(`/api/my-eqp-equipment-data?${params}`, { headers: { Accept: "application/json" } })
   const payload = await response.json().catch(() => ({}))
   if (!response.ok) throw new Error(getApiErrorMessage(payload, "Unable to load MY EQP anomaly data."))

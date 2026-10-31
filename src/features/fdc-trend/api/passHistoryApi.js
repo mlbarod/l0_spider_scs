@@ -1,3 +1,4 @@
+import { appendFilterSearchParams } from "../utils/filterSearch.mjs"
 import { getApiErrorMessage } from "./errorMessage.js"
 
 async function parseResponse(response) {
@@ -25,6 +26,7 @@ export async function fetchSkipListData({
   eqpCh,
   sensor,
   chStep,
+  filterSearch,
 }) {
   const searchParams = new URLSearchParams({ view: "filters", lineId })
   priorities.forEach((priority) => searchParams.append("priority", priority))
@@ -33,6 +35,7 @@ export async function fetchSkipListData({
   if (sensor) searchParams.set("sensor", sensor)
   if (chStep) searchParams.set("chStep", chStep)
 
+  appendFilterSearchParams(searchParams, filterSearch)
   const response = await fetch(`/api/pass-history?${searchParams.toString()}`, {
     headers: { Accept: "application/json" },
   })
