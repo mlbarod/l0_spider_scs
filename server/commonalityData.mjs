@@ -24,6 +24,7 @@ export const COMMONALITY_PATH_COLUMNS = Object.freeze([
   "ch_step",
 ])
 const PATH_TABLE_CACHE_MAX_ENTRIES = 1
+const ALL_STEPS = "ALL"
 const ALL_SENSORS = "ALL"
 const ALL_CH_STEPS = "ALL"
 const pathTableCache = new Map()
@@ -153,8 +154,12 @@ function sortValues(values) {
 export function buildCommonalityFilterPayload(index, filters) {
   const stepSeqs = sortValues(index.rows.map((row) => row.stepSeq))
   const requestedStepSeq = normalizeText(filters.stepSeq || filters.stepDesc)
-  const selectedStepSeq = stepSeqs.includes(requestedStepSeq) ? requestedStepSeq : ""
-  const stepRows = selectedStepSeq
+  const selectedStepSeq = requestedStepSeq === ALL_STEPS && stepSeqs.length
+    ? ALL_STEPS
+    : stepSeqs.includes(requestedStepSeq) ? requestedStepSeq : ""
+  const stepRows = selectedStepSeq === ALL_STEPS
+    ? index.rows
+    : selectedStepSeq
     ? index.rows.filter((row) => row.stepSeq === selectedStepSeq)
     : []
   const sensors = sortValues(stepRows.map((row) => row.sensor))

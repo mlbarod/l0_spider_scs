@@ -76,6 +76,42 @@ test("sdwt_code는 mapping key와 표시 SDWT를 모두 허용해 범위를 제�
   )
 })
 
+test("STEP ALL은 현재 SDWT의 모든 STEP에서 Sensor·ch_step을 조회한다", () => {
+  const sourceRows = normalizeCommonalityPathRows([
+    createSourceRow(),
+    createSourceRow({ step_seq: "200", recipe_id: "RECIPE-2" }),
+    createSourceRow({ step_seq: "200", sensor: "TEMP", ch_step: "20@001", recipe_id: "RECIPE-3" }),
+    createSourceRow({ sdwt_code: "SDWT-2", step_seq: "300", sensor: "OTHER" }),
+  ], latest)
+  const scoped = scopeCommonalityRows(sourceRows, { pathSdwt: "SDWT-1", sdwt: "SDWT-1" })
+  const index = { latestPath: latest, ...scoped }
+  const filters = { stepSeq: "ALL", sensor: "", chStep: "" }
+  const options = buildCommonalityFilterPayload(index, filters)
+  assert.equal(options.filters.stepSeq, "ALL")
+  assert.equal(options.filters.stepDesc, "ALL")
+  assert.deepEqual(options.stepSeqs, ["100", "200"])
+  assert.deepEqual(options.sensors, ["PRESSURE_SENSOR", "TEMP"])
+  assert.deepEqual(options.rows, [])
+  const selected = buildCommonalityFilterPayload(index, { ...filters, sensor: "PRESSURE_SENSOR", chStep: "10@001" })
+  assert.deepEqual(selected.rows.map((row) => row.stepSeq), ["100", "200"])
+  assert.deepEqual(selected.chSteps, ["10@001"])
+  const all = buildCommonalityFilterPayload(index, { ...filters, sensor: "ALL", chStep: "ALL" })
+  assert.deepEqual(all.rows, scoped.rows)
+  assert.equal(all.counts.filteredImages, 3)
+  const narrow = buildCommonalityFilterPayload(index, { stepSeq: "100", sensor: "TEMP", chStep: "ALL" })
+  assert.equal(narrow.filters.sensor, "")
+  assert.equal(narrow.filters.chStep, "")
+  assert.deepEqual(narrow.rows, [])
+  for (const invalid of ["", "UNKNOWN"]) {
+    const payload = buildCommonalityFilterPayload(index, { ...filters, stepSeq: invalid, sensor: "ALL", chStep: "ALL" })
+    assert.deepEqual(payload.rows, [])
+    assert.deepEqual(payload.sensors, [])
+  }
+  const empty = buildCommonalityFilterPayload({ ...index, rows: [] }, { stepSeq: "ALL", sensor: "ALL", chStep: "ALL" })
+  assert.equal(empty.filters.stepSeq, "")
+  assert.deepEqual(empty.rows, [])
+})
+
 test("step_seq, sensor와 ch_step으로 종속 필터 데이터를 생성한다", () => {
   const rows = normalizeCommonalityPathRows([
     createSourceRow(),

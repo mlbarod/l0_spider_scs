@@ -81,9 +81,11 @@ Before running an action, verify the target EQP, Sensor, and scope. Do not creat
 1. Select `Similarity Anomaly Detection` from the home screen.
 2. Select `Line Name`.
 3. Select `SDWT`.
-4. Select `STEP`.
+4. Select `STEP`, or choose `ALL` to query every STEP in the selected SDWT.
 5. Select `Sensor` and `ch_step`.
 6. Review the similarity graphs in the results area.
+
+Choose `Include` or `Exclude` in each filter search box. `Exclude` shows only items that do not contain the entered text. Search is case-insensitive; clearing the text shows all candidates. Searching does not automatically change the current selection.
 
 `ALL` for `ch_step` is a screen selection that groups multiple results for the current filters. It is different from the legacy MY EQP mailing link value `step=ALL`.
 

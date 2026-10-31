@@ -7,13 +7,14 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
 import { useHitHistorySave } from "../hooks/useHitHistorySave"
 import { HistorySavedDialog } from "../components/HistorySavedDialog"
 import { loadChartPng } from "../utils/historyChartImage"
+import { FilterSearchInput } from "../components/FilterSearchInput"
+import { filterItems as filterValues } from "../utils/filterSearch.mjs"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import {
   buildCommonalityImageUrl,
@@ -29,6 +30,7 @@ import { formatLineDisplayName } from "../utils/lineDisplay.mjs"
 
 const EMPTY_MAPPING = Object.freeze({})
 const EMPTY_LIST = Object.freeze([])
+const ALL_STEPS = "ALL"
 const ALL_SENSORS = "ALL"
 const ALL_CH_STEPS = "ALL"
 const IMAGES_PER_PAGE = 18
@@ -142,11 +144,10 @@ function FilterCard({
         </div>
       </div>
       <div className="border-b border-[#e0e0e0] bg-white px-2 py-1.5">
-        <Input
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-          placeholder="Search…"
-          className="h-8 rounded-full border-[#e0e0e0] bg-white px-3 text-xs"
+        <FilterSearchInput
+          title={title}
+          query={query}
+          onQueryChange={onQueryChange}
           disabled={disabled}
         />
       </div>
@@ -236,13 +237,6 @@ function CommonalityImageCard({ row, config, lineId }) {
       <HistorySavedDialog open={saveHitHistoryMutation.successOpen} onOpenChange={saveHitHistoryMutation.setSuccessOpen} />
     </article>
   )
-}
-
-function filterValues(values, query) {
-  const normalizedQuery = query.trim().toLowerCase()
-  return normalizedQuery
-    ? values.filter((item) => item.label.toLowerCase().includes(normalizedQuery))
-    : values
 }
 
 function buildHistoryFilePaths(rows) {
@@ -418,7 +412,11 @@ export function CommonalityAnomalyPage({ variant = "matching" }) {
   )
   const filteredTeams = filterValues(teamOptions.map((team) => ({ label: team.label, value: team.key })), queries.team)
   const filteredStepDescs = filterValues(
-    stepDescs.map((stepDesc) => ({ label: stepDesc, value: stepDesc })),
+    [
+      ...(config === PAGE_VARIANTS.matching && stepDescs.length ? [{ label: "ALL", value: ALL_STEPS }] : []),
+      ...stepDescs.filter((stepDesc) => config !== PAGE_VARIANTS.matching || stepDesc !== ALL_STEPS)
+        .map((stepDesc) => ({ label: stepDesc, value: stepDesc })),
+    ],
     queries.stepDesc,
   )
   const filteredSensors = filterValues(
