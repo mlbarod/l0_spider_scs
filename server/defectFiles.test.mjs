@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { buildDefectRawSummary, buildDefectScatterData, buildDefectFilePairs } from "./defectFiles.mjs"
+import { buildDefectRawSummary, buildDefectScatterData, buildDefectFilePairs, selectDefectFileSummary } from "./defectFiles.mjs"
 
 const rows = [
   { eqp_ch: "EQP-2", x: 1 }, { eqp_ch: "EQP-1", x: 2 },
@@ -12,6 +12,34 @@ test("이상감지 RAW데이터는 eqp_ch별 차트 구분과 행 수를 만든�
   assert.deepEqual(result.eqp_ch_groups, [{ eqp_ch: "EQP-1", row_count: 1 }, { eqp_ch: "EQP-2", row_count: 2 }])
   assert.equal(result.row_count, 5)
   assert.equal(result.unassigned_row_count, 2)
+})
+
+test("목록 eqpid와 정확히 일치하는 RAW만 선택하고 캐시 원본·오류 행 집계를 보존한다", () => {
+  const raw = [
+    { eqp_ch: "EQ01", tkout_time: 1, fab_value: 1 },
+    { eqp_ch: "EQ01", tkout_time: "invalid", fab_value: 2 },
+    { eqp_ch: "EQ01_A", tkout_time: 2, fab_value: 3 },
+    { eqp_ch: "EQ02", tkout_time: 3, fab_value: 4 },
+    { eqp_ch: "", tkout_time: 4, fab_value: 5 },
+  ]
+  const columns = ["eqp_ch", "tkout_time", "fab_value"]
+  const summary = { ...buildDefectRawSummary(raw, columns, { trellis: true }), ...buildDefectScatterData(raw, columns) }
+  const original = structuredClone(summary)
+  const selected = selectDefectFileSummary(summary, [" EQ01 ", "EQ01", "", null])
+  assert.deepEqual(selected.eqp_ch_groups, [{ eqp_ch: "EQ01", row_count: 2 }])
+  assert.deepEqual(selected.points.map((point) => point.eqp_ch), ["EQ01"])
+  assert.equal(selected.row_count, 2)
+  assert.equal(selected.invalid_point_count, 1)
+  assert.equal(selected.unassigned_row_count, 0)
+  assert.deepEqual(summary, original)
+  assert.deepEqual(selectDefectFileSummary(summary, ["EQ02"]).points.map((point) => point.eqp_ch), ["EQ02"])
+  for (const eqpIds of [[], ["", null], ["UNKNOWN"]]) {
+    const empty = selectDefectFileSummary(summary, eqpIds)
+    assert.deepEqual(empty.eqp_ch_groups, [])
+    assert.deepEqual(empty.points, [])
+    assert.equal(empty.row_count, 0)
+    assert.equal(empty.invalid_point_count, 0)
+  }
 })
 
 test("Scatter는 Date·문자열 시각과 fab_value를 변환하고 0은 유지하며 결측값은 제외한다", () => {

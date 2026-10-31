@@ -70,6 +70,22 @@ export function buildDefectRawSummary(rows, columns, { trellis = false } = {}) {
   }
 }
 
+// Return a scoped copy so the cached file remains reusable by other selections.
+export function selectDefectFileSummary(summary, eqpIds) {
+  const allowed = new Set(eqpIds.map((value) => String(value ?? "").trim()).filter(Boolean))
+  const groups = (summary.eqp_ch_groups ?? []).filter((group) => allowed.has(group.eqp_ch))
+  const points = (summary.points ?? []).filter((point) => allowed.has(point.eqp_ch))
+  const rowCount = groups.reduce((count, group) => count + group.row_count, 0)
+  return {
+    ...summary,
+    eqp_ch_groups: groups,
+    points,
+    row_count: rowCount,
+    unassigned_row_count: 0,
+    invalid_point_count: rowCount - points.length,
+  }
+}
+
 export async function readDefectFileSummary(filePath) {
   const info = await stat(filePath)
   const cached = getLruEntry(cache, filePath)

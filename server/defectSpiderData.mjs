@@ -4,7 +4,7 @@ import { compressors } from "hyparquet-compressors"
 
 import { getDefectFailListPath } from "./defectSpiderConfig.mjs"
 import { assertKnownMappingLineSdwt, requireLineMapping } from "./mappingConfig.mjs"
-import { buildDefectFilePairs, readDefectFileSummary } from "./defectFiles.mjs"
+import { buildDefectFilePairs, readDefectFileSummary, selectDefectFileSummary } from "./defectFiles.mjs"
 import { DEFECT_PM_HISTORY_PATH, readDefectPmHistory, selectDefectPmHistory } from "./defectPmHistory.mjs"
 
 export const DEFECT_COLUMNS = ["sdwt", "prc_group", "main_seq", "met_seq", "eqpid", "path"]
@@ -81,7 +81,7 @@ export async function handleDefectFiltersRequest(req, res, url, dependencies = {
     const line = text(url.searchParams.get("line"))
     const pathSdwt = text(url.searchParams.get("pathSdwt"))
     assertKnownMappingLineSdwt(mapping, { line, pathSdwt })
-    filePath = (dependencies.resolvePath ?? getDefectFailListPath)(line)
+    filePath = await (dependencies.resolvePath ?? getDefectFailListPath)(line)
     const rows = await (dependencies.readRows ?? readDefectFailList)(filePath)
     const scopedRows = scopeDefectRows(rows, {
       pathSdwt, sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt,
@@ -94,11 +94,11 @@ export async function handleDefectFiltersRequest(req, res, url, dependencies = {
     })
   } catch (error) {
     const invalidScope = error.code === "MAPPING_SCOPE_MISMATCH"
-    const configured = error.code === "DEFECT_CONFIG_INVALID"
+    const unavailable = error.code === "DEFECT_LIST_UNAVAILABLE"
     send(invalidScope ? 400 : 503, {
       source_path: filePath,
       error: invalidScope ? "Line Name과 SDWT 선택을 확인하세요."
-        : configured || error.code === "DEFECT_SCHEMA_INVALID" ? error.message
+        : unavailable || error.code === "DEFECT_SCHEMA_INVALID" ? error.message
         : "이상감지 리스트를 불러올 수 없습니다. 서버 설정과 파일을 확인하세요.",
     })
   }
@@ -119,18 +119,23 @@ export async function handleDefectFileRequest(req, res, url, dependencies = {}) 
     const line = text(url.searchParams.get("line"))
     const pathSdwt = text(url.searchParams.get("pathSdwt"))
     assertKnownMappingLineSdwt(mapping, { line, pathSdwt })
-    const listPath = (dependencies.resolvePath ?? getDefectFailListPath)(line)
+    const listPath = await (dependencies.resolvePath ?? getDefectFailListPath)(line)
     const rows = await (dependencies.readRows ?? readDefectFailList)(listPath)
     const scoped = scopeDefectRows(rows, { pathSdwt, sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt })
-    const pairs = buildDefectFilePairs(selectDefectRows(scoped, readSelection(url)))
+    const selectedRows = selectDefectRows(scoped, readSelection(url))
+    const pairs = buildDefectFilePairs(selectedRows)
     const filePath = url.searchParams.get("filePath")
     if (!filePath || !pairs.some((pair) => pair.fail_path === filePath || pair.all_path === filePath)) {
       send(400, { error: "선택한 조건의 이상감지 리스트에 없는 파일입니다." })
       return
     }
-    const summary = await (dependencies.readFile ?? readDefectFileSummary)(filePath)
+    const rawSummary = await (dependencies.readFile ?? readDefectFileSummary)(filePath)
+    const isFail = pairs.some((pair) => pair.fail_path === filePath)
+    const summary = isFail
+      ? selectDefectFileSummary(rawSummary, selectedRows.filter((row) => row.path === filePath).map((row) => row.eqpid))
+      : rawSummary
     let pmHistory
-    if (pairs.some((pair) => pair.fail_path === filePath) && summary.eqp_ch_groups?.length) {
+    if (isFail && summary.eqp_ch_groups?.length) {
       try {
         const history = await (dependencies.readPmHistory ?? readDefectPmHistory)()
         pmHistory = selectDefectPmHistory(history, summary.eqp_ch_groups.map((group) => group.eqp_ch))

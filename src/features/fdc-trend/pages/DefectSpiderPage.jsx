@@ -63,9 +63,10 @@ function DefectGroupCharts({ line, pathSdwt, prcGroup }) {
 }
 
 function DefectChartTrellis({ pair, selection }) {
+  const failSelection = { ...selection, mainSeq: pair.main_seq, metSeq: pair.met_seq }
   const failQuery = useQuery({
-    queryKey: ["defect-file", selection, pair.fail_path],
-    queryFn: ({ signal }) => fetchDefectFile({ ...selection, filePath: pair.fail_path, signal }),
+    queryKey: ["defect-file", failSelection, pair.fail_path],
+    queryFn: ({ signal }) => fetchDefectFile({ ...failSelection, filePath: pair.fail_path, signal }),
     enabled: Boolean(pair.fail_path),
     retry: false,
   })
