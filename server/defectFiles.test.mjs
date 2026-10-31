@@ -71,6 +71,19 @@ test("ALL 선택 중에도 각 파일의 main_seq·met_seq를 헤더용으로 �
   assert.equal(pairs[1].met_seq, "21_ITEM")
 })
 
+test("기존 루트만 교체해 FAIL·ALL 경로를 만들고 하위 경로와 원본 path는 유지한다", () => {
+  const path = "/appdata/hadoop/code/eads/P1L/DEVICE_A/fail_data.parquet"
+  const [pair] = buildDefectFilePairs([{ path }])
+  assert.equal(pair.path, path)
+  assert.equal(pair.fail_path, "/appdata/abnormal_trend/pic/defect/P1L/DEVICE_A/fail_data.parquet")
+  assert.equal(pair.all_path, "/appdata/abnormal_trend/pic/defect/P1L/DEVICE_A/all_data.parquet")
+  for (const unchanged of [pair.fail_path, "/appdata/hadoop/code/eads_other/fail_data.parquet",
+    "/another/appdata/hadoop/code/eads/fail_data.parquet"]) {
+    assert.equal(buildDefectFilePairs([{ path: unchanged }])[0].fail_path, unchanged)
+  }
+  assert.equal(buildDefectFilePairs([{ path: "/appdata/hadoop/code/eads/../fail_data.parquet" }])[0].fail_path, "")
+})
+
 test("Scatter 응답은 STEP 색상과 NG 판정·동일 wafer 보호용 메타데이터를 유지한다", () => {
   const { points } = buildDefectScatterData([
     { tkout_time: 1, fab_value: 10, step_seq: "10_STEP", FINAL_DECISION: "NG", STD_RESULT: "OK", anomaly_type: "std", lot_wf: "L", wafer_id: "W", ppid: "PP-1", PROCESS_ID: "PROC-1", ITEM_ID: "ITEM-1", unrelated: "제외" },

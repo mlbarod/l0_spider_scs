@@ -5,13 +5,17 @@ import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
 
 const cache = new Map()
 
+export function resolveDefectRawPath(filePath) {
+  return String(filePath ?? "").replace(/^\/appdata\/hadoop\/code\/eads(?=\/|$)/, "/appdata/abnormal_trend/pic/defect")
+}
+
 export function buildDefectFilePairs(rows) {
   const contexts = new Map(rows.map((row) => {
     const context = { path: String(row.path ?? ""), main_seq: String(row.main_seq ?? "").trim(), met_seq: String(row.met_seq ?? "").trim() }
     return [JSON.stringify(context), context]
   }))
   return [...contexts.values()].map((context) => {
-    const sourcePath = context.path
+    const sourcePath = resolveDefectRawPath(context.path)
     const valid = sourcePath.startsWith("/") && !sourcePath.includes("\0")
       && !sourcePath.split("/").includes("..") && /\/fail_[^/]+\.parquet$/.test(sourcePath)
     return {

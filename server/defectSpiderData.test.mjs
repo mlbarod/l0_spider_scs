@@ -220,6 +220,40 @@ test("FAIL은 파일·SDWT·PRC·단계별 eqpid로 제한하고 ALL은 원본 �
   }
 })
 
+test("변환된 FAIL·ALL 경로를 실제 읽기에 전달하고 FAIL의 eqpid 필터를 유지한다", async () => {
+  const sourcePath = "/appdata/hadoop/code/eads/P1L/DEVICE_A/fail_1.parquet"
+  const failPath = "/appdata/abnormal_trend/pic/defect/P1L/DEVICE_A/fail_1.parquet"
+  const allPath = "/appdata/abnormal_trend/pic/defect/P1L/DEVICE_A/all_1.parquet"
+  const points = ["EQ01", "EQ02"].map((eqp_ch) => ({ eqp_ch, tkout_time: 1, fab_value: 2 }))
+  const summary = { points, eqp_ch_groups: points.map(({ eqp_ch }) => ({ eqp_ch, row_count: 1 })), row_count: 2 }
+  const reads = []
+  const deps = {
+    ...dependencies,
+    readRows: async () => [{ ...fileRows[0], path: sourcePath, eqpid: "EQ01" }],
+    readFile: async (path) => { reads.push(path); return summary },
+    readPmHistory: async () => ({ columns: [], byEquipment: new Map() }),
+  }
+  const params = new URLSearchParams({ line: "L1", pathSdwt: "RAW-A", prcGroup: "ETCH", mainSeq: "10", metSeq: "20" })
+  const filters = response()
+  await handleDefectFiltersRequest({ method: "GET" }, filters, new URL(`http://localhost/api/defect-filters?${params}`), deps)
+  assert.equal(filters.status, 200)
+  assert.equal(filters.body.files[0].fail_path, failPath)
+  assert.equal(filters.body.files[0].all_path, allPath)
+  for (const filePath of [failPath, allPath, sourcePath]) {
+    params.set("filePath", filePath)
+    const res = response()
+    await handleDefectFileRequest({ method: "GET" }, res, new URL(`http://localhost/api/defect-file?${params}`), deps)
+    assert.equal(res.status, filePath === sourcePath ? 400 : 200)
+    if (filePath === failPath) {
+      assert.equal(res.body.source_path, failPath)
+      assert.deepEqual(res.body.points, [points[0]])
+      assert.deepEqual(res.body.eqp_ch_groups, [{ eqp_ch: "EQ01", row_count: 1 }])
+    }
+    if (filePath === allPath) assert.deepEqual(res.body, { source_path: allPath, ...summary })
+  }
+  assert.deepEqual(reads, [failPath, allPath])
+})
+
 test("PM이력은 허용된 FAIL의 eqp_ch에만 연결하고 ALL·허용되지 않은 파일에서는 읽지 않는다", async () => {
   const { buildDefectPmHistory } = await import("./defectPmHistory.mjs")
   const history = buildDefectPmHistory([

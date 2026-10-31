@@ -4,7 +4,7 @@ import { compressors } from "hyparquet-compressors"
 
 import { getDefectFailListPath } from "./defectSpiderConfig.mjs"
 import { assertKnownMappingLineSdwt, requireLineMapping } from "./mappingConfig.mjs"
-import { buildDefectFilePairs, readDefectFileSummary, selectDefectFileSummary } from "./defectFiles.mjs"
+import { buildDefectFilePairs, readDefectFileSummary, resolveDefectRawPath, selectDefectFileSummary } from "./defectFiles.mjs"
 import { DEFECT_PM_HISTORY_PATH, readDefectPmHistory, selectDefectPmHistory } from "./defectPmHistory.mjs"
 
 export const DEFECT_COLUMNS = ["sdwt", "prc_group", "main_seq", "met_seq", "eqpid", "path"]
@@ -132,7 +132,7 @@ export async function handleDefectFileRequest(req, res, url, dependencies = {}) 
     const rawSummary = await (dependencies.readFile ?? readDefectFileSummary)(filePath)
     const isFail = pairs.some((pair) => pair.fail_path === filePath)
     const summary = isFail
-      ? selectDefectFileSummary(rawSummary, selectedRows.filter((row) => row.path === filePath).map((row) => row.eqpid))
+      ? selectDefectFileSummary(rawSummary, selectedRows.filter((row) => resolveDefectRawPath(row.path) === filePath).map((row) => row.eqpid))
       : rawSummary
     let pmHistory
     if (isFail && summary.eqp_ch_groups?.length) {
