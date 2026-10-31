@@ -1,4 +1,5 @@
 import { useRef, useState } from "react"
+import { sanitizeErrorMessage } from "../api/errorMessage.js"
 import { useQuery } from "@tanstack/react-query"
 import { ArrowLeft, ArrowUp } from "lucide-react"
 import { Link } from "react-router-dom"
@@ -82,9 +83,9 @@ function DefectChartTrellis({ pair, selection }) {
     return (
       <section className="col-span-2 min-w-0 space-y-3 rounded-xl border bg-card p-4">
         <p className="text-sm" role={failQuery.data?.trellis_error ? "alert" : "status"}>
-          {pair.error || (failQuery.isError ? "이상감지 RAW데이터를 읽지 못해 eqp_ch별 차트를 구성할 수 없습니다."
+          {sanitizeErrorMessage(pair.error || (failQuery.isError ? "이상감지 RAW데이터를 읽지 못해 eqp_ch별 차트를 구성할 수 없습니다."
             : failQuery.isPending ? "이상감지 RAW데이터의 eqp_ch를 확인 중입니다."
-            : failQuery.data.trellis_error || "차트로 표시할 eqp_ch 값이 없습니다.")}
+            : failQuery.data.trellis_error || "차트로 표시할 eqp_ch 값이 없습니다."))}
         </p>
         {failQuery.isError ? <Button size="sm" variant="outline" disabled={failQuery.isFetching} onClick={() => failQuery.refetch()}>Retry</Button> : null}
       </section>

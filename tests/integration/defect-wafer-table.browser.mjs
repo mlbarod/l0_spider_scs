@@ -11,7 +11,7 @@ import { createRoot } from 'react-dom/client';
 import { DefectWaferList } from './src/features/fdc-trend/components/DefectWaferList.jsx';
 import { LanguageProvider } from './src/i18n/LanguageProvider.jsx';
 import './src/styles/globals.css';
-const rows = Array.from({length: 105}, (_, i) => ({isNg: true, wafer_id: 'W' + i, tkout_time: 1790762400000, step_seq: '01', eqp_ch: 'EQP_A', lot_id: 'LOT_' + i, process_id: null, item_id: 'ITEM', fab_value: i === 0 ? 0 : 1.2345}));
+const rows = Array.from({length: 105}, (_, i) => ({isNg: true, wafer_id: 'W' + i, tkout_time: 1790762400000, step_seq: '01', eqp_ch: 'EQP_A', lot_id: 'LOT_' + i, root_lot_id: i === 1 ? null : i === 2 ? undefined : 'ROOT_' + i, process_id: null, item_id: 'ITEM', fab_value: i === 0 ? 0 : 1.2345}));
 const root = createRoot(document.getElementById('root'));
 window.renderRows = (points) => root.render(React.createElement(LanguageProvider, null, React.createElement(DefectWaferList, {points})));
 window.renderRows([...rows, {isNg: false, wafer_id: 'EXCLUDED'}]);
@@ -53,6 +53,14 @@ test("Wafer grid supports column/range copy, pages, keyboard, data changes and t
     await cell(0, 0).waitFor()
     assert.equal(await page.getByRole("gridcell").count(), 800)
     assert.equal(await page.getByText("EXCLUDED", { exact: true }).count(), 0)
+
+    // LOT_ID retains its heading but both display and copy use only root_lot_id.
+    assert.equal(await cell(0, 4).textContent(), "ROOT_0")
+    assert.equal(await cell(1, 4).textContent(), "—")
+    assert.equal(await cell(2, 4).textContent(), "—")
+    await page.getByRole("button", { name: "LOT_ID 열 전체 선택", exact: true }).click()
+    await page.keyboard.press("Control+c")
+    assert.deepEqual((await clipboard()).split("\n"), Array.from({ length: 105 }, (_, i) => i === 1 || i === 2 ? "—" : `ROOT_${i}`))
 
     // A drag down one column must never include intervening columns.
     const from = await cell(0, 0).boundingBox(), to = await cell(2, 0).boundingBox()

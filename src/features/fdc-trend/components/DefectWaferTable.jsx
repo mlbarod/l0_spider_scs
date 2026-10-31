@@ -32,6 +32,7 @@ export const WAFER_TEXT = {
 }
 
 function cellText(point, column) {
+  if (column === "lot_id") return String(point.root_lot_id ?? "—")
   return String(column === "tkout_time" ? formatDefectTime(point[column], true) : point[column] ?? "—")
 }
 

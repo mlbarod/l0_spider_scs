@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ArrowLeft, Download, FileImage, LineChart, MailPlus, Search } from "lucide-react"
+import { ArrowLeft, Download, LineChart, MailPlus, Search } from "lucide-react"
 import { Link } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -38,7 +38,6 @@ import { cn } from "@/lib/utils"
 
 import {
   FDC_LINES,
-  SPIDER_FILE_PATHS,
   getRecipientRows,
   getSpiderAnomalyRows,
   getSpiderCommonalityRows,
@@ -47,6 +46,7 @@ import {
   getYieldSpecRows,
 } from "../utils/fdcTrendMockData"
 import { fetchHardSpecMeta, fetchHardSpecRecommendations } from "../api/fdcTrendApi"
+import { sanitizeErrorMessage } from "../api/errorMessage.js"
 import { formatLineDisplayName } from "../utils/lineDisplay.mjs"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 
@@ -129,24 +129,6 @@ function PageShell({ children, description, title, category }) {
         <div className="mx-auto grid w-full max-w-7xl gap-4">{children}</div>
       </main>
     </div>
-  )
-}
-
-function SourcePathBar({ paths }) {
-  return (
-    <section className="rounded-lg border bg-card p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <FileImage className="size-4 text-muted-foreground" aria-hidden="true" />
-        <h2 className="text-sm font-semibold">SPIDER Data Paths</h2>
-      </div>
-      <div className="grid gap-2">
-        {paths.map((path) => (
-          <code key={path} className="block truncate rounded-md bg-muted px-2 py-1.5 text-xs text-muted-foreground">
-            {path}
-          </code>
-        ))}
-      </div>
-    </section>
   )
 }
 
@@ -327,7 +309,6 @@ function MatchingPage({ common = false }) {
         <section className="grid content-start gap-3">
           <div className="rounded-lg border bg-card p-4">
             <h2 className="text-sm font-semibold">{common ? "Common Area Image Information" : "Similarity Chart"}</h2>
-            <p className="mt-1 truncate text-xs text-muted-foreground">{selectedRow?.file_path}</p>
           </div>
           <TrendPreviewChart row={selectedRow} />
           <div className="grid grid-cols-2 gap-2">
@@ -342,7 +323,6 @@ function MatchingPage({ common = false }) {
           </div>
         </section>
       </div>
-      <SourcePathBar paths={common ? [SPIDER_FILE_PATHS.commonDate, SPIDER_FILE_PATHS.commonalityRoot] : [SPIDER_FILE_PATHS.erdRoot]} />
     </>
   )
 }
@@ -410,13 +390,6 @@ function HardSpecPage() {
   ].filter(Boolean)
   const chartRows = rows.filter((row) => selectedRows.has(row.id)).slice(0, 15)
   const guideRow = chartRows[0]
-  const hardSpecSourcePaths = [
-    meta?.sourcePaths?.hardSpecRoot ?? SPIDER_FILE_PATHS.hardSpecRoot,
-    meta?.sourcePaths?.priority ?? SPIDER_FILE_PATHS.priority,
-    meta?.sourcePaths?.unitModel ?? SPIDER_FILE_PATHS.unitModel,
-    meta?.sourcePaths?.hardLimit ?? SPIDER_FILE_PATHS.hardLimit,
-    ...(recommendationQuery.data?.sourcePaths ?? []).slice(0, 8),
-  ]
 
   useEffect(() => {
     if (!meta) return
@@ -515,7 +488,7 @@ function HardSpecPage() {
           </div>
           {warningMessages.length ? (
             <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-              {warningMessages[0]}
+              {sanitizeErrorMessage(warningMessages[0])}
             </div>
           ) : null}
         </section>
@@ -563,7 +536,6 @@ function HardSpecPage() {
           </ResponsiveContainer>
         </div>
       </section>
-      <SourcePathBar paths={hardSpecSourcePaths} />
     </>
   )
 }
@@ -605,7 +577,6 @@ function YieldSpecPage() {
         ]}
         rows={rows}
       />
-      <SourcePathBar paths={[SPIDER_FILE_PATHS.yieldRoot, SPIDER_FILE_PATHS.yieldImage]} />
     </>
   )
 }
@@ -700,15 +671,6 @@ export function SpiderFeaturePage({ type }) {
       {type === "l1" ? <MatchingPage /> : null}
       {type === "l3" ? <MatchingPage common /> : null}
       {type === "summary" ? <MetricGrid /> : null}
-      <SourcePathBar
-        paths={[
-          SPIDER_FILE_PATHS.latestPath,
-          SPIDER_FILE_PATHS.latestStats,
-          SPIDER_FILE_PATHS.latestStatsExceptV,
-          SPIDER_FILE_PATHS.teamErdPath,
-          SPIDER_FILE_PATHS.mappingConfig,
-        ]}
-      />
     </PageShell>
   )
 }

@@ -96,6 +96,18 @@ test("이상감지 스탭 ALL RAW데이터는 eqp_ch가 있어도 분리하거�
   assert.deepEqual(buildDefectRawSummary([{ x: 1 }], ["x"]), { row_count: 1, columns: ["x"] })
 })
 
+test("Wafer List용 root_lot_id를 별도로 전달하며 기존 lot_id와 lot_wf는 유지한다", () => {
+  const { points } = buildDefectScatterData([
+    { tkout_time: 1, fab_value: 1, lot_id: "LOT", lot_wf: "WF", root_lot_id: "ROOT" },
+    { tkout_time: 2, fab_value: 1, lot_wf: "WF", ROOT_LOT_ID: "ROOT_UPPER" },
+    { tkout_time: 3, fab_value: 1, lot_id: "LOT", root_lot_id: null },
+    { tkout_time: 4, fab_value: 1, lot_id: "LOT" },
+  ], ["tkout_time", "fab_value"])
+  assert.deepEqual(points.map((point) => point.root_lot_id), ["ROOT", "ROOT_UPPER", undefined, undefined])
+  assert.deepEqual(points.map((point) => point.lot_id), ["LOT", "WF", "LOT", "LOT"])
+  assert.equal(points[0].lot_wf, "WF")
+})
+
 test("eqp_ch 누락·빈 파일·값 없는 행은 임의 차트를 만들지 않는다", () => {
   const missing = buildDefectRawSummary([{ x: 1 }], ["x"], { trellis: true })
   assert.match(missing.trellis_error, /eqp_ch 컬럼/)
