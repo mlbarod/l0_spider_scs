@@ -1,5 +1,7 @@
 # L0 Spider Core Harness 최종 독립 감사
 
+> 도구 전환 안내: 이 문서는 Codex 사용 시절의 기록이며 본문의 `AGENTS.md`, `.codex/` 경로와 Codex 실행 결과는 당시 사실로 보존한다. 현재 프로젝트는 Claude Code를 사용하며 지침은 `CLAUDE.md`, subagent 정의는 `.claude/agents/`를 기준으로 한다.
+
 ## 1. 감사 범위와 기준 commit
 
 | 항목 | 감사 기준 |

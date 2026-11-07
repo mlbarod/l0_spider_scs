@@ -1,5 +1,6 @@
 # L0 Spider 시스템 인벤토리
 
+> 도구 전환 안내: 이 문서는 Codex 사용 시절의 기록이며 본문의 `AGENTS.md`, `.codex/` 경로와 Codex 실행 결과는 당시 사실로 보존한다. 현재 프로젝트는 Claude Code를 사용하며 지침은 `CLAUDE.md`, subagent 정의는 `.claude/agents/`를 기준으로 한다.
 > 문서 상태: `Historical Snapshot`
 > 이 문서는 commit `6cf9568` 시점의 역사적 snapshot이며 기존 조사 근거와 판정을 보존한다.
 > 현재 하네스 상태는 [reports/audit/harness-final-review.md](harness-final-review.md)를 우선한다.

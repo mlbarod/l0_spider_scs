@@ -72,7 +72,7 @@ pass "Node.js runtime 사용 가능: $(node --version)"
 pass "npm package manager 사용 가능: $(npm --version)"
 
 required_files=(
-  "AGENTS.md"
+  "CLAUDE.md"
   "package.json"
   "package-lock.json"
   "docs/system/environment-definition.md"

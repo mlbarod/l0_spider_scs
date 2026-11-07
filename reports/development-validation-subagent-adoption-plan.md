@@ -1,5 +1,6 @@
 # L0 Spider 개발 검증 서브에이전트 도입 계획
 
+> 도구 전환 안내: 이 문서는 Codex 사용 시절의 기록이며 본문의 `AGENTS.md`, `.codex/` 경로와 Codex 실행 결과는 당시 사실로 보존한다. 현재 프로젝트는 Claude Code를 사용하며 지침은 `CLAUDE.md`, subagent 정의는 `.claude/agents/`를 기준으로 한다.<br>
 > 현재 상태: `Superseded / Historical` — 이 문서의 반복 pre-build review와 전문 검증 절차를 현재 업무에 적용하지 않는다. 현재 기준은 [개발 에이전트 최종 검수 workflow](../docs/operations/development-agent-workflow.md)다.<br>
 > 문서 목적: 합의된 검증 서브에이전트 구조를 안전하게 도입하기 위한 실행 순서와 완료 기준 정의<br>
 > 문서 상태: `Planned`<br>

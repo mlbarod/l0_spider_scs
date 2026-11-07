@@ -3,7 +3,7 @@
 ## 1. Purpose
 
 이 문서는 일반 개발 절차를 정의하지 않는다.
-일반 기능 구현과 버그 수정은 루트 `AGENTS.md`의 기본 개발 및 검증 원칙을 따른다.
+일반 기능 구현과 버그 수정은 루트 `CLAUDE.md`의 기본 개발 및 검증 원칙을 따른다.
 이 문서는 다음과 같이 추가적인 독립 검수가 실제로 필요한 경우에만 사용한다.
 
 * 사용자가 독립 검수를 명시적으로 요청한 경우
@@ -43,13 +43,13 @@
 
 ## 4. Independent Review Scope
 
-실제 검수 범위와 판정 기준은 `.codex/agents/pre-build-review.toml`을 따른다.
+실제 검수 범위와 판정 기준은 `.claude/agents/pre-build-review.md`을 따른다.
 메인 에이전트는 reviewer에게 저장소 전체 감사나 현재 변경과 관계없는 검토를 추가로 요구하지 않는다.
 
 ## 5. Review Result
 
 검수 결과는 `PASS` 또는 `BLOCKER`다.
-판정 기준은 `.codex/agents/pre-build-review.toml`을 따른다.
+판정 기준은 `.claude/agents/pre-build-review.md`을 따른다.
 
 - `PASS` → 완료 보고로 진행한다.
 - `BLOCKER` → 발견 사항을 메인 에이전트가 일괄 수정하고 직접 관련된 검증을 수행한다
@@ -69,7 +69,7 @@
 
 ## 7. Reviewer Restrictions
 
-`pre-build-review`의 실행 권한과 금지 사항은 `.codex/agents/pre-build-review.toml`을 따른다.
+`pre-build-review`의 실행 권한과 금지 사항은 `.claude/agents/pre-build-review.md`을 따른다.
 메인 에이전트는 검수를 위해 reviewer의 권한을 확대하거나 다른 agent 또는 CLI로 우회하지 않는다.
 
 ## 8. Execution Limits
