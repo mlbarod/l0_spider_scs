@@ -19,7 +19,7 @@ L0 Spider SCS는 운영 중인 웹서비스다.
 
 ## 3. Documentation Map
 
-문서를 사전에 모두 읽지 않는다. 현재 작업에 필요한 경우에만 아래 위치를 우선 사용한다.
+위 조건에 해당할 때만 아래 위치에서 직접 관련된 문서 하나부터 읽는다.
 
 * 전체 시스템 구조와 주요 경로 → `docs/system/`
 * 기능별 동작과 계약 → `docs/features/`
@@ -28,7 +28,8 @@ L0 Spider SCS는 운영 중인 웹서비스다.
 * 중요한 설계 결정과 변경 이유 → `docs/decisions/`
 * API·데이터 계약 → `harness/contracts/`
 
-특정 문서가 현재 작업과 직접 관련된 경우에만 해당 문서를 읽는다.
+`reports/`는 과거 감사·계획 기록이다. 사용자가 지목하지 않으면 읽지 않는다.
+`web_structure.md`는 2026-08-27 기준 코드 탐색 지도다. 코드 검색으로 관련 위치를 찾지 못한 경우에만 참고한다.
 
 ## 4. Validation
 
@@ -38,12 +39,19 @@ L0 Spider SCS는 운영 중인 웹서비스다.
 같은 검증은 관련 코드가 다시 변경되지 않은 한 반복하지 않는다. 실행할 수 없는 중요한 검증은 반복 시도하지 말고 미실행 상태와 이유를 보고한다.
 완료 전에는 변경 내용을 확인하고 가능한 경우 `git diff --check`를 실행한다.
 
+이 저장소에서의 방법:
+
+* test: 관련 파일만 `node --test <파일>`로 실행한다. `server/*.test.mjs`는 npm test script에 포함되지 않는다.
+* `*.browser.mjs`(Playwright)와 `scripts/verify-all.sh`는 기본 검증으로 실행하지 않는다.
+* lint: `npx eslint <변경 파일>`
+* build: `npm run build -- --outDir <임시 경로>`로 실행해 `dist/`를 덮어쓰지 않는다.
+* 화면 확인: `npm run dev`(port 3000, 일부 API만). 전체 API가 필요하면 `npm start`(port 5173).
+
 ### Environment-Limited Validation
 
 운영 웹서비스, 사내망, 운영 DB 또는 실제 데이터에 접근할 수 없는 경우 실제 환경 재현을 필수로 요구하지 않는다.
 사용자가 제공한 오류·로그·조건과 현재 코드를 근거로 원인을 좁히고, 가능한 경우 기존 test, contract 또는 최소 synthetic data로 직접 영향 범위를 검증한다.
 실제 운영 환경에서만 확인 가능한 사항은 추측으로 통과 처리하지 않고 미검증 사항으로 보고한다.
-
 
 ## 5. Independent Review
 
@@ -61,6 +69,8 @@ L0 Spider SCS는 운영 중인 웹서비스다.
 파괴적인 Git 명령, force push 또는 사용자 변경사항을 되돌리는 작업을 수행하지 않는다.
 운영 자원 확인이 필요한 경우 비파괴적이고 읽기 전용인 방법을 우선한다.
 
+실제 비밀값 파일: `.env*`, `db_info.pkl`. 설정 이름이 필요하면 `docs/system/environment-definition.md`를 본다.
+
 ## 7. Harness Boundary
 
 Harness를 위해 기존 애플리케이션 구조나 소스를 이동 또는 교체하지 않는다.
@@ -76,5 +86,5 @@ Harness를 위해 기존 애플리케이션 구조나 소스를 이동 또는 �
 
 ## 9. Nested Instructions
 
-하위 디렉터리의 `AGENTS.md`는 해당 범위에서 적용한다.
+하위 디렉터리의 `CLAUDE.md`는 해당 범위에서 적용한다.
 하위 지침은 운영 안전, 비밀정보 보호 또는 사용자 변경사항 보호 규칙을 완화할 수 없다.
