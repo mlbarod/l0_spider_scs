@@ -3,7 +3,10 @@ import { asyncBufferFromFile, parquetMetadataAsync, parquetReadObjects, parquetS
 import { compressors } from "hyparquet-compressors"
 
 export const DEFECT_PM_HISTORY_PATH = "/appdata/abnormal_trend/pic/xian_change_point/pm_code_info.parquet"
-let cache
+export const DEFECT_MWO_HISTORY_PATH = "/appdata/abnormal_trend/pic/xian_change_point/mnu_code_info.parquet"
+export const DEFECT_CHANGE_HISTORY_PATHS = Object.freeze([DEFECT_PM_HISTORY_PATH, DEFECT_MWO_HISTORY_PATH])
+const PM_DROPPED_COLUMNS = new Set(["asset_cls"])
+const caches = new Map()
 let pending
 
 export function parseDefectPmTime(value) {
@@ -26,8 +29,8 @@ function rawValue(value) {
 }
 
 export function buildDefectPmHistory(rows, columns) {
-  if (["asset", "inprt_dt", "work_type"].some((column) => !columns.includes(column))) {
-    throw new Error("변경점 파일에 asset, inprt_dt, work_type 컬럼이 필요합니다.")
+  if (["asset", "inprg_dt", "work_type"].some((column) => !columns.includes(column))) {
+    throw new Error("변경점 파일에 asset, inprg_dt, work_type 컬럼이 필요합니다.")
   }
   const byEquipment = new Map()
   for (const row of rows) {
@@ -36,7 +39,7 @@ export function buildDefectPmHistory(rows, columns) {
     const group = byEquipment.get(eqpCh) ?? []
     group.push({
       eqp_ch: eqpCh,
-      timestamp: parseDefectPmTime(row.inprt_dt),
+      timestamp: parseDefectPmTime(row.inprg_dt),
       work_type: String(row.work_type ?? ""),
       raw: Object.fromEntries(columns.map((column) => [column, rawValue(row[column])])),
     })
@@ -49,19 +52,35 @@ export function selectDefectPmHistory(history, eqpChs) {
   return { columns: history.columns, rows: [...new Set(eqpChs)].flatMap((eqpCh) => history.byEquipment.get(eqpCh) ?? []) }
 }
 
+// PM rows (without asset_cls) followed by MWO rows; columns are the union in first-seen order.
+export function mergeDefectChangeHistory(pm, mwo) {
+  const pmColumns = pm.columns.filter((column) => !PM_DROPPED_COLUMNS.has(column))
+  const columns = [...new Set([...pmColumns, ...mwo.columns])]
+  const pmRows = pm.rows.map((row) => Object.fromEntries(Object.entries(row).filter(([column]) => !PM_DROPPED_COLUMNS.has(column))))
+  return { columns, rows: [...pmRows, ...mwo.rows] }
+}
+
+async function readParquetTable(path) {
+  // Invalidate each file's cache on size/mtime changes.
+  const info = await stat(path)
+  const cached = caches.get(path)
+  if (cached?.mtimeMs === info.mtimeMs && cached?.size === info.size) return cached.table
+  const file = await asyncBufferFromFile(path)
+  const metadata = await parquetMetadataAsync(file)
+  const columns = parquetSchema(metadata).children.map((column) => column.element.name)
+  const rows = await parquetReadObjects({ file, compressors })
+  const table = { columns, rows }
+  caches.set(path, { mtimeMs: info.mtimeMs, size: info.size, table })
+  return table
+}
+
 export async function readDefectPmHistory() {
-  // Coalesce parallel chart loads; invalidate the single-file cache on size/mtime changes.
+  // Coalesce parallel chart loads into one read of the PM + MWO change history files.
   if (pending) return pending
   pending = (async () => {
-    const info = await stat(DEFECT_PM_HISTORY_PATH)
-    if (cache?.mtimeMs === info.mtimeMs && cache?.size === info.size) return cache.history
-    const file = await asyncBufferFromFile(DEFECT_PM_HISTORY_PATH)
-    const metadata = await parquetMetadataAsync(file)
-    const columns = parquetSchema(metadata).children.map((column) => column.element.name)
-    const rows = await parquetReadObjects({ file, compressors })
-    const history = buildDefectPmHistory(rows, columns)
-    cache = { mtimeMs: info.mtimeMs, size: info.size, history }
-    return history
+    const [pm, mwo] = await Promise.all(DEFECT_CHANGE_HISTORY_PATHS.map(readParquetTable))
+    const merged = mergeDefectChangeHistory(pm, mwo)
+    return buildDefectPmHistory(merged.rows, merged.columns)
   })()
   try { return await pending } finally { pending = null }
 }

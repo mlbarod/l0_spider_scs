@@ -257,9 +257,9 @@ test("변환된 FAIL·ALL 경로를 실제 읽기에 전달하고 FAIL의 eqpid 
 test("PM이력은 허용된 FAIL의 eqp_ch에만 연결하고 ALL·허용되지 않은 파일에서는 읽지 않는다", async () => {
   const { buildDefectPmHistory } = await import("./defectPmHistory.mjs")
   const history = buildDefectPmHistory([
-    { asset: "XXXX12-YY", inprt_dt: "2026-10-01", work_type: "PM" },
-    { asset: "OTHER1-AA", inprt_dt: "2026-10-01", work_type: "PM" },
-  ], ["asset", "inprt_dt", "work_type"])
+    { asset: "XXXX12-YY", inprg_dt: "2026-10-01", work_type: "PM" },
+    { asset: "OTHER1-AA", inprg_dt: "2026-10-01", work_type: "PM" },
+  ], ["asset", "inprg_dt", "work_type"])
   for (const filePath of [fileRows[0].path, "/fixture/fail_dir/all_1.parquet", "/fixture/fail_other.parquet"]) {
     let pmReads = 0
     const res = response()
@@ -275,6 +275,7 @@ test("PM이력은 허용된 FAIL의 eqp_ch에만 연결하고 ALL·허용되지 
       assert.equal(res.body.pm_history.rows.length, 1)
       assert.equal(res.body.pm_history.rows[0].raw.asset, "XXXX12-YY")
       assert.equal(res.body.pm_history.source_path, "/appdata/abnormal_trend/pic/xian_change_point/pm_code_info.parquet")
+      assert.deepEqual(res.body.pm_history.source_paths, ["/appdata/abnormal_trend/pic/xian_change_point/pm_code_info.parquet", "/appdata/abnormal_trend/pic/xian_change_point/mnu_code_info.parquet"])
     } else assert.equal(res.body.pm_history, undefined)
   }
 })

@@ -2,12 +2,14 @@ import { useCallback, useMemo, useState } from "react"
 import { buildDefectScatterSeries, defectInitialDomain, defectScatterDomain } from "../utils/defectScatter.mjs"
 import { DefectScatterPlot } from "./DefectScatterPlot"
 import { DefectWaferList } from "./DefectWaferList"
-import { DefectPmHistory } from "./DefectPmHistory"
+import { useLanguage } from "@/i18n"
+import { CHANGE_HISTORY_TEXT, DefectPmHistory } from "./DefectPmHistory"
 import { sanitizeErrorMessage } from "../api/errorMessage.js"
 
 const EMPTY_LIST = []
 
 export function DefectScatterChart({ failData, allData, eqpCh }) {
+  const { language } = useLanguage()
   const [hidden, setHidden] = useState([])
   const [zoom, setZoom] = useState(null)
   const series = useMemo(() => buildDefectScatterSeries(failData.points ?? [], allData.points ?? [], eqpCh), [failData, allData, eqpCh])
@@ -58,7 +60,7 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
         <button type="button" className="shrink-0 rounded border px-2 py-1 hover:bg-muted" onClick={resetZoom}>범위 초기화</button>
       </div>
       <p className="px-4 pb-3 text-[11px] text-muted-foreground">작고 옅은 점: ALL (STEP별 색상) · 크고 진한 점: RAW (빨강 NG / 청록 그 외)</p>
-      <p className="flex items-center gap-1 px-4 pb-3 text-[11px] text-muted-foreground"><span className="w-4 border-t border-dashed border-green-600" />변경점 (PM이력)</p>
+      <p className="flex items-center gap-1 px-4 pb-3 text-[11px] text-muted-foreground" data-i18n-skip><span className="w-4 border-t border-dashed border-green-600" />{(CHANGE_HISTORY_TEXT[language] ?? CHANGE_HISTORY_TEXT.ko).legend}</p>
       {invalidCount > 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">시간 또는 값이 유효하지 않은 {invalidCount}행은 표시에서 제외했습니다.</p> : null}
       <DefectWaferList points={series.selected} />
       <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} />
