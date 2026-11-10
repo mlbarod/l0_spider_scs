@@ -6,6 +6,8 @@ export const DEFECT_PM_HISTORY_PATH = "/appdata/abnormal_trend/pic/xian_change_p
 export const DEFECT_MWO_HISTORY_PATH = "/appdata/abnormal_trend/pic/xian_change_point/mnu_code_info.parquet"
 export const DEFECT_CHANGE_HISTORY_PATHS = Object.freeze([DEFECT_PM_HISTORY_PATH, DEFECT_MWO_HISTORY_PATH])
 const PM_DROPPED_COLUMNS = new Set(["asset_cls"])
+// The pandas index column is shown as a LINK button, so its values are not sent.
+export const DEFECT_CHANGE_LINK_COLUMN = "__index_level_0__"
 const caches = new Map()
 let pending
 
@@ -22,7 +24,8 @@ export function parseDefectPmTime(value) {
 
 function rawValue(value) {
   if (value == null) return null
-  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : null
+  // Same UTC wall clock as the scatter axis, shown as yyyy-mm-dd hh:mm:ss.
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString().slice(0, 19).replace("T", " ") : null
   if (typeof value === "bigint") return String(value)
   if (typeof value === "object") return JSON.stringify(value, (_key, item) => typeof item === "bigint" ? String(item) : item)
   return value
@@ -41,7 +44,7 @@ export function buildDefectPmHistory(rows, columns) {
       eqp_ch: eqpCh,
       timestamp: parseDefectPmTime(row.inprg_dt),
       work_type: String(row.work_type ?? ""),
-      raw: Object.fromEntries(columns.map((column) => [column, rawValue(row[column])])),
+      raw: Object.fromEntries(columns.map((column) => [column, column === DEFECT_CHANGE_LINK_COLUMN ? null : rawValue(row[column])])),
     })
     byEquipment.set(eqpCh, group)
   }

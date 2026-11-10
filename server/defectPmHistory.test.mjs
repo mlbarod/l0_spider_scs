@@ -36,7 +36,7 @@ test("PM 원본의 Date·BigInt·중첩 값은 JSON 응답으로 안전하게 �
   const result = selectDefectPmHistory(history, ["X_Y"])
   assert.doesNotThrow(() => JSON.stringify(result))
   assert.equal(result.rows[0].raw.count, "123")
-  assert.equal(result.rows[0].raw.inprg_dt, "2026-10-01T00:00:00.000Z")
+  assert.equal(result.rows[0].raw.inprg_dt, "2026-10-01 00:00:00")
   assert.equal(result.rows[0].raw.description, '{"id":"5"}')
   assert.throws(() => buildDefectPmHistory([], ["asset"]), /asset, inprg_dt, work_type/)
 })
@@ -59,4 +59,13 @@ test("변경점 이력은 PM 파일의 asset_cls를 삭제한 뒤 MWO 파일을 
   ])
   assert.equal(result.rows[1].raw.mwo_no, "M1")
   assert.equal(result.rows[0].raw.mwo_no, null)
+})
+
+test("변경점 이력의 __index_level_0__ 값은 LINK 버튼 자리로만 남기고 전달하지 않는다", () => {
+  const history = buildDefectPmHistory([{ asset: "X-Y", inprg_dt: new Date("2026-10-01T02:03:04.567Z"), work_type: "PM", __index_level_0__: 7n }],
+    ["asset", "inprg_dt", "work_type", "__index_level_0__"])
+  const [row] = selectDefectPmHistory(history, ["X_Y"]).rows
+  assert.equal(row.raw.inprg_dt, "2026-10-01 02:03:04")
+  assert.equal(row.raw.__index_level_0__, null)
+  assert.deepEqual(history.columns, ["asset", "inprg_dt", "work_type", "__index_level_0__"])
 })

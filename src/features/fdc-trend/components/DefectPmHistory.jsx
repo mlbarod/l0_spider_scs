@@ -4,22 +4,26 @@ import { useLanguage } from "@/i18n"
 import { sanitizeErrorMessage } from "../api/errorMessage.js"
 
 const PAGE_SIZE = 100
+const LINK_COLUMN = "__index_level_0__"
 
 export const CHANGE_HISTORY_TEXT = {
   ko: {
     title: "변경점 이력보기", table: "변경점 이력", error: "로드 오류", total: (count) => `${count.toLocaleString()}건`,
     invalid: (count) => `날짜가 유효하지 않은 ${count}건은 변경점 점선에서 제외했습니다.`,
     empty: "해당 설비의 변경점 이력이 없습니다.", previous: "이전", next: "다음", legend: "변경점 이력",
+    link: "변경점 상세 페이지 열기 (준비 중)",
   },
   en: {
     title: "View change history", table: "Change history", error: "Load error", total: (count) => `${count.toLocaleString()} rows`,
     invalid: (count) => `${count} rows with invalid dates were excluded from the change lines.`,
     empty: "No change history for this equipment.", previous: "Previous", next: "Next", legend: "Change history",
+    link: "Open change detail page (coming soon)",
   },
   "zh-CN": {
     title: "查看变更点履历", table: "变更点履历", error: "加载错误", total: (count) => `${count.toLocaleString()}条`,
     invalid: (count) => `已从变更点虚线中排除 ${count} 条日期无效的记录。`,
     empty: "该设备没有变更点履历。", previous: "上一页", next: "下一页", legend: "变更点履历",
+    link: "打开变更点详情页面（准备中）",
   },
 }
 
@@ -50,12 +54,15 @@ export const DefectPmHistory = memo(function DefectPmHistory({ rows, columns, er
             <div className="max-h-80 overflow-auto border-t">
               <table className="w-full whitespace-nowrap text-left text-xs" aria-label={t.table}>
                 <thead className="sticky top-0 bg-muted">
-                  <tr>{columns.map((column) => <th key={column} scope="col" className="px-3 py-2 font-medium">{column}</th>)}</tr>
+                  <tr>{columns.map((column) => <th key={column} scope="col" className="px-3 py-2 font-medium">{column === LINK_COLUMN ? "LINK" : column}</th>)}</tr>
                 </thead>
                 <tbody>
                   {rows.slice(activePage * PAGE_SIZE, (activePage + 1) * PAGE_SIZE).map((row, index) => (
                     <tr key={activePage * PAGE_SIZE + index} className="border-t hover:bg-muted/30">
-                      {columns.map((column) => <td key={column} className="select-text px-3 py-2">{row.raw[column] == null ? "—" : String(row.raw[column])}</td>)}
+                      {columns.map((column) => <td key={column} className="select-text px-3 py-2">{column === LINK_COLUMN ? (
+                        // TODO: open the agreed URL format in a new window once it is defined.
+                        <button type="button" className="rounded border px-2 py-0.5 disabled:opacity-40" disabled title={t.link} aria-label={t.link}>LINK</button>
+                      ) : row.raw[column] == null ? "—" : String(row.raw[column])}</td>)}
                     </tr>
                   ))}
                 </tbody>
