@@ -1,4 +1,4 @@
-import { memo, useId, useState } from "react"
+import { memo, useId, useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { useLanguage } from "@/i18n"
 import { sanitizeErrorMessage } from "../api/errorMessage.js"
@@ -33,6 +33,9 @@ export const DefectPmHistory = memo(function DefectPmHistory({ rows, columns, er
   const [open, setOpen] = useState(false)
   const [page, setPage] = useState(0)
   const contentId = useId()
+  // Newest inprg_dt first; rows with invalid dates go last.
+  const sortedRows = useMemo(() => [...rows].sort((a, b) =>
+    (Number.isFinite(b.timestamp) ? b.timestamp : -Infinity) - (Number.isFinite(a.timestamp) ? a.timestamp : -Infinity) || 0), [rows])
   const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE))
   const activePage = Math.min(page, pageCount - 1)
   const invalidDates = rows.filter((row) => !Number.isFinite(row.timestamp)).length
@@ -57,7 +60,7 @@ export const DefectPmHistory = memo(function DefectPmHistory({ rows, columns, er
                   <tr>{columns.map((column) => <th key={column} scope="col" className="px-3 py-2 font-medium">{column === LINK_COLUMN ? "LINK" : column}</th>)}</tr>
                 </thead>
                 <tbody>
-                  {rows.slice(activePage * PAGE_SIZE, (activePage + 1) * PAGE_SIZE).map((row, index) => (
+                  {sortedRows.slice(activePage * PAGE_SIZE, (activePage + 1) * PAGE_SIZE).map((row, index) => (
                     <tr key={activePage * PAGE_SIZE + index} className="border-t hover:bg-muted/30">
                       {columns.map((column) => <td key={column} className="select-text px-3 py-2">{column === LINK_COLUMN ? (
                         // TODO: open the agreed URL format in a new window once it is defined.

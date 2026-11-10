@@ -1192,6 +1192,8 @@ const ErdScatterCard = memo(function ErdScatterCard({
   })
   const points = chartQuery.data?.points ?? EMPTY_LIST
   const changeHistory = chartQuery.data?.changeHistory ?? EMPTY_LIST
+  // The table lists the newest change first; the chart keeps the server's ascending order.
+  const changeHistoryTableRows = useMemo(() => [...changeHistory].sort((left, right) => right.dateMs - left.dateMs), [changeHistory])
   useChartDrawReveal(
     chartContainerRef,
     chartQuery.dataUpdatedAt,
@@ -1470,7 +1472,7 @@ const ErdScatterCard = memo(function ErdScatterCard({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {changeHistory.map((history, index) => {
+                    {changeHistoryTableRows.map((history, index) => {
                       const historyUrl = safeHistoryUrl(history.ctttmUrl)
                       return (
                         <TableRow key={`${history.dateMs}-${index}`}>
