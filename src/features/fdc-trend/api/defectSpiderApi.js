@@ -1,7 +1,8 @@
 import { getApiErrorMessage } from "./errorMessage.js"
 
-function buildParams({ line, pathSdwt, prcGroup, mainSeq, metSeq }) {
+function buildParams({ line, pathSdwt, step, prcGroup, mainSeq, metSeq }) {
   const params = new URLSearchParams({ line, pathSdwt })
+  if (step) params.set("step", step)
   if (prcGroup) params.set("prcGroup", prcGroup)
   if (mainSeq === null) params.set("mainAll", "1")
   else if (mainSeq) params.set("mainSeq", mainSeq)

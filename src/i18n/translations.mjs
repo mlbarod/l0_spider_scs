@@ -407,6 +407,9 @@ const ko = {
   "Register Mailing Feature": "Mailing 기능 등록",
   "Registering…": "등록 중…",
   "Mailing feature registered.": "Mailing 기능이 등록되었습니다.",
+  "Step Type": "스탭 구분",
+  "Management Step": "관리스탭",
+  "Post-DEPO Step": "DEPO후 스탭",
 }
 
 const zhCN = {
@@ -809,6 +812,9 @@ const zhCN = {
   "Register Mailing Feature": "注册 Mailing 功能",
   "Registering…": "正在注册…",
   "Mailing feature registered.": "Mailing 功能已注册。",
+  "Step Type": "步骤类型",
+  "Management Step": "管理步骤",
+  "Post-DEPO Step": "DEPO后步骤",
 }
 
 export const TRANSLATIONS = Object.freeze({ ko, en: Object.freeze({}), "zh-CN": zhCN })

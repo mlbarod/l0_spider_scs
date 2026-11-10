@@ -1,6 +1,6 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { DEFECT_FAIL_LIST_ROOT, getDefectFailListPath, resolveDefectFailListPath } from "./defectSpiderConfig.mjs"
+import { DEFECT_DEPO_FAIL_LIST_ROOT, DEFECT_FAIL_LIST_ROOT, getDefectFailListPath, resolveDefectFailListPath } from "./defectSpiderConfig.mjs"
 
 const entry = (name, directory = true) => ({ name, isDirectory: () => directory })
 const now = new Date("2026-10-30T15:01:00Z") // 한국시간 10월 31일 00:01
@@ -38,4 +38,14 @@ test("Line과 무관하게 지정한 루트를 조회하고 요청마다 새 날
   await assert.rejects(getDefectFailListPath("L1", {
     now, readDirectory: async () => { throw Object.assign(new Error("denied"), { code: "EACCES" }) },
   }), { code: "EACCES" })
+})
+
+test("DEPO후 스탭은 fail_list_all_depo_scs 루트를, 그 외 값은 기존 관리스탭 루트를 조회한다", async () => {
+  const roots = []
+  const readDirectory = async (root) => { roots.push(root); return [entry("2026-10-31 09:00")] }
+  assert.equal(await getDefectFailListPath("L1", { now, readDirectory, step: "depo" }),
+    "/appdata/abnormal_trend/pic/defect/fail_list_all_depo_scs/2026-10-31 09:00/fail_list.parquet")
+  await getDefectFailListPath("L1", { now, readDirectory })
+  await getDefectFailListPath("L1", { now, readDirectory, step: "unknown" })
+  assert.deepEqual(roots, [DEFECT_DEPO_FAIL_LIST_ROOT, DEFECT_FAIL_LIST_ROOT, DEFECT_FAIL_LIST_ROOT])
 })

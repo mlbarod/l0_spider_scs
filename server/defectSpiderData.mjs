@@ -9,12 +9,14 @@ import { DEFECT_PM_HISTORY_PATH, readDefectPmHistory, selectDefectPmHistory } fr
 
 export const DEFECT_COLUMNS = ["sdwt", "prc_group", "main_seq", "met_seq", "eqpid", "path"]
 const text = (value) => String(value ?? "").trim()
-let cache
+// 관리스탭·DEPO후 스탭 목록을 번갈아 조회해도 매번 다시 읽지 않도록 최근 2개 파일을 보관한다.
+const cache = new Map()
 
 export async function readDefectFailList(filePath) {
   const info = await stat(filePath)
-  if (cache?.filePath === filePath && cache.mtimeMs === info.mtimeMs && cache.size === info.size) {
-    return cache.rows
+  const cached = cache.get(filePath)
+  if (cached && cached.mtimeMs === info.mtimeMs && cached.size === info.size) {
+    return cached.rows
   }
   const file = await asyncBufferFromFile(filePath)
   const metadata = await parquetMetadataAsync(file)
@@ -28,7 +30,9 @@ export async function readDefectFailList(filePath) {
     .map((row) => Object.fromEntries(DEFECT_COLUMNS.map((column) => [
       column, column === "path" ? String(row[column] ?? "") : text(row[column]),
     ])))
-  cache = { filePath, mtimeMs: info.mtimeMs, size: info.size, rows }
+  cache.delete(filePath)
+  cache.set(filePath, { mtimeMs: info.mtimeMs, size: info.size, rows })
+  if (cache.size > 2) cache.delete(cache.keys().next().value)
   return rows
 }
 
@@ -81,7 +85,7 @@ export async function handleDefectFiltersRequest(req, res, url, dependencies = {
     const line = text(url.searchParams.get("line"))
     const pathSdwt = text(url.searchParams.get("pathSdwt"))
     assertKnownMappingLineSdwt(mapping, { line, pathSdwt })
-    filePath = await (dependencies.resolvePath ?? getDefectFailListPath)(line)
+    filePath = await (dependencies.resolvePath ?? getDefectFailListPath)(line, { step: text(url.searchParams.get("step")) })
     const rows = await (dependencies.readRows ?? readDefectFailList)(filePath)
     const scopedRows = scopeDefectRows(rows, {
       pathSdwt, sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt,
@@ -119,7 +123,7 @@ export async function handleDefectFileRequest(req, res, url, dependencies = {}) 
     const line = text(url.searchParams.get("line"))
     const pathSdwt = text(url.searchParams.get("pathSdwt"))
     assertKnownMappingLineSdwt(mapping, { line, pathSdwt })
-    const listPath = await (dependencies.resolvePath ?? getDefectFailListPath)(line)
+    const listPath = await (dependencies.resolvePath ?? getDefectFailListPath)(line, { step: text(url.searchParams.get("step")) })
     const rows = await (dependencies.readRows ?? readDefectFailList)(listPath)
     const scoped = scopeDefectRows(rows, { pathSdwt, sdwt: mapping.sdwt_mapping[pathSdwt] ?? pathSdwt })
     const selectedRows = selectDefectRows(scoped, readSelection(url))

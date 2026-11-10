@@ -65,7 +65,7 @@ const spiderSuites = [
     category: "Defect",
     href: "/defect-spider",
     active: true,
-    status: "In Development",
+    status: "Live",
   },
 ]
 

@@ -45,3 +45,15 @@ test("ALL은 값 필터와 구분해 두 API에 전달한다", async (t) => {
   assert.equal(urls[2].searchParams.get("metSeq"), "0")
   assert.equal(urls[2].searchParams.has("mainAll"), false)
 })
+
+test("DEPO후 스탭만 step 파라미터를 보내고 관리스탭은 기존 요청을 유지한다", async (t) => {
+  const urls = []
+  t.mock.method(globalThis, "fetch", async (url) => {
+    urls.push(new URL(url, "http://localhost"))
+    return { ok: true, json: async () => ({}) }
+  })
+  await fetchDefectFilters({ line: "L1", pathSdwt: "A", step: "" })
+  await fetchDefectFile({ line: "L1", pathSdwt: "A", step: "depo", filePath: "/fixture/fail_1.parquet" })
+  assert.equal(urls[0].searchParams.has("step"), false)
+  assert.equal(urls[1].searchParams.get("step"), "depo")
+})

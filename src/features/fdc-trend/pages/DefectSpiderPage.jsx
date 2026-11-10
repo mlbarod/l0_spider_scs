@@ -34,10 +34,10 @@ function DefectFilterRow({ title, options, selected, onSelect, placeholder }) {
   )
 }
 
-function DefectGroupCharts({ line, pathSdwt, prcGroup }) {
-  const selection = { line, pathSdwt, prcGroup, mainSeq: null, metSeq: null }
+function DefectGroupCharts({ line, pathSdwt, step, prcGroup }) {
+  const selection = { line, pathSdwt, step, prcGroup, mainSeq: null, metSeq: null }
   const filesQuery = useQuery({
-    queryKey: ["defect-filters", line, pathSdwt, prcGroup, null, null],
+    queryKey: ["defect-filters", step, line, pathSdwt, prcGroup, null, null],
     queryFn: ({ signal }) => fetchDefectFilters({ ...selection, signal }),
   })
   return (
@@ -116,8 +116,14 @@ function DefectChartTrellis({ pair, selection }) {
   )
 }
 
+const DEFECT_STEPS = [
+  { value: "", label: "Management Step" },
+  { value: "depo", label: "Post-DEPO Step" },
+]
+
 export function DefectSpiderPage() {
   const pageRef = useRef(null)
+  const [selectedStep, setSelectedStep] = useState("")
   const [selectedLine, setSelectedLine] = useState("")
   const [selectedTeam, setSelectedTeam] = useState("")
   const [selectedGroup, setSelectedGroup] = useState(null)
@@ -137,8 +143,8 @@ export function DefectSpiderPage() {
     ? selectedTeam
     : (teams[0]?.value ?? "")
   const filtersQuery = useQuery({
-    queryKey: ["defect-filters", activeLine, activeTeam],
-    queryFn: ({ signal }) => fetchDefectFilters({ line: activeLine, pathSdwt: activeTeam, signal }),
+    queryKey: ["defect-filters", selectedStep, activeLine, activeTeam],
+    queryFn: ({ signal }) => fetchDefectFilters({ line: activeLine, pathSdwt: activeTeam, step: selectedStep, signal }),
     enabled: Boolean(activeLine && activeTeam),
   })
   const groups = filtersQuery.isSuccess ? filtersQuery.data.filters.prc_group ?? [] : []
@@ -166,6 +172,11 @@ export function DefectSpiderPage() {
 
       <section className="shrink-0 border-b border-[#e0e0e0] bg-[#f5f5f7]">
         <div className="divide-y px-6 py-2">
+          <DefectFilterRow title="Step Type" options={DEFECT_STEPS} selected={selectedStep}
+            onSelect={(step) => {
+              setSelectedStep(step)
+              setSelectedGroup(null)
+            }} />
           <DefectFilterRow title="Line Name" options={lines.map((line) => ({ value: line, label: formatLineDisplayName(line) }))}
             selected={activeLine} placeholder={mappingQuery.isPending ? "Loading…" : "No lines are available."}
             onSelect={(line) => {
@@ -210,8 +221,8 @@ export function DefectSpiderPage() {
           {visibleGroups.length ? (
             <div className="space-y-6 p-4">
               {visibleGroups.map((prcGroup) => (
-                <DefectGroupCharts key={JSON.stringify([activeLine, activeTeam, prcGroup])}
-                  line={activeLine} pathSdwt={activeTeam} prcGroup={prcGroup} />
+                <DefectGroupCharts key={JSON.stringify([selectedStep, activeLine, activeTeam, prcGroup])}
+                  line={activeLine} pathSdwt={activeTeam} step={selectedStep} prcGroup={prcGroup} />
               ))}
             </div>
           ) : (

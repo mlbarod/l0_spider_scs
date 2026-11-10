@@ -294,3 +294,15 @@ test("변경점 파일 실패는 산점도 로드를 막지 않으며 내부 오
   assert.equal(res.body.pm_history.source_path, "/appdata/abnormal_trend/pic/xian_change_point/pm_code_info.parquet")
   assert.doesNotMatch(res.body.pm_history.error, /private/)
 })
+
+test("두 API는 step 값을 목록 경로 결정에 전달한다", async () => {
+  const steps = []
+  const resolvePath = async (_line, { step }) => { steps.push(step); return listPath }
+  for (const query of ["", "&step=depo"]) {
+    await handleDefectFiltersRequest({ method: "GET" }, response(),
+      new URL(`http://localhost/api/defect-filters?line=L1&pathSdwt=RAW-A${query}`), { ...dependencies, resolvePath })
+    await handleDefectFileRequest({ method: "GET" }, response(),
+      new URL(`http://localhost/api/defect-file?line=L1&pathSdwt=RAW-A${query}`), { ...dependencies, resolvePath })
+  }
+  assert.deepEqual(steps, ["", "", "depo", "depo"])
+})
