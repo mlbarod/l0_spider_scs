@@ -2,20 +2,25 @@
 
 ## 1. 현재 사용자 문서
 
-| 사용자 작업 | 안내 | 화면 경로 | 기능 기준 |
-|---|---|---|---|
-| Dashboard 조회 | [Dashboard 사용법](USER_MANUAL.md#2-dashboard-사용법) | `/` | [dashboard.md](../features/dashboard.md) |
-| 자설비 조회·차트·SKIP | [자설비 이상감지](USER_MANUAL.md#3-자설비-이상감지) | `/self-equipment` | [self-equipment.md](../features/self-equipment.md) |
-| 동일성 그래프 조회 | [동일성 이상감지](USER_MANUAL.md#4-동일성-이상감지) | `/matching-anomaly` | [abnormal-data.md](../features/abnormal-data.md) |
-| 개발예정 상태 확인 | [개발예정 기능](USER_MANUAL.md#5-개발예정-기능) | `/under-construction/:appId` | [시스템 개요](../system/overview.md) |
-| 오류 대응 | [문제 해결](USER_MANUAL.md#6-문제-해결과-주의사항) | 현재 화면 | [troubleshooting.md](../operations/troubleshooting.md) |
+| 사용자 작업 | 안내 | 화면 경로 |
+|---|---|---|
+| 첫 접속·언어·메인 화면 | [시작하기](USER_MANUAL.ko.md#1-시작하기) | `/` |
+| 필터·검색·ALL 공통 조작 | [공통 조작](USER_MANUAL.ko.md#2-공통-조작) | 각 조회 화면 |
+| Line별 현황 조회 | [라인별 이상감지 대시보드](USER_MANUAL.ko.md#3-라인별-이상감지-대시보드) | `/` |
+| 설비별 차트·SKIP | [설비별 SPEC내 이상감지](USER_MANUAL.ko.md#4-설비별-spec내-이상감지) | `/self-equipment` |
+| 동일성 그래프 조회 | [동일성 이상감지](USER_MANUAL.ko.md#5-동일성-이상감지) | `/matching-anomaly` |
+| Defect 차트 조회 | [Defect SPIDER 사용법](USER_MANUAL.ko.md#6-defect-spider-사용법) | `/defect-spider` |
+| 저장한 차트 확인 | [이력저장 게시판](USER_MANUAL.ko.md#7-이력저장-게시판) | `/history` |
+| 집중 모니터링 설비 등록 | [MY EQP 등록](USER_MANUAL.ko.md#8-my-eqp-등록) | `/registration` |
+| 오류 대응 | [문제 해결](USER_MANUAL.ko.md#9-문제-해결) | 현재 화면 |
+
+영문 `USER_MANUAL.md`, 중문 `USER_MANUAL.zh-CN.md`는 같은 장 구성을 유지한다.
 
 ## 2. Route 상태
 
-- 운영중: `/`, `/self-equipment`, `/matching-anomaly`, `/manual`
-- 개발예정: 메인 카드가 연결하는 `/under-construction/:appId`
-- 호환·잔여 경로: `/common-commonality-anomaly`, `/defect-spider`, `/l1-spider`, `/l3-spider` 등은 직접 접근 가능 여부와 관계없이 공식 사용자 기능이 아니다.
-- `/registration`, `/recipients`는 MY EQP 개발예정 화면을 표시한다.
+- 운영중: `/`, `/self-equipment`, `/matching-anomaly`, `/defect-spider`, `/history`, `/registration`, `/manual`
+- `/recipients`는 `/registration`과 같은 MY EQP 등록 화면을 표시한다.
+- 호환·잔여 경로: `/common-anomaly`, `/common-commonality-anomaly`, `/l1-spider`, `/l3-spider`, `/under-construction/:appId`는 메인 카드에 노출되지 않으며 사용자 매뉴얼 대상이 아니다.
 
 ## 3. 이미지 자산 상태
 

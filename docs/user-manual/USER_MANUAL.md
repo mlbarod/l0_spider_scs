@@ -1,121 +1,218 @@
 # SPIDER User Manual
 
-> Baseline date: 2026-08-30
-> Currently available: Dashboard, Equipment-Level In-SPEC Anomaly Detection, Similarity Anomaly Detection, User Manual
+> Last updated: 2026-11-10
 
 ## Contents
 
-1. [Access and Feature Status](#1-access-and-feature-status)
-2. [Using the Dashboard](#2-using-the-dashboard)
-3. [Equipment-Level In-SPEC Anomaly Detection](#3-equipment-level-in-spec-anomaly-detection)
-4. [Similarity Anomaly Detection](#4-similarity-anomaly-detection)
-5. [Planned Features](#5-planned-features)
-6. [Troubleshooting and Precautions](#6-troubleshooting-and-precautions)
+1. [Getting Started](#1-getting-started)
+2. [Common Controls](#2-common-controls)
+3. [Line Anomaly Dashboard](#3-line-anomaly-dashboard)
+4. [Equipment-Level In-SPEC Anomaly Detection](#4-equipment-level-in-spec-anomaly-detection)
+5. [Similarity Anomaly Detection](#5-similarity-anomaly-detection)
+6. [How to Use Defect SPIDER](#6-how-to-use-defect-spider)
+7. [Saved History Board](#7-saved-history-board)
+8. [MY EQP Registration](#8-my-eqp-registration)
+9. [Troubleshooting](#9-troubleshooting)
 
-## 1. Access and Feature Status
+## 1. Getting Started
 
-Select a feature card on the SPIDER home screen. Only cards marked `Live` are currently available to users.
+### 1.1 First visit
 
-| Status | Features |
+On your first visit, the `User registration` screen appears.
+
+1. Enter your `knox_id`. Do not enter an email address (no @).
+2. Click `Register and continue`.
+
+After you register once, you are recognized automatically when you connect again from the same PC.
+
+### 1.2 Changing the language
+
+On the main screen, click `한국어` / `English` / `中文` at the top right. Your choice is kept for your next visit.
+
+### 1.3 Main screen
+
+| Area | What it shows |
 |---|---|
-| Live | Equipment-Level In-SPEC Anomaly Detection, Similarity Anomaly Detection, Saved History Board, MY EQP Registration, User Manual |
-| In Development | Defect SPIDER |
+| `Last algorithm run time` | When the anomaly data was last updated |
+| App cards | Equipment-Level In-SPEC Anomaly Detection, Similarity Anomaly Detection, Saved History Board, MY EQP Registration, User Manual |
+| Connected app card | Defect SPIDER |
+| `Line Anomaly Dashboard` | Anomaly status by Line, at the bottom of the main screen |
 
-The `Line Anomaly Dashboard` below the home screen is live. Planned feature cards are hidden from the home screen.
+Click a card to open that app. Click `SPIDER Home` or `Back to home` on any app screen to return to the main screen.
 
-## 2. Using the Dashboard
+## 2. Common Controls
 
-The Dashboard shows anomaly status and recent trends by Line.
+Choose filters **in order, from left (or top) to right**. Changing an earlier filter clears the filters after it.
 
-1. Select the query start and end dates.
-2. Select the required Lines. If none are selected, all Lines are queried.
-3. Select `Search`.
-4. Review total monitored sensors, total anomalies, Grade counts, and the previous-day comparison on the KPI cards.
-5. Review `Anomalies by Line`, `Daily Anomaly Trend by Line`, and `Line Details`.
+- **Select/deselect**: Click an item to select it. Click a selected item again to deselect it.
+- **`ALL`**: Shows every item currently in the list at once.
+- **Search**: Type in the `Search…` box of a filter card.
+  - Use the button to the left of the box to choose `Include` (items containing the text) or `Exclude` (items not containing it).
+  - Search is not case-sensitive.
+  - If you select `ALL` while searching, **only the items shown in the search results** are included.
+- **Filter area size**: Drag the grip at the bottom of the filter area to change its height. Double-click the grip to restore the default size.
+- **`Retry`**: Loads the data again with the same conditions after a failure.
+- Click the arrow button at the bottom right to go back to the top.
 
-`Reset` restores the default filters. `Retry` reloads server data using the current filters. Select a column header in the details table to sort it.
+## 3. Line Anomaly Dashboard
 
-If `Last algorithm run time` at the top of the home screen shows `Unavailable`, contact the operator to check the data status instead of repeatedly refreshing.
+Check anomaly status by Line at the bottom of the main screen (the `Dashboard` menu at the top).
 
-## 3. Equipment-Level In-SPEC Anomaly Detection
+1. In `Select Lines`, check the Lines you want. If you check none, `All lines` are shown.
+2. Click `Search`.
+3. Review the results.
 
-### 3.1 Filter Order
-
-Select Line Name, SDWT, and Sensor Grade to automatically set the remaining filters to `ALL` and display `CRITICAL` charts. You can then narrow the filters in the order below. Removing a Grade or changing Line or SDWT clears downstream selections. SKIP LIST keeps its sequential selection flow.
-
-1. `Line Name`
-2. `SDWT`
-3. `Sensor Grade`
-4. `PRC_Group`
-5. `eqp_ch`
-6. `sensor`
-7. `ch_step`
-
-Each selection changes the options in the next filter. If the expected value is missing, check the preceding filters, data date, or Sensor exclusion settings. `Retry` reloads data using the current filters.
-
-### 3.2 Reviewing Charts
-
-After all filters are selected, charts are displayed by EQP in the `Scatter chart` area.
-
-- `Group ch_steps`: View multiple `ch_step` values for the same EQP in one area.
-- `Show All ch_steps`: Return the grouped view to individual charts.
-- `Similarity Chart`: Open similarity data for the selected EQP in a separate window.
-- `Show 3-Day Similarity Chart`: Display the last 72 hours similarity chart next to the grouped view.
-- `Change History`: Review EQP work history and any available LINK.
-
-A no-data message does not always mean the query failed. First check whether source data exists for the selected filters.
-
-### 3.3 SKIP Actions
-
-`SKIP`, `EQP ALL SKIP`, and `Remove SKIP` are available only when DB capability is enabled and user information is ready.
-
-- `SKIP`: Exclude the current anomaly record.
-- `EQP ALL SKIP`: Exclude multiple `ch_step` values for the selected EQP and Sensor.
-- `SKIP LIST`: Review excluded records for the Line using the same `PRC_Group` filter order as the standard equipment view.
-- `Remove SKIP`: Restore an excluded record.
-
-Before running an action, verify the target EQP, Sensor, and scope. Do not create test SKIP records in the production DB.
-
-`ALL` queries only the items matching the current search. Changing the search while `ALL` is selected updates the charts and dependent filters. No matches means no charts.
-
-## 4. Similarity Anomaly Detection
-
-1. Select `Similarity Anomaly Detection` from the home screen.
-2. Select `Line Name`.
-3. Select `SDWT`.
-4. Select `STEP`, or choose `ALL` to query every STEP in the selected SDWT.
-5. Select `Sensor` and `ch_step`.
-6. Review the similarity graphs in the results area.
-
-Choose `Include` or `Exclude` in each filter search box. `Exclude` shows only items that do not contain the entered text. Search is case-insensitive; clearing the text shows all candidates. Searching does not automatically change the current selection. `ALL` queries only the items matching the current search. Changing the search while `ALL` is selected updates the charts and dependent filters. No matches means no charts.
-
-`ALL` for `ch_step` is a screen selection that groups multiple results for the current filters. It is different from the legacy MY EQP mailing link value `step=ALL`.
-
-Use the page buttons when there are many results. `Retry` reloads the latest path using the current filters.
-
-## 5. MY EQP Registration
-
-1. Open MY EQP Registration and select Line, SDWT, PRC Group, then one or more EQPs. ALL selects the current equipment list in that group.
-2. Enter the monitoring period in days and an optional Comment (up to 90 characters).
-3. Enter each viewer/recipient knox_id and press Enter. Your current ID is selected initially.
-4. Save MY EQP. Each designated user can view the registered equipment under MY EQP in Equipment-Level In-SPEC Anomaly Detection for the selected Line.
-5. Use Delete in the registration list to remove your own condition. Other recipients retain their registrations.
-
-Expired registrations remain visible in the registration list but do not appear in MY EQP anomaly queries. This screen saves recipient information; it does not send email or create a delivery schedule.
-
-## 6. Troubleshooting and Precautions
-
-| Screen Message or Symptom | What to Check |
+| Area | How to read it |
 |---|---|
-| `No data matches the selected filters.` | Check the preceding filters and the data date. |
-| Unable to load data | Select `Retry` after a short wait. If the issue continues, provide the URL, time, and selected filters to the operator. |
-| DB capability disabled | Queries may remain available, but SKIP and history actions cannot be used. |
-| Last run time shows `Unavailable` | Ask the operator to check the latest Dashboard data or connection status. |
-| Planned notice | This is not an error; the feature is not yet available. |
+| KPI cards | Monitored sensors, total anomalies, counts by Grade, and `vs. Previous Day` change (▲ up / ▼ down) |
+| `Anomalies by Line` | Anomaly count bars by Line. **Click a bar to show only that Line.** |
+| `Daily Anomaly Trend by Line` | Change the range with the period buttons (10/30/90/180 days). Click a legend entry to hide or show that Line. |
+| `Line Details` | Click a column header to sort. Click `Details` to open Equipment-Level In-SPEC Anomaly Detection. |
 
-Precautions:
+`Reset` returns to all Lines and the 10-day trend, and shows any hidden Lines again.
 
-- Do not modify browser query parameters to bypass permissions or data restrictions.
-- Do not share internal paths or user information shown on the screen outside the organization.
-- Do not directly modify production data, the DB, or Sensor settings to reproduce an error.
-- Do not include real passwords, tokens, or credentials when reporting an issue.
+## 4. Equipment-Level In-SPEC Anomaly Detection
+
+Review anomaly charts by equipment and SKIP them when needed.
+
+### 4.1 Searching
+
+1. Select `Line Name`.
+2. Select `SDWT`.
+   - `MY EQP`: Shows only your registered MY EQP equipment. This appears only when you have registrations.
+   - `SKIP LIST`: Shows only skipped charts.
+3. Select `Sensor Grade`. You can select more than one.
+   - When you select a grade, the remaining filters (`PRC_Group`, `eqp_ch`, `sensor`, `ch_step`) are set to `ALL`, the status is set to `CRITICAL`, and the charts appear right away.
+4. To narrow the results, select `PRC_Group` → `eqp_ch` → `sensor` → `ch_step` in that order.
+
+### 4.2 Viewing charts
+
+| Button | What it does |
+|---|---|
+| `CRITICAL` / `WARNING` | Shows only anomalies with that status. Click it again to show all. |
+| Page numbers | Shows 20 charts per page. |
+| `Group ch_steps` / `Show All ch_steps` | Groups the charts of the same EQP, or shows them one by one. (Default: grouped) |
+| `Show 3-Day Similarity Chart` | In grouped view, also shows the last 3 days (72 hours) similarity chart on the right. (Default: on) |
+| `Similarity Chart` | Opens a window comparing other equipment in the same data. The current EQP is red. Turn on `Draw Reference Lines` and click twice to mark a reference band. |
+| `Change History` | Shows equipment work history in a table. If there is a `LINK`, it opens the related page. |
+| `Save History` | Saves the chart with an image to the [Saved History Board](#7-saved-history-board). |
+
+Chart controls: **drag to zoom**, **double-click to reset**. Red points are anomaly data, grey points are previous data, and the green dashed line marks change points.
+
+### 4.3 SKIP
+
+| Button | What it does |
+|---|---|
+| `SKIP` | Excludes the current chart from anomaly detection. Enter a one-line reason (optional) and click `OK`. |
+| `EQP ALL SKIP` | Excludes every ch_step of that EQP and sensor at once. |
+| `Remove SKIP` | Returns a skipped chart to anomaly detection. |
+
+You can view and remove skipped charts under `SDWT` → `SKIP LIST`. Check the target EQP and sensor before you SKIP.
+
+## 5. Similarity Anomaly Detection
+
+View graphs that compare signal distributions between equipment under the same conditions.
+
+1. Select `Line Name`. (The first Line is selected automatically.)
+2. Select `SDWT`. (The first SDWT is selected automatically.)
+3. Select `STEP`. `ALL` means every STEP of that SDWT.
+4. Select `Sensor`.
+5. Select `ch_step` to show the graphs. If Sensor is `ALL`, only `ALL` can be selected for ch_step.
+
+Results appear in `Similarity-Based Anomaly Graphs`, grouped by step_seq.
+
+- 18 graphs are shown per page. Use the page numbers below to move between pages.
+- Click `Save History` on a graph to save it to the [Saved History Board](#7-saved-history-board).
+
+## 6. How to Use Defect SPIDER
+
+View anomaly detection results based on defect signals as charts. The data is based on **today's latest anomaly list**.
+
+Some labels on this screen are shown in Korean. They are written below with an English explanation.
+
+### 6.1 Searching
+
+1. Select `Step Type`.
+   - `Management Step` (default): anomaly results for management steps
+   - `Post-DEPO Step`: anomaly results for steps after DEPO
+2. Select `Line Name`. (The first Line is selected automatically.)
+3. Select `SDWT`. (The first SDWT is selected automatically.)
+4. Select `PRC Group`. The default `ALL` shows the charts of every PRC Group.
+
+When you change `Step Type`, PRC Group returns to `ALL` and the charts are redrawn with the data of the selected step.
+
+### 6.2 Viewing charts
+
+Charts are grouped by PRC Group, with one chart per eqp_ch. The chart title shows `eqp_ch / main_seq / met_seq`.
+
+| Mark | Meaning |
+|---|---|
+| Small, light points | ALL data (colored by STEP) |
+| Large, dark points | Anomaly RAW data (red: NG, teal: others) |
+| Green dashed line | Change point (PM history) |
+| Legend on the right | STEP colors and counts, and the eqp_ch list. **Click an eqp_ch** to hide or show its points. |
+
+Chart controls:
+
+- **Drag**: zoom into the selected area
+- **Drag in the opposite direction**: return to the initial range
+- **Double-click** or `범위 초기화` (Reset range): show the full range
+
+### 6.3 Details
+
+- `이상감지 Wafer List 보기` (View anomaly wafer list): Opens the anomaly wafer list as a table. Drag over cells or click a column header to select, then click `복사` (Copy) or press Ctrl+C to paste into Excel.
+- `PM이력 보기` (View PM history): Opens the PM history of that equipment as a table.
+
+## 7. Saved History Board
+
+View the charts saved with `Save History` on each screen. You can also click `Go to Saved History Board` in the window that appears right after saving.
+
+1. Enter conditions if needed: `Line Name`, `SDWT`, `Saved by`, `Saved from`, `Saved until`.
+   - Line Name, SDWT and Saved by must be entered **exactly** to match.
+2. Click `Search` (or press Enter). `Reset` clears all conditions.
+3. Click `History details` in the list to see the chart image and information saved at that time.
+
+- Records are shown newest first, 20 per page. Use `Previous` / `Next` to move.
+- `Refresh` reloads the current page.
+- `Delete history` is visible only to administrators. A deleted record and its image are removed permanently.
+
+## 8. MY EQP Registration
+
+Register equipment you want to watch closely. You can then view only that equipment under `SDWT` → `MY EQP` in Equipment-Level In-SPEC Anomaly Detection.
+
+### 8.1 Registering
+
+1. In `Select equipment reference data`, select `Line Name` → `SDWT` → `PRC Group` → `EQP` in that order.
+   - You can select several EQPs. Selecting `ALL` registers every equipment in the list.
+2. Check your choices in `Selected conditions`.
+3. In `Monitoring period`, enter how many days the registration should stay active (an integer of 1 or more).
+4. If needed, add a note in `Notes` (optional, up to 90 characters).
+5. In `Viewers and mail recipients`, enter a knox_id and press Enter.
+   - Your own knox_id is added automatically.
+   - You can add several people. Click the X on a name chip to remove it.
+6. Click `Save MY EQP`. The button is enabled only when all required items are filled in.
+
+### 8.2 Checking and deleting registrations
+
+Check the registrations for the selected Line in `Registered MY EQP conditions` at the bottom of the screen.
+
+- Status: `Monitoring` or `Expired`
+- You can delete your own registrations with `Delete`. Deleting removes all equipment in that registration.
+- You cannot delete another user's public registration.
+- Registrations cannot be edited. To change one, delete it and register again.
+
+## 9. Troubleshooting
+
+| Message or symptom | What to do |
+|---|---|
+| `No data matches the selected filters.` or another no-data message | This may not be an error. Check the earlier filters and your search text. |
+| Loading failed | Click `Retry`. If it keeps failing, send the screen, time and selected conditions to the contact person. |
+| `Reference mapping error` | Click `Retry`. If it continues, contact the contact person. |
+| `Last algorithm run time` shows `Unavailable` | Ask the contact person to check the data update status. |
+| Defect SPIDER shows `오늘(…)의 이상감지 목록 폴더가 없습니다.` (today's anomaly list folder is missing) | Today's data has not been created yet. Check again later. |
+| `Another knox_id is already registered. Contact the administrator.` | Ask the contact person to change your user registration. |
+| `SKIP` or `Save History` is missing or disabled | The chart is still loading, or it has no data to save. |
+
+Do not include passwords or other credentials when you report a problem.
+
+Contacts: see `Development · Operations` at the top of the main screen.
