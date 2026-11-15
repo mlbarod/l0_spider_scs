@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 
 import { fetchDashboardStats } from "../api/dashboardApi"
 import { LineAnomalyDashboard } from "../components/LineAnomalyDashboard"
+import { useAppPrefetch } from "../hooks/useAppPrefetch"
 
 const spiderApps = [
   {
@@ -69,8 +70,14 @@ const spiderSuites = [
   },
 ]
 
+function PrefetchLink({ to, ...props }) {
+  const prefetchHandlers = useAppPrefetch(to)
+  return <Link to={to} {...props} {...prefetchHandlers} />
+}
+
 function SpiderAppCard({ app, animationIndex = 0 }) {
   const isOperating = app.status === "Live"
+  const prefetchHandlers = useAppPrefetch(app.href)
   const animationStyle = {
     "--spider-app-enter-delay": `${animationIndex * 55}ms`,
   }
@@ -133,6 +140,7 @@ function SpiderAppCard({ app, animationIndex = 0 }) {
       to={app.href}
       className="spider-app-enter group relative block h-full"
       style={animationStyle}
+      {...prefetchHandlers}
     >
       {content}
     </Link>
@@ -257,7 +265,7 @@ export function L0SpiderHomePage() {
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {spiderSuites.map((app, index) => (
-                <Link
+                <PrefetchLink
                   key={app.title}
                   to={app.href}
                   className="spider-app-enter group flex min-h-[220px] flex-col rounded-[18px] border border-white/12 bg-[#2a2a2c] p-6 transition-transform hover:-translate-y-1 active:scale-[0.98]"
@@ -273,7 +281,7 @@ export function L0SpiderHomePage() {
                     <span>{app.category}</span>
                     <span className="grid size-8 place-items-center rounded-full bg-white/8"><ArrowRight className="size-4" /></span>
                   </div>
-                </Link>
+                </PrefetchLink>
               ))}
             </div>
           </div>
