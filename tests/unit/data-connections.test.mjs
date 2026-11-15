@@ -261,6 +261,8 @@ test("기본 실행은 Dashboard, 자설비, 동일성과 공통부 이상감지
     ["POST", "/api/pass-history"],
     ["GET", "/api/hit-history"],
     ["POST", "/api/hit-history"],
+    ["GET", "/api/history-board"],
+    ["POST", "/api/history-board"],
   ]) {
     const response = createResponse()
     assert.equal(blockDisabledDataRequest(
@@ -288,6 +290,12 @@ test("읽기 가능한 credential이 있으면 사용자·이력 API를 제한�
     ["GET", "/api/pass-history"],
     ["POST", "/api/pass-history"],
     ["DELETE", "/api/pass-history"],
+    ["GET", "/api/history-board"],
+    ["POST", "/api/history-board"],
+    ["GET", `/api/history-board/${"a".repeat(64)}`],
+    ["PATCH", `/api/history-board/${"a".repeat(64)}`],
+    ["DELETE", `/api/history-board/${"a".repeat(64)}`],
+    ["GET", `/api/history-board/${"a".repeat(64)}/image`],
   ]) {
     assert.equal(blockDisabledDataRequest(
       { method, url: pathname, headers: { host: "localhost" } },

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 
-import { createHitHistory } from "./hitHistoryApi.js"
+import { createHistoryPost } from "./historyBoardApi.js"
 import { createPassHistory } from "./passHistoryApi.js"
 
 const passFields = {
@@ -44,36 +44,34 @@ test("자설비 SKIP API는 chart row의 PASS 이력 필드를 POST body로 전�
   })
 })
 
-test("자설비 이력저장 API는 updateDate와 sdwt를 file_path와 함께 전달한다", async (context) => {
+test("이력저장 게시판 API는 등록 구분·차트 정보와 file_path를 POST body로 전달한다", async (context) => {
   const originalFetch = globalThis.fetch
-  let requestBody
-  globalThis.fetch = async (_url, options) => {
-    requestBody = JSON.parse(options.body)
-    return {
-      ok: true,
-      json: async () => ({
-        ok: true,
-        affectedRows: 1,
-      }),
-    }
+  let request
+  globalThis.fetch = async (url, options) => {
+    request = { url, method: options.method, body: JSON.parse(options.body) }
+    return { ok: true, json: async () => ({ ok: true, id: "a".repeat(64), created: true }) }
   }
   context.after(() => {
     globalThis.fetch = originalFetch
   })
 
-  await createHitHistory({
+  const input = {
+    entryType: "HISTORY",
+    title: "[SPIDER] title",
+    details: "Line: P1L",
+    comment: "Please review the anomaly detection details.",
+    app: "self-equipment",
     lineId: "P1L",
     updateDate: "2026-08-27 13:00:00",
     sdwt: "SDWT-1",
     filePath: "/mounted/runtime/path_xian/result",
-    execDate: "2026-08-27T13:05:00+09:00",
-  })
+    image: "data:image/png;base64,AAAA",
+    requestId: "00000000-0000-4000-8000-000000000000",
+  }
+  const result = await createHistoryPost(input)
 
-  assert.deepEqual(requestBody, {
-    lineId: "P1L",
-    updateDate: "2026-08-27 13:00:00",
-    sdwt: "SDWT-1",
-    filePath: "/mounted/runtime/path_xian/result",
-    execDate: "2026-08-27T13:05:00+09:00",
-  })
+  assert.equal(request.url, "/api/history-board")
+  assert.equal(request.method, "POST")
+  assert.deepEqual(request.body, input)
+  assert.equal(result.created, true)
 })

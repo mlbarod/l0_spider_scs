@@ -20,6 +20,7 @@ import {
   handleCommonAnomalyScatterRequest,
 } from "./server/commonAnomalyData.mjs"
 import { handleHitHistoryRequest } from "./server/hitHistory.mjs"
+import { handleHistoryBoardRequest } from "./server/historyBoard.mjs"
 import { handleMailingRegistrationRequest } from "./server/mailingRegistration.mjs"
 import {
   handleCommonalityDataRequest,
@@ -91,6 +92,11 @@ function mappingConfigApi() {
 
         if (url.pathname === "/api/hit-history") {
           handleHitHistoryRequest(req, res)
+          return
+        }
+
+        if (url.pathname === "/api/history-board" || url.pathname.startsWith("/api/history-board/")) {
+          handleHistoryBoardRequest(req, res)
           return
         }
 

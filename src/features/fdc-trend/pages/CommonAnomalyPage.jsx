@@ -18,8 +18,7 @@ import {
   fetchCommonSkipListData,
 } from "../api/commonAnomalyApi"
 import { fetchCurrentUser } from "../api/currentUserApi"
-import { useHitHistorySave } from "../hooks/useHitHistorySave"
-import { HistorySavedDialog } from "../components/HistorySavedDialog"
+import { ChartHistoryDialog } from "../components/ChartHistoryDialog"
 import { loadChartPng } from "../utils/historyChartImage"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import { isLineMappingQueryReady } from "../api/mappingContract.mjs"
@@ -201,13 +200,9 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
       prcGroup: row.prc_group,
     })
   }
-  const saveHitHistoryMutation = useHitHistorySave()
-  const handleHistorySave = () => {
-    saveHitHistoryMutation.save({
-      lineId,
-      filePath: row.image_path,
-    }, () => loadChartPng(imageUrl))
-  }
+  const historyEntryFields = { lineId, filePath: row.image_path }
+  const historyEntryTitle = `[SPIDER] Common Area Anomaly Detection / ${eqp || "-"} / ${row.sensor || "-"}`
+  const historyEntryDetails = `Line: ${lineId || "-"} · EQP: ${eqp || "-"} · PRC Group: ${row.prc_group || "-"} · Sensor: ${row.sensor || "-"} · Step: ${row.step || "-"} · Grade: ${row.priority || "-"} · Date: ${row.date || "-"}`
 
   return (
     <article className="grid min-h-[400px] min-w-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-lg border bg-card shadow-sm">
@@ -272,22 +267,16 @@ const CommonAnomalyImageCard = memo(function CommonAnomalyImageCard({
             queryKeyPrefix="common-anomaly-identity-data"
             lotIdLabel="lotid"
           />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-9 px-[0.9rem] text-sm"
-            onClick={handleHistorySave}
-            disabled={saveHitHistoryMutation.isPending || imageFailed}
-          >
-            {saveHitHistoryMutation.isPending
-              ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-              : null}
-            Save History
-          </Button>
+          <ChartHistoryDialog
+            title={historyEntryTitle}
+            details={historyEntryDetails}
+            app="common-anomaly"
+            fields={historyEntryFields}
+            prepareImage={() => loadChartPng(imageUrl)}
+            disabled={imageFailed}
+          />
         </div>
       </footer>
-      <HistorySavedDialog open={saveHitHistoryMutation.successOpen} onOpenChange={saveHitHistoryMutation.setSuccessOpen} />
     </article>
   )
 })

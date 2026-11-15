@@ -23,7 +23,7 @@ Vite와 통합 서버는 동일한 handler를 import해 20개 API 경로를 등�
 | 영역 | 경로 |
 |---|---|
 | Dashboard | `/api/dashboard-data`, `/api/dashboard-stats`, `/api/dashboard-latest-date` |
-| 사용자·이력 | `/api/current-user`, `/api/hit-history`, `/api/clicked-category-history`, `/api/pass-history` |
+| 사용자·이력 | `/api/current-user`, `/api/hit-history`(이전 방식, 화면 미사용), `/api/history-board`(이력저장 게시판), `/api/clicked-category-history`, `/api/pass-history` |
 | 자설비·매핑 | `/api/mapping-config`, `/api/self-equipment-data`, `/api/erd-scatter-data`, `/api/erd-file` |
 | 동일성 | `/api/latest-commonality-path`, `/api/commonality-data`, `/api/commonality-image` |
 | 공통부 잔여 구현 | `/api/common-anomaly-data`, `/api/common-anomaly-scatter-data`, `/api/common-anomaly-image`, `/api/common-commonality-data`, `/api/common-commonality-image` |
@@ -38,7 +38,7 @@ Vite와 통합 서버는 동일한 handler를 import해 20개 API 경로를 등�
 - 동일성: `path_erd_commonality_xian` index와 `erd_commonality` 이미지
 - 공통부 잔여 구현: `path_common`, `common`, `path_common_commonality`
 - 공통 설정: mapping JSON, 선택적 Sensor 제외 JSON
-- DB: `pass_history`, `hit_history`, `clicked_category_history` 등 현재 이력 helper
+- DB: `pass_history`, `hit_history_post`(이력저장 게시판; 기존 `hit_history`는 백업으로 보존), `clicked_category_history` 등 현재 이력 helper
 
 서버는 운영 분석 파일의 소비자다. 조회 중 운영 파일을 생성하거나 수정하지 않는다.
 

@@ -44,8 +44,7 @@ import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
 import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { fetchMyEqpRegistrations } from "../api/myEqpRegistrationApi"
 import { fetchCurrentUser } from "../api/currentUserApi"
-import { useHitHistorySave } from "../hooks/useHitHistorySave"
-import { HistorySavedDialog } from "../components/HistorySavedDialog"
+import { ChartHistoryDialog } from "../components/ChartHistoryDialog"
 import { renderChartPng } from "../utils/historyChartImage"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import {
@@ -1148,15 +1147,15 @@ const ErdScatterCard = memo(function ErdScatterCard({
   const handleSkipDelete = () => {
     deleteSkipMutation.mutate({ lineId, filePath: historyFilePath, ...passHistoryFields })
   }
-  const saveHitHistoryMutation = useHitHistorySave()
-  const handleHistorySave = () => {
-    saveHitHistoryMutation.save({
-      lineId,
-      updateDate: passHistoryFields.updateDate,
-      sdwt: passHistoryFields.sdwt,
-      filePath: historyFilePath,
-    }, () => renderChartPng(renderScatterChart(null, buildRenderedScatterSeries(points, null))))
+  const historyEntryFields = {
+    lineId,
+    updateDate: passHistoryFields.updateDate,
+    sdwt: passHistoryFields.sdwt,
+    filePath: historyFilePath,
   }
+  const historyEntryTitle = `[SPIDER] Equipment-Level In-SPEC Anomaly Detection / ${eqp || "-"} / ${row.sensor || "-"}`
+  const historyEntryDetails = `Line: ${lineId || "-"} · SDWT: ${passHistoryFields.sdwt || "-"} · EQP: ${eqp || "-"} · PPID: ${passHistoryFields.recipeId || "-"} · Sensor: ${row.sensor || "-"} · Step: ${row.step || "-"} · Grade: ${row.priority || "-"}`
+  const prepareHistoryImage = () => renderChartPng(renderScatterChart(null, buildRenderedScatterSeries(points, null)))
 
   useEffect(() => {
     const card = cardRef.current
@@ -1504,23 +1503,17 @@ const ErdScatterCard = memo(function ErdScatterCard({
             </DialogContent>
           </Dialog>
           {historyActionsEnabled ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 px-[0.9rem] text-sm"
-              onClick={handleHistorySave}
-              disabled={saveHitHistoryMutation.isPending || chartQuery.isLoading || chartQuery.isError || !points.length}
-            >
-              {saveHitHistoryMutation.isPending
-                ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                : null}
-              Save History
-            </Button>
+            <ChartHistoryDialog
+              title={historyEntryTitle}
+              details={historyEntryDetails}
+              app="self-equipment"
+              fields={historyEntryFields}
+              prepareImage={prepareHistoryImage}
+              disabled={chartQuery.isLoading || chartQuery.isError || !points.length}
+            />
           ) : null}
         </div>
       </footer>
-      <HistorySavedDialog open={saveHitHistoryMutation.successOpen} onOpenChange={saveHitHistoryMutation.setSuccessOpen} />
     </article>
   )
 })

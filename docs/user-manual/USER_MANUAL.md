@@ -95,7 +95,7 @@ Review anomaly charts by equipment and SKIP them when needed.
 | `Show 3-Day Similarity Chart` | In grouped view, also shows the last 3 days (72 hours) similarity chart on the right. (Default: on) |
 | `Similarity Chart` | Opens a window comparing other equipment in the same data. The current EQP is red. Turn on `Draw Reference Lines` and click twice to mark a reference band. |
 | `Change History` | Shows equipment work history in a table. If there is a `LINK`, it opens the related page. |
-| `Save History` | Saves the chart with an image to the [Saved History Board](#7-saved-history-board). |
+| `Save History` | After you check the title and comment in the window and click `Save`, the chart and its image are saved to the [Saved History Board](#7-saved-history-board). |
 
 Chart controls: **drag to zoom**, **double-click to reset**. Red points are anomaly data, grey points are previous data, and the green dashed line marks change points.
 
@@ -165,16 +165,17 @@ Chart controls:
 
 ## 7. Saved History Board
 
-View the charts saved with `Save History` on each screen. You can also click `Go to Saved History Board` in the window that appears right after saving.
+View the charts registered with `Save History` on each screen and manage their work status. You can also click `View on the board` in the window right after saving.
 
-1. Enter conditions if needed: `Line Name`, `SDWT`, `Saved by`, `Saved from`, `Saved until`.
-   - Line Name, SDWT and Saved by must be entered **exactly** to match.
-2. Click `Search` (or press Enter). `Reset` clears all conditions.
-3. Click `History details` in the list to see the chart image and information saved at that time.
+1. If needed, select `Line Name`, `SDWT` and `Work status` (In progress/Completed), or enter a search term (title, registered by, chart details).
+2. Click `Search` (or press Enter).
+3. Click a title in the list to see the chart image, chart details and comment registered at that time.
+4. In the details window, use `Mark as completed` / `Change to in progress` to change the work status. The processing comment is optional, and each change is kept in `Status change history`.
 
-- Records are shown newest first, 20 per page. Use `Previous` / `Next` to move.
+- Records saved before this change are shown with the title `Saved history`.
+- Entries are shown newest first, 20 per page. Use `Previous` / `Next` to move.
 - `Refresh` reloads the current page.
-- `Delete history` is visible only to administrators. A deleted record and its image are removed permanently.
+- `Delete entry` is visible only to administrators. A deleted entry is removed permanently together with its image and status change history.
 
 ## 8. MY EQP Registration
 

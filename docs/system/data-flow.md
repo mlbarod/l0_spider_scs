@@ -14,7 +14,7 @@
 | `DF-DASH-01` | Dashboard | `/api/dashboard-data`, `/api/dashboard-stats`, `/api/dashboard-latest-date` | `stats/{latest_date}_spider_step_stats.parquets`, `path/{latest_date}` |
 | `DF-SELF-01` | 자설비 목록 | `/api/mapping-config`, `/api/self-equipment-data` | `mapping_config.json`, `path_xian/{line}/{sdwt}/df_path.parquet` |
 | `DF-SELF-02` | 자설비 chart | `/api/erd-scatter-data`, `/api/erd-file` | 선택 경로의 `data.parquet`, image, `{eqp}.parquet` |
-| `DF-SELF-03` | 자설비 이력 | `/api/current-user`, `/api/pass-history`, `/api/hit-history`, `/api/clicked-category-history` | 이력 DB |
+| `DF-SELF-03` | 자설비 이력 | `/api/current-user`, `/api/pass-history`, `/api/history-board`, `/api/clicked-category-history` | 이력 DB |
 | `DF-MATCH-01` | 동일성 이상감지 | `/api/latest-commonality-path`, `/api/commonality-data`, `/api/commonality-image` | `path_erd_commonality_xian`, `erd_commonality` image |
 | `DF-MANUAL-01` | 사용자 메뉴얼 | 정적 Markdown import | `docs/user-manual/USER_MANUAL.md` |
 

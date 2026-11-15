@@ -10,8 +10,7 @@ import { Card, CardContent, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 
 import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
-import { useHitHistorySave } from "../hooks/useHitHistorySave"
-import { HistorySavedDialog } from "../components/HistorySavedDialog"
+import { ChartHistoryDialog } from "../components/ChartHistoryDialog"
 import { loadChartPng } from "../utils/historyChartImage"
 import { FilterSearchInput } from "../components/FilterSearchInput"
 import { filterItems as filterValues, filterItemsWithAll, getAllFilterSearch } from "../utils/filterSearch.mjs"
@@ -182,15 +181,10 @@ function CommonalityImageCard({ row, config, lineId }) {
   const detailText = row.eqpModel
     ? `${row.grade} · ${row.eqpModel}`
     : `${row.grade} · ${row.stepSeq} · ${row.ppid}`
-  const saveHitHistoryMutation = useHitHistorySave()
-  const handleHistorySave = () => {
-    saveHitHistoryMutation.save({
-      lineId,
-      updateDate: row.latestDate,
-      sdwt: row.sdwt,
-      filePath: row.filePath,
-    }, () => loadChartPng(imageUrl))
-  }
+  const historyEntryFields = { lineId, updateDate: row.latestDate, sdwt: row.sdwt, filePath: row.filePath }
+  const historyEntryApp = config === PAGE_VARIANTS.commonCommonality ? "common-commonality-anomaly" : "matching-anomaly"
+  const historyEntryTitle = `[SPIDER] ${config.title} / ${row.sensor || "-"} / ${row.chStep || "-"}`
+  const historyEntryDetails = `Line: ${lineId || "-"} · SDWT: ${row.sdwt || "-"} · Sensor: ${row.sensor || "-"} · CH Step: ${row.chStep || "-"} · ${detailText} · Date: ${row.latestDate || "-"}`
 
   return (
     <article className="grid min-w-0 overflow-hidden rounded-xl border bg-background shadow-sm">
@@ -220,21 +214,15 @@ function CommonalityImageCard({ row, config, lineId }) {
         )}
       </div>
       <footer className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/20 px-4 py-2.5">
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="h-9 px-[0.9rem] text-sm"
-          onClick={handleHistorySave}
-          disabled={saveHitHistoryMutation.isPending || imageFailed}
-        >
-          {saveHitHistoryMutation.isPending
-            ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-            : null}
-          Save History
-        </Button>
+        <ChartHistoryDialog
+          title={historyEntryTitle}
+          details={historyEntryDetails}
+          app={historyEntryApp}
+          fields={historyEntryFields}
+          prepareImage={() => loadChartPng(imageUrl)}
+          disabled={imageFailed}
+        />
       </footer>
-      <HistorySavedDialog open={saveHitHistoryMutation.successOpen} onOpenChange={saveHitHistoryMutation.setSuccessOpen} />
     </article>
   )
 }

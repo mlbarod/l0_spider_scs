@@ -23,6 +23,7 @@ import {
   handleCommonAnomalyScatterRequest,
 } from "./server/commonAnomalyData.mjs"
 import { handleHitHistoryRequest } from "./server/hitHistory.mjs"
+import { handleHistoryBoardRequest } from "./server/historyBoard.mjs"
 import {
   handleCommonalityDataRequest,
   handleCommonalityImageRequest,
@@ -187,6 +188,13 @@ const server = createServer((req, res) => {
   if (url.pathname === "/api/hit-history") {
     handleHitHistoryRequest(req, res).catch((error) => {
       sendJson(res, 500, { ok: false, error: error.message })
+    })
+    return
+  }
+
+  if (url.pathname === "/api/history-board" || url.pathname.startsWith("/api/history-board/")) {
+    handleHistoryBoardRequest(req, res).catch(() => {
+      sendJson(res, 500, { ok: false, error: "Unable to process the board request." })
     })
     return
   }

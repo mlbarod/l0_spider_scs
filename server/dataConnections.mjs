@@ -37,6 +37,9 @@ const DB_METHODS = new Map([
   ["/api/clicked-category-history", new Set(["POST"])],
   ["/api/pass-history", new Set(["GET", "POST", "DELETE"])],
 ])
+// Saved History Board: list/create, entry detail/status/delete and entry image.
+const HISTORY_BOARD_PATH = /^\/api\/history-board(?:\/[a-f0-9]{64}(?:\/image)?)?$/
+const HISTORY_BOARD_METHODS = new Set(["GET", "POST", "PATCH", "DELETE"])
 
 export const DATA_CONNECTIONS_ENABLED_ENV = "SCS_DATA_CONNECTIONS_ENABLED"
 export const DASHBOARD_DATA_ENABLED_ENV = "SCS_DASHBOARD_DATA_ENABLED"
@@ -153,7 +156,10 @@ export function blockDisabledDataRequest(
     && COMMON_ANOMALY_READ_METHODS.get(normalizedPathname)?.has(req.method)
   )
   const dbConnectionsEnabled = areDbConnectionsEnabled(environment, canReadDbInfo)
-  const isKnownDbRequest = isExactPath && DB_METHODS.get(normalizedPathname)?.has(req.method)
+  const isKnownDbRequest = isExactPath && (
+    DB_METHODS.get(normalizedPathname)?.has(req.method)
+    || (HISTORY_BOARD_PATH.test(normalizedPathname) && HISTORY_BOARD_METHODS.has(req.method))
+  )
   const isAllowedDbRequest = (
     dbConnectionsEnabled
     && isKnownDbRequest
