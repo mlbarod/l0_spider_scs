@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { Link } from "react-router-dom"
-import { Loader2 } from "lucide-react"
+import { Loader2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -89,7 +89,7 @@ export function ChartHistoryDialog({ title, details, app, fields, prepareImage, 
 
   return <>
     <Button type="button" variant="outline" size="sm" className="h-9 px-[0.9rem] text-sm" disabled={disabled} onClick={openDraft}>
-      Save History
+      <Save className="size-4" aria-hidden="true" />Save History
     </Button>
     <Dialog open={open} onOpenChange={(value) => { if (!saving) { setOpen(value); if (!value) generation.current += 1 } }}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
