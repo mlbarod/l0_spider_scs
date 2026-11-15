@@ -13,6 +13,7 @@ const EMPTY_LIST = []
 export function DefectScatterChart({ failData, allData, eqpCh, historyEntry }) {
   const { language } = useLanguage()
   const [hidden, setHidden] = useState([])
+  const [hiddenSteps, setHiddenSteps] = useState([])
   const [zoom, setZoom] = useState(null)
   const series = useMemo(() => buildDefectScatterSeries(failData.points ?? [], allData.points ?? [], eqpCh), [failData, allData, eqpCh])
   const pmHistory = failData.pm_history
@@ -34,15 +35,18 @@ export function DefectScatterChart({ failData, allData, eqpCh, historyEntry }) {
   return (
     <div className="min-w-0" data-defect-scatter={eqpCh}>
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_144px] items-start gap-2 px-2 pt-2">
-      <DefectScatterPlot series={series} hidden={hidden} domain={domain} pmRows={pmRows} onZoom={setZoom} onResetInitial={resetInitialZoom} onShowFullRange={resetZoom} />
+      <DefectScatterPlot series={series} hidden={hidden} hiddenSteps={hiddenSteps} domain={domain} pmRows={pmRows} onZoom={setZoom} onResetInitial={resetInitialZoom} onShowFullRange={resetZoom} />
       <aside className="h-[340px] overflow-y-auto rounded-md border bg-muted/25 p-2" aria-label="eqp_ch 범례">
         <p className="mb-2 text-[10px] font-semibold text-muted-foreground">STEP</p>
         {[...series.stepColors].map(([step, color]) => (
-          <div key={step} data-defect-step={step} className="grid grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-1 px-1 py-1 text-[10px]">
+          <button key={step} type="button" data-defect-step={step} aria-pressed={!hiddenSteps.includes(step)} title={step}
+            className="grid w-full grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-1 rounded px-1 py-1 text-left text-[10px] hover:bg-muted"
+            style={{ opacity: hiddenSteps.includes(step) ? 0.4 : 1 }}
+            onClick={() => setHiddenSteps((current) => current.includes(step) ? current.filter((value) => value !== step) : [...current, step])}>
             <span className="size-2 rounded-full" style={{ backgroundColor: color }} />
             <span>{step}</span>
             <span className="text-muted-foreground">{series.stepCounts.get(step).toLocaleString()}</span>
-          </div>
+          </button>
         ))}
         <p className="mb-2 mt-3 text-[10px] font-semibold text-muted-foreground">eqp_ch</p>
         {legendEqps.map((eqp) => (

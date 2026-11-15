@@ -40,7 +40,7 @@ const DefectPmMarkers = memo(function DefectPmMarkers({ rows, width, domain }) {
   )
 })
 
-export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidden, domain, pmRows, onZoom, onResetInitial, onShowFullRange }) {
+export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidden, hiddenSteps, domain, pmRows, onZoom, onResetInitial, onShowFullRange }) {
   const plotRef = useRef(null), canvasRef = useRef(null), selectionRef = useRef(null), tooltipRef = useRef(null)
   const dragRef = useRef(null), frameRef = useRef(null), indexRef = useRef(null), hoverRef = useRef(null)
   const [size, setSize] = useState({ width: 0, pixelRatio: 1 })
@@ -58,7 +58,7 @@ export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidde
   }, [])
   useEffect(() => {
     if (size.width <= DEFECT_PLOT.left + DEFECT_PLOT.right) return
-    indexRef.current = drawDefectScatter(canvasRef.current, { series, hidden, domain, ...size })
+    indexRef.current = drawDefectScatter(canvasRef.current, { series, hidden, hiddenSteps, domain, ...size })
     tooltipRef.current.style.display = "none"
     hoverRef.current = null
     const selection = selectionRef.current
@@ -70,7 +70,7 @@ export const DefectScatterPlot = memo(function DefectScatterPlot({ series, hidde
       selection.style.display = "none"
       indexRef.current = null
     }
-  }, [series, hidden, domain, size])
+  }, [series, hidden, hiddenSteps, domain, size])
   const cancelFrame = () => { cancelAnimationFrame(frameRef.current); frameRef.current = null }
   const clearDrag = () => {
     cancelFrame()

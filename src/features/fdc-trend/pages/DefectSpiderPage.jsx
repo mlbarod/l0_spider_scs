@@ -42,7 +42,10 @@ function DefectGroupCharts({ line, pathSdwt, sdwtLabel, step, prcGroup }) {
   })
   return (
     <section className="min-w-0 space-y-3" aria-label={`PRC Group ${prcGroup}`}>
-      <h3 className="text-sm font-semibold">{prcGroup}</h3>
+      <h3 className="inline-flex max-w-full items-center gap-2 rounded-lg border border-[#0066cc]/30 bg-[#0066cc]/10 py-1 pl-1 pr-3 text-sm font-semibold text-[#0066cc]">
+        <span className="shrink-0 rounded-md bg-[#0066cc] px-2 py-0.5 text-[10px] font-bold tracking-wide text-white">PRC Group</span>
+        <span className="min-w-0 break-all">{prcGroup}</span>
+      </h3>
       {filesQuery.isError ? (
         <div className="flex items-center gap-3 text-sm text-destructive" role="alert">
           <p>{filesQuery.error.message}</p>

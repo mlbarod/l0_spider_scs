@@ -29,7 +29,7 @@ export function findDefectPoint(index, x, y) {
   return nearest
 }
 
-export function drawDefectScatter(canvas, { series, hidden, domain, width, pixelRatio }) {
+export function drawDefectScatter(canvas, { series, hidden, hiddenSteps = [], domain, width, pixelRatio }) {
   canvas.width = Math.round(width * pixelRatio)
   canvas.height = Math.round(DEFECT_PLOT.height * pixelRatio)
   const context = canvas.getContext("2d")
@@ -71,8 +71,10 @@ export function drawDefectScatter(canvas, { series, hidden, domain, width, pixel
   context.rect(DEFECT_PLOT.left, DEFECT_PLOT.top, width - DEFECT_PLOT.left - DEFECT_PLOT.right, DEFECT_PLOT.bottom - DEFECT_PLOT.top)
   context.clip()
   const hiddenEqps = new Set(hidden)
+  const hiddenStepSet = new Set(hiddenSteps)
   for (const group of series.background) {
-    if (!hiddenEqps.has(group.eqp_ch)) for (const point of group.points) draw(point, false)
+    if (hiddenEqps.has(group.eqp_ch)) continue
+    for (const point of group.points) if (!hiddenStepSet.has(defectStepPrefix(point))) draw(point, false)
   }
   for (const point of series.selected) if (!hiddenEqps.has(point.eqp_ch)) draw(point, true)
   context.restore()
