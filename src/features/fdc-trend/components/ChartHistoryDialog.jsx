@@ -16,6 +16,8 @@ export const CHART_HISTORY_COMMENTS = Object.freeze([
   "Please share the results after root-cause analysis and action.",
 ])
 const MAX_COMMENT_LENGTH = 2000
+// Matches the dialog open animation (duration-200) so image work never stalls the popup.
+const OPEN_ANIMATION_MS = 200
 
 // Saves the chart with a title and comment to the Saved History Board (l0_spider mail flow without sending).
 export function ChartHistoryDialog({ title, details, app, fields, prepareImage, disabled = false }) {
@@ -64,8 +66,15 @@ export function ChartHistoryDialog({ title, details, app, fields, prepareImage, 
     setSaveError("")
     // One request ID per opened draft so a retry after a lost response cannot duplicate the entry.
     requestId.current = createHistoryRequestId()
+    setImageError("")
+    setImageBusy(true)
     setOpen(true)
-    void prepare()
+    // Building the image renders a second chart and blocks the main thread, so it starts only
+    // after the popup has painted and finished opening. Closing first cancels it.
+    const scheduled = generation.current
+    requestAnimationFrame(() => setTimeout(() => {
+      if (scheduled === generation.current) void prepare()
+    }, OPEN_ANIMATION_MS))
   }
 
   async function save() {
@@ -120,11 +129,13 @@ export function ChartHistoryDialog({ title, details, app, fields, prepareImage, 
           <h3 className="break-words font-semibold" data-i18n-skip>{draftTitle}</h3>
           <p className="whitespace-pre-wrap break-words text-sm" data-i18n-skip>{details}</p>
           <p className="whitespace-pre-wrap break-words py-[60px] text-sm leading-5">{comment}</p>
-          {imageBusy ? <p className="flex items-center gap-2 text-sm"><Loader2 className="size-4 animate-spin" aria-hidden="true" /><span>Preparing the chart image…</span></p>
+          {imageBusy ? <div role="status" className="grid h-60 w-full max-w-[600px] animate-pulse place-items-center rounded-md bg-muted">
+              <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden="true" /><span>Preparing the chart image…</span></p>
+            </div>
             : imageError ? <div role="alert" className="flex flex-wrap items-center gap-2 text-sm text-destructive">
               <span>{imageError}</span><Button variant="outline" size="sm" onClick={prepare}>Prepare again</Button>
             </div>
-            : image ? <img src={image} alt="Chart to save" className="h-auto max-w-full" /> : null}
+            : image ? <img src={image} alt="Chart to save" className="h-auto max-w-full animate-in fade-in-0 duration-300" /> : null}
         </section>
         {saveError ? <p role="alert" className="text-sm text-destructive">{saveError}</p> : null}
         {savedId ? <div role="status" className="flex flex-wrap items-center gap-3 text-sm text-green-700">
