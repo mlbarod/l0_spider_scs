@@ -1,7 +1,7 @@
 -- 메일보내기·이력저장 게시판 (MySQL / MariaDB, InnoDB, utf8mb4)
 -- 배포 전에 관리자가 대상 DB에서 검토 후 1회 실행합니다. 앱은 DDL을 실행하지 않습니다.
 -- 기존 hit_history / hit_history_image 테이블과 데이터는 변경하지 않습니다(백업으로 보존).
--- 테이블 생성 후 기존 데이터 복사: python3 -B scripts/migrate_hit_history_to_board.py --apply
+-- 테이블 생성 + 기존 데이터 복사를 한 번에: scripts/setup_history_board.py (DB_CONFIG 입력 후 --apply)
 -- PNG는 최대 5MiB. max_allowed_packet은 전송 여유를 포함해 16MiB 이상 권장.
 
 CREATE TABLE `hit_history_post` (
