@@ -205,9 +205,12 @@ def main():
     except BoardError as error:
         print(json.dumps({"ok": False, "code": str(error)}))
     except Exception as error:
-        # Never print DB credentials, images, SQL or driver details to stdout.
-        print(f"history board operation failed: {type(error).__name__}", file=sys.stderr)
-        print(json.dumps({"ok": False, "code": "BOARD_STORAGE_ERROR"}))
+        # Only the error type and MySQL error number are reported (e.g. "OperationalError 1142").
+        # Never print DB credentials, images, SQL or driver messages.
+        number = error.args[0] if error.args and type(error.args[0]) is int else None
+        cause = type(error).__name__ + (f" {number}" if number is not None else "")
+        print(f"history board operation failed: {cause}", file=sys.stderr)
+        print(json.dumps({"ok": False, "code": "BOARD_STORAGE_ERROR", "cause": cause}))
 
 
 if __name__ == "__main__":

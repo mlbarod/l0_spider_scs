@@ -17,6 +17,7 @@ const APP_NAMES = {
   "matching-anomaly": "Similarity Anomaly Detection",
   "common-anomaly": "Common Area Anomaly Detection",
   "common-commonality-anomaly": "Common Area Similarity Detection",
+  "defect-spider": "Defect SPIDER",
 }
 const WORK_NAMES = { IN_PROGRESS: "In progress", COMPLETED: "Completed" }
 const TYPE_NAMES = { HISTORY: "Save History" }

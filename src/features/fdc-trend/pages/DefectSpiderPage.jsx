@@ -34,7 +34,7 @@ function DefectFilterRow({ title, options, selected, onSelect, placeholder }) {
   )
 }
 
-function DefectGroupCharts({ line, pathSdwt, step, prcGroup }) {
+function DefectGroupCharts({ line, pathSdwt, sdwtLabel, step, prcGroup }) {
   const selection = { line, pathSdwt, step, prcGroup, mainSeq: null, metSeq: null }
   const filesQuery = useQuery({
     queryKey: ["defect-filters", step, line, pathSdwt, prcGroup, null, null],
@@ -54,7 +54,8 @@ function DefectGroupCharts({ line, pathSdwt, step, prcGroup }) {
         <div className="overflow-x-auto">
           <div className="grid min-w-[640px] grid-cols-2 gap-4">
             {filesQuery.data.files.map((pair) => (
-              <DefectChartTrellis key={JSON.stringify([pair.path, pair.main_seq, pair.met_seq])} pair={pair} selection={selection} />
+              <DefectChartTrellis key={JSON.stringify([pair.path, pair.main_seq, pair.met_seq])} pair={pair} selection={selection}
+                sdwtLabel={sdwtLabel} listDate={defectListDate(filesQuery.data.source_path)} />
             ))}
           </div>
         </div>
@@ -63,7 +64,24 @@ function DefectGroupCharts({ line, pathSdwt, step, prcGroup }) {
   )
 }
 
-function DefectChartTrellis({ pair, selection }) {
+// The anomaly list folder is named "yyyy-mm-dd HH:mm" (or "yyyy-mm-dd : HH:mm").
+function defectListDate(sourcePath) {
+  const match = /\/(\d{4}-\d{2}-\d{2})\s+(?::\s*)?(\d{2}:\d{2})\/fail_list\.parquet$/.exec(String(sourcePath ?? ""))
+  return match ? `${match[1]} ${match[2]}` : ""
+}
+
+function buildDefectHistoryEntry({ pair, selection, sdwtLabel, listDate, eqpCh }) {
+  const stepType = selection.step === "depo" ? "Post-DEPO Step" : "Management Step"
+  const sdwt = sdwtLabel || selection.pathSdwt
+  return {
+    title: `[SPIDER] Defect SPIDER / ${eqpCh || "-"} / ${pair.main_seq || "-"} / ${pair.met_seq || "-"}`,
+    details: `Step Type: ${stepType} · Line: ${selection.line || "-"} · SDWT: ${sdwt || "-"} · PRC Group: ${selection.prcGroup || "-"} · EQP_CH: ${eqpCh || "-"} · MAIN: ${pair.main_seq || "-"} · MET: ${pair.met_seq || "-"} · List date: ${listDate || "-"}`,
+    fields: { lineId: selection.line, sdwt, updateDate: listDate, filePath: pair.fail_path },
+    disabled: !pair.fail_path || !listDate || !sdwt,
+  }
+}
+
+function DefectChartTrellis({ pair, selection, sdwtLabel, listDate }) {
   const failSelection = { ...selection, mainSeq: pair.main_seq, metSeq: pair.met_seq }
   const failQuery = useQuery({
     queryKey: ["defect-file", failSelection, pair.fail_path],
@@ -103,7 +121,8 @@ function DefectChartTrellis({ pair, selection }) {
             <Badge variant="destructive">중심치 이상</Badge>
           </header>
           {allQuery.isSuccess ? (
-            <DefectScatterChart failData={failQuery.data} allData={allQuery.data} eqpCh={eqp_ch} />
+            <DefectScatterChart failData={failQuery.data} allData={allQuery.data} eqpCh={eqp_ch}
+              historyEntry={buildDefectHistoryEntry({ pair, selection, sdwtLabel, listDate, eqpCh: eqp_ch })} />
           ) : (
             <div className="grid h-[340px] place-items-center p-4 text-sm text-muted-foreground">
               {allQuery.isError ? "이상감지 스탭 ALL RAW데이터를 읽지 못했습니다. 재시도해 주세요." : "차트 데이터를 불러오는 중입니다."}
@@ -222,7 +241,7 @@ export function DefectSpiderPage() {
             <div className="space-y-6 p-4">
               {visibleGroups.map((prcGroup) => (
                 <DefectGroupCharts key={JSON.stringify([selectedStep, activeLine, activeTeam, prcGroup])}
-                  line={activeLine} pathSdwt={activeTeam} step={selectedStep} prcGroup={prcGroup} />
+                  line={activeLine} pathSdwt={activeTeam} sdwtLabel={sdwtMapping[activeTeam] ?? activeTeam} step={selectedStep} prcGroup={prcGroup} />
               ))}
             </div>
           ) : (

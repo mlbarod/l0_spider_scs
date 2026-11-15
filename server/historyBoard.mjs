@@ -12,7 +12,7 @@ const helperPath = fileURLToPath(new URL("../scripts/history_board.py", import.m
 const ROUTE = /^\/api\/history-board(?:\/([a-f0-9]{64})(\/image)?)?$/
 // All entries come from each chart's Save History button (l0_spider mail flow without sending).
 const ENTRY_TYPES = new Set(["HISTORY"])
-const APPS = new Set(["self-equipment", "matching-anomaly", "common-anomaly", "common-commonality-anomaly"])
+const APPS = new Set(["self-equipment", "matching-anomaly", "common-anomaly", "common-commonality-anomaly", "defect-spider"])
 export const MAX_COMMENT_LENGTH = 2000
 const hash = (value) => createHash("sha256").update(value).digest("hex")
 
@@ -40,12 +40,19 @@ export function runHistoryBoardHelper(payload) {
     const timeout = setTimeout(() => { timedOut = true; child.kill("SIGTERM") }, 30_000)
     child.stdout.on("data", (chunk) => { stdout += chunk })
     child.on("error", (error) => { clearTimeout(timeout); reject(error) })
-    child.on("close", () => {
+    child.on("close", (exitCode) => {
       clearTimeout(timeout)
       let result
       try { result = timedOut ? null : JSON.parse(stdout.trim()) } catch { result = null }
       if (result?.ok === true) return resolvePromise(result)
-      reject(Object.assign(new Error("Unable to process the board request."), { code: result?.code ?? "BOARD_STORAGE_ERROR" }))
+      const code = result?.code ?? "BOARD_STORAGE_ERROR"
+      if (code === "BOARD_STORAGE_ERROR") {
+        // Log only a sanitized cause (error type + MySQL error number) to find the failing step.
+        const cause = /^[A-Za-z][A-Za-z0-9_]{0,63}(?: -?\d{1,6})?$/.test(result?.cause ?? "") ? result.cause
+          : timedOut ? "timeout" : `no helper output (exit ${exitCode})`
+        console.error(`[history-board] helper failed: action=${payload.action} cause=${cause}`)
+      }
+      reject(Object.assign(new Error("Unable to process the board request."), { code }))
     })
     child.stdin.on("error", reject)
     child.stdin.end(JSON.stringify(payload))

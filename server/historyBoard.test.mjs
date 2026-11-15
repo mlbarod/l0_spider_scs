@@ -202,3 +202,15 @@ test("사용자 등록을 하지 않아도 목록·상세·이미지는 조회�
   }
   assert.equal(calls.length, 0)
 })
+
+test("Defect SPIDER 차트도 목록 날짜·SDWT와 fail parquet 경로로 이력저장할 수 있다", async () => {
+  const { calls, options } = setup()
+  const res = response()
+  const body = { ...historyBody, app: "defect-spider", updateDate: "2026-11-15 09:30", sdwt: "ETCH-A",
+    filePath: "/appdata/abnormal_trend/pic/defect/result/fail_EQP01.parquet" }
+  await handleHistoryBoardRequest(request({ method: "POST", body }), res, options)
+  assert.equal(res.status, 200)
+  assert.equal(calls[0].app, "defect-spider")
+  assert.equal(calls[0].updateDate, "2026-11-15 09:30")
+  assert.equal(calls[0].sdwt, "ETCH-A")
+})

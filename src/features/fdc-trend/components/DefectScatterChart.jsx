@@ -5,10 +5,12 @@ import { DefectWaferList } from "./DefectWaferList"
 import { useLanguage } from "@/i18n"
 import { CHANGE_HISTORY_TEXT, DefectPmHistory } from "./DefectPmHistory"
 import { sanitizeErrorMessage } from "../api/errorMessage.js"
+import { ChartHistoryDialog } from "./ChartHistoryDialog"
+import { renderDefectChartPng } from "../utils/defectChartImage"
 
 const EMPTY_LIST = []
 
-export function DefectScatterChart({ failData, allData, eqpCh }) {
+export function DefectScatterChart({ failData, allData, eqpCh, historyEntry }) {
   const { language } = useLanguage()
   const [hidden, setHidden] = useState([])
   const [zoom, setZoom] = useState(null)
@@ -59,6 +61,12 @@ export function DefectScatterChart({ failData, allData, eqpCh }) {
         <span>드래그: 확대 · 반대 방향: 최초 범위 · 더블클릭: 전체 범위</span>
         <button type="button" className="shrink-0 rounded border px-2 py-1 hover:bg-muted" onClick={resetZoom}>범위 초기화</button>
       </div>
+      {historyEntry ? (
+        <div className="flex justify-end px-4 pb-3">
+          <ChartHistoryDialog {...historyEntry} app="defect-spider"
+            prepareImage={() => renderDefectChartPng({ series, domain: baseDomain, pmRows })} />
+        </div>
+      ) : null}
       <p className="px-4 pb-3 text-[11px] text-muted-foreground">작고 옅은 점: ALL (STEP별 색상) · 크고 진한 점: RAW (빨강 NG / 청록 그 외)</p>
       <p className="flex items-center gap-1 px-4 pb-3 text-[11px] text-muted-foreground" data-i18n-skip><span className="w-4 border-t border-dashed border-green-600" />{(CHANGE_HISTORY_TEXT[language] ?? CHANGE_HISTORY_TEXT.ko).legend}</p>
       {invalidCount > 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">시간 또는 값이 유효하지 않은 {invalidCount}행은 표시에서 제외했습니다.</p> : null}

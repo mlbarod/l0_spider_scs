@@ -162,6 +162,7 @@ Chart controls:
 
 - `이상감지 Wafer List 보기` (View anomaly wafer list): Opens the anomaly wafer list as a table. Drag over cells or click a column header to select, then click `복사` (Copy) or press Ctrl+C to paste into Excel.
 - `PM이력 보기` (View PM history): Opens the PM history of that equipment as a table.
+- `Save History`: After you check the title and comment and click `Save`, the chart (initial range) and its image are saved to the [Saved History Board](#7-saved-history-board).
 
 ## 7. Saved History Board
 
