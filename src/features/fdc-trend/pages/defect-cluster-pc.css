@@ -410,3 +410,40 @@
   flex-shrink: 0;
   color: var(--defect-secondary);
 }
+
+/* EQP 이름 옆 "몰림PC 판정 사유" 버튼: 누르면 그 EQP wafer map에 군집 원·비교 영역을 그린다. */
+.cluster-pc-eqp-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cluster-pc-reason-toggle {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border: 1px solid var(--defect-border);
+  border-radius: 9999px;
+  background: var(--defect-surface);
+  color: var(--defect-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cluster-pc-reason-toggle:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+}
+
+.cluster-pc-reason-toggle[aria-pressed="true"] {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.cluster-pc-reason-toggle:focus-visible {
+  outline: 2px solid var(--defect-focus);
+  outline-offset: 2px;
+}

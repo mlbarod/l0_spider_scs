@@ -259,3 +259,24 @@ test("path 컬럼의 l0_spider 경로(/appdata/hadoop/code/eads)는 /appdata/abn
   const [row] = clusterRows([{ line: "L", lot_wf: "W1", path: "/appdata/hadoop/code/eads/L/a.parquet" }])
   assert.equal(row.path, "/appdata/abnormal_trend/pic/defect/L/a.parquet")
 })
+
+test("같은 판정을 다시 누르면 DELETE로 그 판정 행만 지우도록 요청한다", async () => {
+  const { base, config, eads } = await fixture()
+  try {
+    const saved = []
+    const service = createClusterPcService({
+      readList: async () => [{ line: "L", device: "D", sdwt: "S1", main_seq: "U%100", met_seq: "200_RANDOM_PC", lot_wf: "W1", path: join(eads, "a.parquet"), clusters: "[]" }],
+      saveFeedback: async (payload) => { saved.push(payload); return { ok: true } },
+      currentUser: async () => ({ ok: true, knoxId: "user1" }),
+    })
+    const key = { snapshot: "2026-11-18 09:00", line: "L", device: "D", mainSeq: "U%100", metSeq: "200", lotWf: "W1" }
+    const body = await service(feedbackRequest({ ...key, verdict: "correct" }, { method: "DELETE" }), url("feedback"), config)
+    assert.deepEqual(body, { ok: true, verdict: "" })
+    assert.deepEqual(saved, [{ ...key, verdict: "Y", action: "delete", knoxId: "user1" }])
+    await assert.rejects(service(feedbackRequest({ ...key, verdict: "correct" }, { method: "DELETE" }), url("feedback"), { ...config, listRoot: join(base, "missing") }), { status: 404 })
+
+    const failing = createClusterPcService({ readList: async () => [{ line: "L", device: "D", main_seq: "U%100", met_seq: "200_RANDOM_PC", lot_wf: "W1", path: join(eads, "a.parquet") }],
+      saveFeedback: async () => ({ ok: false }), currentUser: async () => ({ ok: true, knoxId: "user1" }) })
+    await assert.rejects(failing(feedbackRequest({ ...key, verdict: "wrong" }, { method: "DELETE" }), url("feedback"), config), { status: 500, message: "Unable to cancel the clustered PC verdict." })
+  } finally { await rm(base, { recursive: true, force: true }) }
+})

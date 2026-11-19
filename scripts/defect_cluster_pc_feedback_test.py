@@ -54,6 +54,17 @@ class FeedbackTest(unittest.TestCase):
                 feedback.save_feedback(dict(PAYLOAD), connect)
         connection.commit.assert_not_called()
 
+    def test_delete_removes_only_same_verdict(self):
+        connection, cursor, connect = self.fixture()
+        with patch.object(feedback, "load_db_info", return_value=INFO):
+            self.assertEqual(feedback.save_feedback({**PAYLOAD, "action": "delete", "clusters": None, "knoxId": "verified"}, connect), {"ok": True})
+        sql, params = cursor.execute.call_args.args
+        self.assertTrue(sql.startswith("DELETE FROM `defect_cluster_pc_feedback`"))
+        self.assertIn("`verdict` = %s", sql)
+        self.assertEqual(sql.count("%s"), 7)
+        self.assertEqual(params, ("2026-11-19 07:00", "L1", "D", "U%100", "200", "LOT1/01", "N"))
+        connection.commit.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

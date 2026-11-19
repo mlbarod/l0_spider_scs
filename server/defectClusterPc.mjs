@@ -146,6 +146,7 @@ export function packPoints(rows, lotWf) {
 export const FEEDBACK_VERDICTS = { correct: "Y", wrong: "N" }
 const FEEDBACK_FIELDS = { snapshot: 16, line: 32, device: 64, mainSeq: 64, metSeq: 64, lotWf: 64 }
 const INVALID_FEEDBACK = "Check the verdict request values."
+const FEEDBACK_DELETE_ERROR = "Unable to cancel the clustered PC verdict."
 const RESULT_CHANGED = "Clustered PC results were updated. Refresh the list."
 const RESULT_NOT_FOUND = "Clustered PC result folder was not found."
 
@@ -186,7 +187,9 @@ export function createClusterPcService({ readList: readListFile = readList, read
     return { configured: true, snapshot: latest.snapshot, rows: clusterRows(await readListFile(latest.listPath)) }
   }
 
+  // POST = 판정 저장(덮어쓰기), DELETE = 같은 판정을 다시 눌러 취소(그 판정 행만 지운다).
   async function feedback(req, config) {
+    const remove = req.method === "DELETE"
     const user = await currentUser(req)
     const key = feedbackKey(await readJsonBody(req))
     const data = await load(config)
@@ -195,15 +198,17 @@ export function createClusterPcService({ readList: readListFile = readList, read
     const row = data.rows.find((item) => ["line", "device", "mainSeq", "metSeq", "lotWf"].every((field) => item[field] === key[field]))
     if (!row) throw requestError("This wafer is not in the results.", 404)
     let result
-    try { result = await saveFeedback({ ...key, clusters: row.clustersRaw, knoxId: user.knoxId }) } catch { result = null }
-    if (result?.ok !== true) throw requestError(FEEDBACK_SAVE_ERROR, 500)
-    return { ok: true, verdict: key.verdict }
+    try {
+      result = await saveFeedback(remove ? { ...key, action: "delete", knoxId: user.knoxId } : { ...key, clusters: row.clustersRaw, knoxId: user.knoxId })
+    } catch { result = null }
+    if (result?.ok !== true) throw requestError(remove ? FEEDBACK_DELETE_ERROR : FEEDBACK_SAVE_ERROR, 500)
+    return remove ? { ok: true, verdict: "" } : { ok: true, verdict: key.verdict }
   }
 
   return async function handleClusterPc(req, url, config = DEFECT_CLUSTER_PC_CONFIG) {
     const command = url.pathname.slice("/api/defect-spider/cluster-pc/".length)
     if (command === "feedback") {
-      if (req.method !== "POST") throw requestError("Method not allowed", 405)
+      if (req.method !== "POST" && req.method !== "DELETE") throw requestError("Method not allowed", 405)
       return feedback(req, config)
     }
     if (req.method !== "GET") throw requestError("Method not allowed", 405)

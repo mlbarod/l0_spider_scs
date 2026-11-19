@@ -36,7 +36,7 @@ const DB_METHODS = new Map([
   ["/api/hit-history", new Set(["GET", "POST", "DELETE"])],
   ["/api/clicked-category-history", new Set(["POST"])],
   ["/api/pass-history", new Set(["GET", "POST", "DELETE"])],
-  ["/api/defect-spider/cluster-pc/feedback", new Set(["POST"])],
+  ["/api/defect-spider/cluster-pc/feedback", new Set(["POST", "DELETE"])],
 ])
 // Saved History Board: list/create, entry detail/status/delete and entry image.
 const HISTORY_BOARD_PATH = /^\/api\/history-board(?:\/[a-f0-9]{64}(?:\/image)?)?$/

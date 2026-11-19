@@ -23,6 +23,7 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
   - 화면에서 받은 값은 파일 경로로 쓰지 않는다. 결과 파일의 `path`만 읽는다. `path`가 l0_spider 경로(`/appdata/hadoop/code/eads/...`)이면 앞부분을 `/appdata/abnormal_trend/pic/defect`로 바꿔 읽고, 바꾼 경로도 `/appdata/abnormal_trend/pic/defect` 안쪽일 때만 읽는다.
   - 화면이 본 결과 시각(`snapshot`)과 서버의 최신 결과가 다르면 410으로 새로고침을 요청한다.
 - 몰림 근거 표시(2026-11-19): 결과의 `clusters` 값으로 map 위에 그린다.
+  - wafer map을 처음 그릴 때는 점만 그린다. EQP 이름 옆 "몰림PC 판정 사유" 버튼을 누르면 그 EQP의 wafer map에 아래 원과 음영을 그리고, 다시 누르면 지운다. 필터를 바꾸거나 새로 조회하면 모두 꺼진 상태로 돌아간다.
   - 파란 원은 군집 창이다(실제 반경). 1.5mm 창은 map에서 너무 작아 최소 4px로 그린다. 판정 근거가 아닌 군집(비교 배수 미달)은 회색 점선이다.
   - 파란 음영은 판정 근거 군집의 비교 영역이다. 방향 비교는 45° 부채꼴, 링 비교는 가장 안쪽 원(약 53mm)이다.
   - 카드 아래에는 가장 배수가 큰 근거 군집을 `r 25mm · 60개 · 방향 3.9배`처럼 표시한다. 마우스를 올리면 모든 군집이 보인다.
@@ -31,9 +32,9 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
 ### 판정 피드백 ("몰림PC 맞음" / "몰림PC 아님", 2026-11-19)
 
 - wafer 카드마다 두 버튼이 있다. 누르면 그 wafer의 판정과 판정 사유(`clusters`)를 DB에 저장한다. 오탐 분석과 알고리즘 튜닝용이다.
-- 저장 단위: 결과 시각 + line + device + main_seq + met_seq + lot_wf당 1행이다. 다시 누르면(다른 사용자 포함) 마지막 판정으로 덮어쓰고, 저장자와 시각도 바뀐다.
+- 저장 단위: 결과 시각 + line + device + main_seq + met_seq + lot_wf당 1행이다. 다른 판정을 누르면(다른 사용자 포함) 마지막 판정으로 덮어쓰고, 저장자와 시각도 바뀐다. 눌린 판정을 다시 누르면 눌림이 풀리고 그 판정 행을 지운다(그 사이 다른 판정으로 바뀐 행은 지우지 않는다).
 - 화면은 wafer 식별값과 판정만 보낸다. 서버는 화면이 본 결과 시각이 최신 결과와 같은지(아니면 410), 그 wafer가 결과에 있는지(없으면 404) 확인한다. 그다음 결과 파일의 `clusters` 원문과 접속 IP로 등록된 사용자(`knox_id`, 현재 사용자 확인과 같은 방식)로 저장한다. 등록되지 않은 사용자는 저장할 수 없다.
-- 저장 경로: `POST /api/defect-spider/cluster-pc/feedback`(본문 `{ snapshot, line, device, mainSeq, metSeq, lotWf, verdict: "correct" | "wrong" }`) → `scripts/defect_cluster_pc_feedback.py`가 클릭이력과 같은 DB(`db_info.pkl`)에 `pymysql`로 저장한다.
+- 저장 경로: `POST /api/defect-spider/cluster-pc/feedback`(본문 `{ snapshot, line, device, mainSeq, metSeq, lotWf, verdict: "correct" | "wrong" }`) → `scripts/defect_cluster_pc_feedback.py`가 클릭이력과 같은 DB(`db_info.pkl`)에 `pymysql`로 저장한다. 취소는 같은 본문으로 `DELETE`를 보낸다.
 - 눌린 버튼 표시는 이 화면을 보는 동안만 유지한다. 새로고침하면 저장된 판정을 다시 불러오지 않는다.
 - 저장하지 않는 것: eqpid, prc_group, sdwt, 좌표 원본. 필요하면 식별값으로 그날 결과 파일과 원본 parquet을 찾는다(원본 보관 기간 안에서만).
 - 테이블 생성문: [`scripts/defect_cluster_pc_feedback.sql`](../../scripts/defect_cluster_pc_feedback.sql)을 운영 DB에서 한 번 수동 실행한다. 앱 DB 계정에 INSERT, UPDATE 권한이 필요하다.

@@ -31,7 +31,8 @@ export const CLUSTER_PC_TEXT = {
     groupSummary: (eqps, chambers, wafers) => `EQP ${eqps}개 · 챔버 ${chambers}개 · ${wafers}매`,
     eqpSummary: (chambers, wafers) => `챔버 ${chambers}개 · ${wafers}매`, wafers: (count) => `${count}매`,
     defects: (count) => `defect ${count.toLocaleString()}개`, more: (count) => ` 외 ${count}`, hit: " (몰림 근거)",
-    verdict: "몰림PC 판정", correct: "몰림PC 맞음", wrong: "몰림PC 아님", saving: "저장 중…", top: "맨 위로",
+    verdict: "몰림PC 판정", correct: "몰림PC 맞음", wrong: "몰림PC 아님", saving: "저장 중…", deleting: "취소 중…", top: "맨 위로",
+    reason: "몰림PC 판정 사유",
     none: "(없음)", noEqpid: "(EQPID 없음)",
   },
   en: {
@@ -47,7 +48,8 @@ export const CLUSTER_PC_TEXT = {
     groupSummary: (eqps, chambers, wafers) => `${eqps} EQP · ${chambers} chambers · ${wafers} wafers`,
     eqpSummary: (chambers, wafers) => `${chambers} chambers · ${wafers} wafers`, wafers: (count) => `${count} wafers`,
     defects: (count) => `${count.toLocaleString()} defects`, more: (count) => ` +${count} more`, hit: " (clustering evidence)",
-    verdict: "Clustered PC verdict", correct: "Clustered PC", wrong: "Not clustered PC", saving: "Saving…", top: "Back to top",
+    verdict: "Clustered PC verdict", correct: "Clustered PC", wrong: "Not clustered PC", saving: "Saving…", deleting: "Canceling…", top: "Back to top",
+    reason: "Clustered PC verdict reason",
     none: "(None)", noEqpid: "(No EQPID)",
   },
   "zh-CN": {
@@ -63,7 +65,8 @@ export const CLUSTER_PC_TEXT = {
     groupSummary: (eqps, chambers, wafers) => `EQP ${eqps} 个 · 腔室 ${chambers} 个 · ${wafers} 片`,
     eqpSummary: (chambers, wafers) => `腔室 ${chambers} 个 · ${wafers} 片`, wafers: (count) => `${count} 片`,
     defects: (count) => `defect ${count.toLocaleString()} 个`, more: (count) => ` 等 ${count} 个`, hit: "（聚集依据）",
-    verdict: "聚集PC判定", correct: "是聚集PC", wrong: "不是聚集PC", saving: "保存中…", top: "回到顶部",
+    verdict: "聚集PC判定", correct: "是聚集PC", wrong: "不是聚集PC", saving: "保存中…", deleting: "取消中…", top: "回到顶部",
+    reason: "聚集PC判定依据",
     none: "（无）", noEqpid: "（无 EQPID）",
   },
 }
@@ -110,7 +113,8 @@ function drawCluster(ctx, c, r, cluster) {
 
 // canvas 1장에 점을 직접 찍는다(SVG/DOM 점 대비 수천 개도 즉시 그린다).
 // 화면에 보일 때만 그려서, wafer가 수백 매여도 첫 화면이 바로 나온다.
-const WaferCanvas = memo(function WaferCanvas({ xy, clusters }) {
+// 판정 사유(군집 원, 비교 영역)는 showReason일 때만 그린다(처음에는 점만 그린다).
+const WaferCanvas = memo(function WaferCanvas({ xy, clusters, showReason }) {
   const ref = useRef(null)
   const [visible, setVisible] = useState(false)
   useEffect(() => {
@@ -137,13 +141,13 @@ const WaferCanvas = memo(function WaferCanvas({ xy, clusters }) {
     ctx.strokeStyle = "#d2d2d7"
     ctx.lineWidth = 1
     ctx.beginPath(); ctx.moveTo(c - r, c); ctx.lineTo(c + r, c); ctx.moveTo(c, c - r); ctx.lineTo(c, c + r); ctx.stroke()
-    for (const cluster of clusters) if (cluster.hit) drawZone(ctx, c, r, cluster)
+    if (showReason) for (const cluster of clusters) if (cluster.hit) drawZone(ctx, c, r, cluster)
     ctx.strokeStyle = "#52514e"
     ctx.beginPath(); ctx.arc(c, c, r, 0, Math.PI * 2); ctx.stroke()
     ctx.fillStyle = "#d9480f"
     for (let i = 0; i < xy.length; i += 2) ctx.fillRect(c + xy[i] * scale - 0.9, c - xy[i + 1] * scale - 0.9, 1.8, 1.8)
-    for (const cluster of clusters) drawCluster(ctx, c, r, cluster)
-  }, [xy, clusters, visible])
+    if (showReason) for (const cluster of clusters) drawCluster(ctx, c, r, cluster)
+  }, [xy, clusters, showReason, visible])
   return <canvas ref={ref} className="cluster-pc-canvas" style={{ width: MAP_SIZE, height: MAP_SIZE }} aria-hidden="true" />
 })
 
@@ -151,23 +155,24 @@ const NO_CLUSTERS = []
 
 const VERDICTS = ["correct", "wrong"]
 
-// 판정 버튼: 저장에 성공한 판정만 눌린 상태로 보여준다(이 화면을 보는 동안만 기억, 다시 누르면 덮어쓴다).
+// 판정 버튼: 저장에 성공한 판정만 눌린 상태로 보여준다(이 화면을 보는 동안만 기억).
+// 다른 판정을 누르면 덮어쓰고, 눌린 판정을 다시 누르면 저장을 지우고 눌림을 푼다.
 function FeedbackButtons({ state, onSave, t }) {
   return <div className="cluster-pc-feedback" role="group" aria-label={t.verdict}>
     {VERDICTS.map((verdict) => <button type="button" key={verdict} data-verdict={verdict}
       aria-pressed={state?.saved === verdict} disabled={Boolean(state?.saving)} onClick={() => onSave(verdict)}>
-      {state?.saving === verdict ? t.saving : t[verdict]}
+      {state?.saving === verdict ? (state.removing ? t.deleting : t.saving) : t[verdict]}
     </button>)}
   </div>
 }
 
-function WaferCard({ wafer, feedback, onFeedback, t, language }) {
+function WaferCard({ wafer, feedback, onFeedback, showReason, t, language }) {
   const count = wafer.xy.length / 2
   const clusters = wafer.clusters || NO_CLUSTERS
   const main = clusters.filter((cluster) => cluster.hit).sort((a, b) => b.zoneRatio - a.zoneRatio)[0]
   const detail = clusters.map((cluster, index) => `#${index + 1} ${clusterLabel(cluster, language)}${cluster.hit ? t.hit : ""}`).join("\n")
   return <figure className="cluster-pc-wafer" title={`${wafer.lotWf}\n${wafer.device} · ${wafer.mainSeq} · ${wafer.metSeq}${detail ? `\n${detail}` : ""}`}>
-    <WaferCanvas xy={wafer.xy} clusters={clusters} />
+    <WaferCanvas xy={wafer.xy} clusters={clusters} showReason={showReason} />
     <figcaption>
       <strong>{wafer.lotWf}</strong>
       <span>{wafer.device} · {wafer.mainSeq} · {wafer.metSeq}</span>
@@ -211,13 +216,18 @@ export function DefectClusterPcPage() {
   }, [catalog?.snapshot, filters])
 
   useEffect(() => { setFeedback({}) }, [catalog?.snapshot])
+  // EQP별 "몰림PC 판정 사유" 표시 여부. 새 wafer map을 받으면 모두 끈 상태로 시작한다.
+  const [reasons, setReasons] = useState({})
+  useEffect(() => { setReasons({}) }, [maps.data])
+  const toggleReason = (key) => setReasons((previous) => ({ ...previous, [key]: !previous[key] }))
 
   async function saveFeedback(wafer, verdict) {
     const key = waferKey(wafer)
-    setFeedback((previous) => ({ ...previous, [key]: { ...previous[key], saving: verdict } }))
+    const remove = feedback[key]?.saved === verdict
+    setFeedback((previous) => ({ ...previous, [key]: { ...previous[key], saving: verdict, removing: remove } }))
     try {
-      await saveClusterPcFeedback({ snapshot: catalog.snapshot, wafer, verdict })
-      setFeedback((previous) => ({ ...previous, [key]: { saved: verdict } }))
+      await saveClusterPcFeedback({ snapshot: catalog.snapshot, wafer, verdict, remove })
+      setFeedback((previous) => ({ ...previous, [key]: { saved: remove ? undefined : verdict } }))
     } catch (error) {
       setFeedback((previous) => ({ ...previous, [key]: { saved: previous[key]?.saved } }))
       toast.error(error.message)
@@ -226,7 +236,7 @@ export function DefectClusterPcPage() {
 
   const options = useMemo(() => clusterFilterOptions(catalog?.rows || [], filters), [catalog, filters])
   const prcGroups = useMemo(() => groupByPrcEqp(maps.data?.wafers || []), [maps.data])
-  const card = (wafer, index) => <WaferCard key={`${index}|${waferKey(wafer)}`} wafer={wafer} feedback={feedback[waferKey(wafer)]} onFeedback={saveFeedback} t={t} language={language} />
+  const card = (wafer, index, showReason) => <WaferCard key={`${index}|${waferKey(wafer)}`} wafer={wafer} feedback={feedback[waferKey(wafer)]} onFeedback={saveFeedback} showReason={showReason} t={t} language={language} />
 
   // 상위 필터를 바꾸면 하위 필터는 처음 값(SDWT는 미선택, PRC_Group은 ALL)으로 되돌린다.
   function select(key, value) {
@@ -277,11 +287,15 @@ export function DefectClusterPcPage() {
         {/* 5칸 격자: EQP 묶음은 챔버 칸 수 합만큼, 챔버 묶음은 wafer 수만큼(각각 최대 5칸) 차지한다. */}
         <div className="cluster-pc-eqp-grid" style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, minmax(0, 1fr))` }}>
           {eqps.map((eqp) => <div key={eqp.eqp} role="group" aria-label={`EQP ${eqp.eqp}`} className="cluster-pc-eqp" style={{ gridColumn: `span ${eqp.span}` }}>
-            <div className="cluster-pc-eqp-title" title={eqp.eqp}><strong>{displayValue(eqp.eqp, t)}</strong><span>{t.eqpSummary(eqp.chambers.length, eqp.count)}</span></div>
+            <div className="cluster-pc-eqp-title">
+              <div className="cluster-pc-eqp-name"><strong title={eqp.eqp}>{displayValue(eqp.eqp, t)}</strong>
+                <button type="button" className="cluster-pc-reason-toggle" aria-pressed={Boolean(reasons[`${prcGroup}|${eqp.eqp}`])} onClick={() => toggleReason(`${prcGroup}|${eqp.eqp}`)}>{t.reason}</button></div>
+              <span>{t.eqpSummary(eqp.chambers.length, eqp.count)}</span>
+            </div>
             <div className="cluster-pc-chamber-grid" style={{ gridTemplateColumns: `repeat(${eqp.span}, minmax(0, 1fr))` }}>
               {eqp.chambers.map((chamber) => <div key={chamber.eqpid} role="group" aria-label={`EQPID ${chamber.eqpid}`} className="cluster-pc-chamber" style={{ gridColumn: `span ${chamber.span}` }}>
                 <div className="cluster-pc-chamber-title" title={chamber.eqpid}><strong>{displayValue(chamber.chamber, t)}</strong><span>{t.wafers(chamber.wafers.length)}</span></div>
-                <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map(card)}</div>
+                <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, Boolean(reasons[`${prcGroup}|${eqp.eqp}`])))}</div>
               </div>)}
             </div>
           </div>)}
