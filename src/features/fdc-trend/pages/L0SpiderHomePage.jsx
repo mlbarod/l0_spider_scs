@@ -3,6 +3,7 @@ import { Activity, ArrowRight, BookOpen, CalendarClock, ChartNoAxesCombined, His
 import { Link } from "react-router-dom"
 
 import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { LanguageSwitcher } from "@/i18n"
 import { cn } from "@/lib/utils"
 
@@ -64,11 +65,56 @@ const spiderSuites = [
     title: "Defect SPIDER",
     subtitle: "Explore anomalous patterns based on defect signals.",
     category: "Defect",
-    href: "/defect-spider",
+    dialog: "defect",
     active: true,
     status: "Live",
   },
 ]
+
+// Defect SPIDER card opens this app selection dialog.
+const defectSpiderApps = [
+  { title: "Chamber Anomaly Detection", href: "/defect-spider", badge: "List type" },
+  { title: "Clustered PC Anomaly Detection", href: "/defect-spider/cluster-pc", badge: "Map type" },
+]
+
+function DefectSpiderDialog({ children }) {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>{children}</DialogTrigger>
+      <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[680px]">
+        <DialogHeader className="pr-6">
+          <DialogTitle>Defect SPIDER</DialogTitle>
+          <DialogDescription>Select an anomaly detection app.</DialogDescription>
+        </DialogHeader>
+        <div className="overflow-x-auto">
+          <div className="grid grid-cols-[repeat(2,305px)] gap-3 py-2">
+            {defectSpiderApps.map((item) => (
+              <DialogClose key={item.href} asChild>
+                <PrefetchLink
+                  to={item.href}
+                  className="group relative flex h-36 flex-col rounded-[18px] border border-[#e0e0e0] bg-white p-5 transition-all duration-300 hover:-translate-y-1 hover:border-[#0066cc] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0066cc] focus-visible:ring-inset"
+                >
+                  <Badge className="absolute right-5 top-5 border border-[#0066cc]/20 bg-[#0066cc]/8 px-2.5 py-1 text-[11px] font-semibold text-[#0066cc]">
+                    {item.badge}
+                  </Badge>
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#d2d2d7]/55 text-[#1d1d1f] transition-colors duration-300 group-hover:bg-[#0066cc] group-hover:text-white">
+                    <ScanSearch className="size-5" aria-hidden="true" />
+                  </div>
+                  <span className="mt-auto flex items-center justify-between gap-3 text-left text-sm font-semibold leading-tight tracking-[-0.23px] text-[#1d1d1f] transition-colors group-hover:text-[#0066cc]">
+                    {item.title}
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-[#f5f5f7] text-[#0066cc] transition-colors group-hover:bg-[#0066cc] group-hover:text-white">
+                      <ArrowRight className="size-4" aria-hidden="true" />
+                    </span>
+                  </span>
+                </PrefetchLink>
+              </DialogClose>
+            ))}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
 function PrefetchLink({ to, ...props }) {
   const prefetchHandlers = useAppPrefetch(to)
@@ -264,25 +310,31 @@ export function L0SpiderHomePage() {
               <p className="mt-4 text-[17px] leading-[1.47] tracking-[-0.37px] text-[#cccccc]">Anomaly detection apps powered by L1 and L3 data.</p>
             </div>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {spiderSuites.map((app, index) => (
-                <PrefetchLink
-                  key={app.title}
-                  to={app.href}
-                  className="spider-app-enter group flex min-h-[220px] flex-col rounded-[18px] border border-white/12 bg-[#2a2a2c] p-6 transition-transform hover:-translate-y-1 active:scale-[0.98]"
-                  style={{ "--spider-app-enter-delay": `${(spiderApps.length + index) * 55}ms` }}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="grid size-11 place-items-center rounded-full bg-[#d2d2d7]/20 text-white"><app.icon className="size-5" /></span>
-                    <Badge className="border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-[#cccccc]">{app.status}</Badge>
-                  </div>
-                  <h3 className="mt-8 text-[21px] font-semibold leading-tight tracking-[-0.23px]">{app.title}</h3>
-                  <p className="mt-2 text-sm leading-[1.5] text-[#cccccc]">{app.subtitle}</p>
-                  <div className="mt-auto flex items-end justify-between pt-7 text-xs text-[#2997ff]">
-                    <span>{app.category}</span>
-                    <span className="grid size-8 place-items-center rounded-full bg-white/8"><ArrowRight className="size-4" /></span>
-                  </div>
-                </PrefetchLink>
-              ))}
+              {spiderSuites.map((app, index) => {
+                const className = "spider-app-enter group flex min-h-[220px] flex-col rounded-[18px] border border-white/12 bg-[#2a2a2c] p-6 transition-transform hover:-translate-y-1 active:scale-[0.98]"
+                const style = { "--spider-app-enter-delay": `${(spiderApps.length + index) * 55}ms` }
+                const content = (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="grid size-11 place-items-center rounded-full bg-[#d2d2d7]/20 text-white"><app.icon className="size-5" /></span>
+                      <Badge className="border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-[#cccccc]">{app.status}</Badge>
+                    </div>
+                    <h3 className="mt-8 text-[21px] font-semibold leading-tight tracking-[-0.23px]">{app.title}</h3>
+                    <p className="mt-2 text-sm leading-[1.5] text-[#cccccc]">{app.subtitle}</p>
+                    <div className="mt-auto flex items-end justify-between pt-7 text-xs text-[#2997ff]">
+                      <span>{app.category}</span>
+                      <span className="grid size-8 place-items-center rounded-full bg-white/8"><ArrowRight className="size-4" /></span>
+                    </div>
+                  </>
+                )
+                return app.dialog === "defect" ? (
+                  <DefectSpiderDialog key={app.title}>
+                    <button type="button" className={cn(className, "cursor-pointer text-left")} style={style}>{content}</button>
+                  </DefectSpiderDialog>
+                ) : (
+                  <PrefetchLink key={app.title} to={app.href} className={className} style={style}>{content}</PrefetchLink>
+                )
+              })}
             </div>
           </div>
         </section>

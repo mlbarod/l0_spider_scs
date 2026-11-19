@@ -1,0 +1,412 @@
+/* Defect SPIDER 몰림PC 이상감지 화면 (l0_spider defect-list.css + cluster-pc.css에서 이 화면이 쓰는 부분) */
+
+.defect-list-page {
+  --defect-text: #1d1d1f;
+  --defect-secondary: #7a7a7a;
+  --defect-border: #e0e0e0;
+  --defect-border-hover: #d2d2d7;
+  --defect-muted: #f5f5f7;
+  --defect-surface: #ffffff;
+  --defect-accent: #0066cc;
+  --defect-focus: #0071e3;
+  --defect-error: hsl(0 72% 51%);
+  color: var(--defect-text);
+  background: var(--defect-surface);
+  font-family: "SF Pro Text", "Pretendard Variable", Inter, system-ui, sans-serif;
+}
+
+.defect-list-page > header {
+  flex-shrink: 0;
+  padding: 12px 24px;
+  border-color: var(--defect-border);
+  background: var(--defect-surface);
+}
+
+.defect-list-page > header h1 {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.defect-list-description {
+  margin-top: 2px;
+  color: var(--defect-secondary);
+  font-size: 12px;
+}
+
+.defect-list-page > header > div:last-child {
+  flex-wrap: wrap;
+  margin-right: 56px;
+}
+
+.defect-list-page > header [data-slot="button"],
+.defect-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  max-width: min(320px, 100%);
+  min-width: 0;
+  padding: 4px 12px;
+  border: 1px solid var(--defect-border);
+  border-radius: 9999px;
+  background: var(--defect-surface);
+  color: var(--defect-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background-color 150ms, border-color 150ms, transform 150ms;
+}
+
+.defect-filter-pill > span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.defect-list-page > header [data-slot="button"]:hover,
+.defect-filter-pill:hover:not(:disabled) {
+  border-color: var(--defect-border-hover);
+  background: var(--defect-muted);
+  color: var(--defect-text);
+}
+
+.defect-filter-pill[aria-pressed="true"] {
+  border-color: var(--defect-accent);
+  background: var(--defect-accent);
+  color: var(--defect-surface);
+}
+
+.defect-filter-pill[aria-pressed="true"]:hover:not(:disabled) {
+  border-color: var(--defect-accent);
+  background: var(--defect-focus);
+  color: var(--defect-surface);
+}
+
+.defect-list-page > header [data-slot="button"]:focus-visible,
+.defect-filter-pill:focus-visible,
+.defect-back-to-top:focus-visible {
+  outline: 2px solid var(--defect-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.defect-filter-pill:disabled {
+  border-color: var(--defect-border);
+  background: var(--defect-surface);
+  color: var(--defect-text);
+  opacity: 0.5;
+  cursor: default;
+}
+
+.defect-filter-pill:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.defect-filters {
+  flex-shrink: 0;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--defect-border);
+  background: var(--defect-muted);
+}
+
+.defect-filter-rows {
+  display: grid;
+  gap: 12px;
+}
+
+.defect-filter-row {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+}
+
+.defect-filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.defect-filter-label[data-disabled] {
+  color: var(--defect-secondary);
+}
+
+.defect-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  min-height: 32px;
+}
+
+.defect-filter-placeholder {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  color: var(--defect-secondary);
+  font-size: 12px;
+}
+
+.defect-filter-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--defect-error);
+  font-size: 12px;
+}
+
+.defect-filter-notice {
+  margin-bottom: 12px;
+  color: var(--defect-secondary);
+  font-size: 12px;
+}
+
+.defect-list-content {
+  flex: 1 0 auto;
+  min-width: 0;
+  padding: 16px 16px 96px;
+  background: rgb(245 245 247 / 30%);
+}
+
+.defect-scatter-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--defect-border);
+  border-radius: 18px;
+  background: var(--defect-surface);
+}
+
+.defect-scatter-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--defect-border);
+  background: rgb(245 245 247 / 30%);
+}
+
+.defect-scatter-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.defect-scatter-header p,
+.defect-scatter-header > span {
+  color: var(--defect-secondary);
+  font-size: 12px;
+}
+
+.defect-scatter-header p {
+  margin-top: 2px;
+}
+
+.defect-back-to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  background: var(--defect-accent);
+  color: var(--defect-surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 16%);
+  cursor: pointer;
+}
+
+.defect-back-to-top:hover {
+  background: var(--defect-focus);
+}
+
+.cluster-pc-wafer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--defect-border);
+  border-radius: 12px;
+  background: var(--defect-surface);
+}
+
+.cluster-pc-canvas {
+  display: block;
+}
+
+.cluster-pc-wafer figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  width: 100%;
+  min-width: 0;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+.cluster-pc-wafer figcaption > * {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cluster-pc-wafer figcaption strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cluster-pc-wafer figcaption span {
+  color: var(--defect-secondary);
+}
+
+.cluster-pc-wafer figcaption .cluster-pc-reason {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.cluster-pc-wafer figcaption em {
+  color: var(--defect-error);
+  font-style: normal;
+}
+
+.cluster-pc-feedback {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+
+.cluster-pc-feedback button {
+  flex: 1;
+  min-width: 0;
+  padding: 3px 4px;
+  border: 1px solid var(--defect-border);
+  border-radius: 6px;
+  background: var(--defect-surface);
+  color: var(--defect-secondary);
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cluster-pc-feedback button:hover:not(:disabled) {
+  border-color: var(--defect-secondary);
+}
+
+.cluster-pc-feedback button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.cluster-pc-feedback button[data-verdict="correct"][aria-pressed="true"] {
+  border-color: #2563eb;
+  background: #2563eb;
+  color: #fff;
+}
+
+.cluster-pc-feedback button[data-verdict="wrong"][aria-pressed="true"] {
+  border-color: #d9480f;
+  background: #d9480f;
+  color: #fff;
+}
+
+/* PRC_Group ALL: 5칸 격자에 EQPID 묶음을 wafer 수만큼(최대 5칸) 놓는다. */
+.cluster-pc-eqp-grid {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.cluster-pc-eqp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--defect-border);
+  border-radius: 12px;
+  background: rgb(245 245 247 / 40%);
+}
+
+.cluster-pc-eqp-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px;
+  font-size: 12px;
+}
+
+.cluster-pc-eqp-title strong {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cluster-pc-eqp-title span {
+  flex-shrink: 0;
+  color: var(--defect-secondary);
+}
+
+.cluster-pc-eqp-wafers {
+  display: grid;
+  gap: 8px;
+}
+
+/* EQP 묶음 안의 챔버(EQPID) 묶음 */
+.cluster-pc-chamber-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.cluster-pc-chamber {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--defect-surface);
+  box-shadow: inset 0 0 0 1px var(--defect-border);
+}
+
+.cluster-pc-chamber-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 4px;
+  font-size: 11px;
+}
+
+.cluster-pc-chamber-title strong {
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cluster-pc-chamber-title span {
+  flex-shrink: 0;
+  color: var(--defect-secondary);
+}

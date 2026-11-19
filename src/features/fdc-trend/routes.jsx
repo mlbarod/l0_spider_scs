@@ -4,6 +4,7 @@ import { FdcTrendShell } from "./components/FdcTrendShell"
 import { CommonalityAnomalyPage } from "./pages/CommonalityAnomalyPage"
 import { FdcTrendPage } from "./pages/FdcTrendPage"
 import { DefectSpiderPage } from "./pages/DefectSpiderPage"
+import { DefectClusterPcPage } from "./pages/DefectClusterPcPage"
 import { L0SpiderHomePage } from "./pages/L0SpiderHomePage"
 import { SpiderComingSoonPage } from "./pages/SpiderComingSoonPage"
 import { SpiderFeaturePage } from "./pages/SpiderFeaturePage"
@@ -63,6 +64,10 @@ const fdcTrendChildren = [
   {
     path: "defect-spider",
     element: <DefectSpiderPage />,
+  },
+  {
+    path: "defect-spider/cluster-pc",
+    element: <DefectClusterPcPage />,
   },
   {
     path: "l1-spider",

@@ -35,6 +35,7 @@ import {
 import { handleLatestCommonalityPathRequest } from "./server/latestCommonalityPath.mjs"
 import { handleMappingConfigRequest } from "./server/mappingConfig.mjs"
 import { handleDefectFiltersRequest, handleDefectFileRequest } from "./server/defectSpiderData.mjs"
+import { handleDefectClusterPcRequest } from "./server/defectClusterPc.mjs"
 import { handleMailingRegistrationRequest } from "./server/mailingRegistration.mjs"
 import { handlePassHistoryRequest } from "./server/passHistory.mjs"
 import {
@@ -269,6 +270,11 @@ const server = createServer((req, res) => {
 
   if (url.pathname === "/api/defect-file") {
     handleDefectFileRequest(req, res, url)
+    return
+  }
+
+  if (url.pathname.startsWith("/api/defect-spider/cluster-pc/")) {
+    handleDefectClusterPcRequest(req, res, url)
     return
   }
 

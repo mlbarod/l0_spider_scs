@@ -36,6 +36,7 @@ const DB_METHODS = new Map([
   ["/api/hit-history", new Set(["GET", "POST", "DELETE"])],
   ["/api/clicked-category-history", new Set(["POST"])],
   ["/api/pass-history", new Set(["GET", "POST", "DELETE"])],
+  ["/api/defect-spider/cluster-pc/feedback", new Set(["POST"])],
 ])
 // Saved History Board: list/create, entry detail/status/delete and entry image.
 const HISTORY_BOARD_PATH = /^\/api\/history-board(?:\/[a-f0-9]{64}(?:\/image)?)?$/
@@ -136,7 +137,7 @@ export function blockDisabledDataRequest(
   const isAllowedDefectRead = (
     isDefaultEnabled(environment, "SCS_DEFECT_DATA_ENABLED")
     && isExactPath
-    && ["/api/defect-filters", "/api/defect-file"].includes(normalizedPathname)
+    && ["/api/defect-filters", "/api/defect-file", "/api/defect-spider/cluster-pc/catalog", "/api/defect-spider/cluster-pc/maps"].includes(normalizedPathname)
     && req.method === "GET"
   )
   const isAllowedMappingRead = (
