@@ -75,7 +75,7 @@ export function DefectScatterChart({ failData, allData, eqpCh, historyEntry }) {
         </div>
       ) : null}
       <DefectWaferList points={series.selected} />
-      <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} />
+      <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} line={historyEntry?.fields?.lineId} />
     </div>
   )
 }

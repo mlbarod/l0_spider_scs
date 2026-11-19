@@ -294,7 +294,9 @@ function formatActTimeTick(value) {
 
 function safeHistoryUrl(value) {
   const url = String(value ?? "").trim()
-  return /^(https?:\/\/|\/)/i.test(url) ? url : ""
+  if (!url || /^(javascript|data|vbscript):/i.test(url)) return ""
+  // ctttm_url may omit the scheme (e.g. "ctttm.eqmsscs...:7443/..."); open it as an absolute https URL.
+  return /^([a-z][a-z\d+.-]*:\/\/|\/)/i.test(url) ? url : `https://${url}`
 }
 
 function numericDomain(values, fallbackPadding) {
