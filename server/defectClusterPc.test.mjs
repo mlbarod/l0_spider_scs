@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
-import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, metSeqNumber, NO_VALUE, packPoints, parseClusters, splitValues } from "./defectClusterPc.mjs"
+import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, parseClusters, splitValues } from "./defectClusterPc.mjs"
 import { clusterFilterOptions, clusterLabel, eqpSpan, groupByEqp, groupByPrcEqp, splitEqpid } from "../src/features/fdc-trend/utils/defectClusterPc.mjs"
 
 const url = (path) => new URL(`/api/defect-spider/cluster-pc/${path}`, "http://localhost")
@@ -249,4 +249,13 @@ test("HTTP 응답: 요청 오류는 상태 코드와 문구를, 사용자 미등
   await handler(feedbackRequest({ verdict: "correct" }), feedback, url("feedback"))
   assert.equal(feedback.status, 428)
   assert.equal(feedback.body.code, "USER_REGISTRATION_REQUIRED")
+})
+
+test("path 컬럼의 l0_spider 경로(/appdata/hadoop/code/eads)는 /appdata/abnormal_trend/pic/defect로 바꿔 읽는다", () => {
+  assert.equal(sourcePath(" /appdata/hadoop/code/eads/L1/defect_map/D/U%100/200_RANDOM_PC/2026-11-19/100_measure_data_xy.parquet "),
+    "/appdata/abnormal_trend/pic/defect/L1/defect_map/D/U%100/200_RANDOM_PC/2026-11-19/100_measure_data_xy.parquet")
+  assert.equal(sourcePath("/appdata/abnormal_trend/pic/defect/a.parquet"), "/appdata/abnormal_trend/pic/defect/a.parquet")
+  assert.equal(sourcePath("/appdata/hadoop/code/eads_other/a.parquet"), "/appdata/hadoop/code/eads_other/a.parquet")
+  const [row] = clusterRows([{ line: "L", lot_wf: "W1", path: "/appdata/hadoop/code/eads/L/a.parquet" }])
+  assert.equal(row.path, "/appdata/abnormal_trend/pic/defect/L/a.parquet")
 })

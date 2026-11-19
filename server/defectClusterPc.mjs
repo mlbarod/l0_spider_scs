@@ -16,6 +16,12 @@ export const DEFECT_CLUSTER_PC_CONFIG = Object.freeze({
   listRoot: `${DEFECT_CLUSTER_PC_ROOT}/fail_list_all_scs`,
   rawRoots: Object.freeze([DEFECT_CLUSTER_PC_ROOT]),
 })
+// 결과 파일의 path 컬럼에는 l0_spider 경로가 들어 있다. 앞부분만 이 서비스 경로로 바꿔 읽는다.
+const L0_SPIDER_ROOT = "/appdata/hadoop/code/eads"
+export function sourcePath(value) {
+  const path = text(value)
+  return path === L0_SPIDER_ROOT || path.startsWith(`${L0_SPIDER_ROOT}/`) ? `${DEFECT_CLUSTER_PC_ROOT}${path.slice(L0_SPIDER_ROOT.length)}` : path
+}
 const LIST_FILE = "fail_list_bias_pc.parquet"
 const FILTER_KEYS = ["line", "sdwt", "prcGroup"]
 export const NO_VALUE = "(None)"
@@ -98,7 +104,7 @@ export function clusterRows(rows) {
   return rows.map((row) => ({
     line: text(row.line), device: text(row.device), mainSeq: text(row.main_seq), metSeq: metSeqNumber(row.met_seq),
     eqpid: text(row.eqpid), sdwt: splitValues(row.sdwt), prcGroup: splitValues(row.prc_group),
-    lotWf: text(row.lot_wf), path: text(row.path), clusters: parseClusters(row.clusters), clustersRaw: text(row.clusters),
+    lotWf: text(row.lot_wf), path: sourcePath(row.path), clusters: parseClusters(row.clusters), clustersRaw: text(row.clusters),
   })).filter((row) => row.line && row.lotWf && row.path)
 }
 

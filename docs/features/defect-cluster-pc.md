@@ -20,7 +20,7 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
 - 빠르게 그리기: 서버가 좌표를 0.1mm 정수 배열로 줄여 보내고(gzip), 화면은 canvas에 직접 그린다. 화면에 보이는 wafer만 먼저 그리고 나머지는 스크롤할 때 그린다.
   - 측정(synthetic, 개발 PC): 400매(wafer당 480~3,000점) 응답 약 0.4~0.5초, 클릭 후 첫 화면 약 1.1초
 - API: `GET /api/defect-spider/cluster-pc/catalog`(필터 값만, 파일 경로 미노출), `GET /api/defect-spider/cluster-pc/maps?snapshot=&line=&sdwt=&prcGroup=`(`line`, `sdwt` 필수). catalog의 행은 `[line, sdwt 값 목록, prc_group 값 목록]`이다.
-  - 화면에서 받은 값은 파일 경로로 쓰지 않는다. 결과 파일의 `path`만 읽고, 그 경로도 `/appdata/abnormal_trend/pic/defect` 안쪽일 때만 읽는다.
+  - 화면에서 받은 값은 파일 경로로 쓰지 않는다. 결과 파일의 `path`만 읽는다. `path`가 l0_spider 경로(`/appdata/hadoop/code/eads/...`)이면 앞부분을 `/appdata/abnormal_trend/pic/defect`로 바꿔 읽고, 바꾼 경로도 `/appdata/abnormal_trend/pic/defect` 안쪽일 때만 읽는다.
   - 화면이 본 결과 시각(`snapshot`)과 서버의 최신 결과가 다르면 410으로 새로고침을 요청한다.
 - 몰림 근거 표시(2026-11-19): 결과의 `clusters` 값으로 map 위에 그린다.
   - 파란 원은 군집 창이다(실제 반경). 1.5mm 창은 map에서 너무 작아 최소 4px로 그린다. 판정 근거가 아닌 군집(비교 배수 미달)은 회색 점선이다.
