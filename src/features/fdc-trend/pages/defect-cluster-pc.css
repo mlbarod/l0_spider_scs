@@ -248,6 +248,40 @@
   display: block;
 }
 
+.cluster-pc-wafer-info {
+  align-self: stretch;
+  margin: 0;
+  min-width: 0;
+  color: var(--defect-secondary);
+  font-size: 11px;
+  line-height: 15px;
+  text-align: right;
+}
+
+.cluster-pc-wafer-info > div {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.cluster-pc-wafer-info dt,
+.cluster-pc-wafer-info dd {
+  display: inline;
+  margin: 0;
+}
+
+.cluster-pc-wafer-info dd {
+  color: var(--defect-text);
+}
+
+.cluster-pc-wafer-ucc {
+  align-self: stretch;
+  color: var(--defect-secondary);
+  font-size: 11px;
+  line-height: 15px;
+  text-align: right;
+}
+
 .cluster-pc-wafer figcaption {
   display: flex;
   flex-direction: column;

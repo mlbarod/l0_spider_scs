@@ -12,10 +12,10 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
   - 결과의 `sdwt`, `prc_group`이 `A,B`처럼 여러 값이면 선택지에 따로 보여주고, 둘 중 하나를 고르면 그 wafer가 나온다.
   - 값이 비어 있는 wafer(배치의 장비 정보 미매칭, 이전 결과 파일)는 `(None)` 선택지로 본다(화면에는 언어별로 `(없음)`, `(None)`, `（无）`로 표시).
 - wafer map: Line Name과 SDWT를 고르면 조건에 맞는 몰림 wafer를 EQPID별로 묶어 `lot_wf` 단위로 그린다.
-  - PRC_Group 선택과 관계없이(2026-11-19) PRC_Group별 카드 안에서 EQP별, 다시 챔버(EQPID)별로 묶어 한 줄 5칸 격자에 그린다. eqpid는 `_` 앞이 EQP, 뒤가 챔버다(예: `EQA01_PM1` → `EQA01` / `PM1`).
+  - PRC_Group 선택과 관계없이(2026-11-19) PRC_Group별 카드 안에서 EQP별, 다시 챔버(EQPID)별로 묶어 한 줄 5칸 격자에 그린다. eqpid는 `_` 앞이 EQP, 뒤가 챔버다. 챔버는 `PM{chamber}`로 표시한다(예: `EQA01_1` → `EQA01` / `PM1`, 이미 `PM`으로 시작하면 그대로, 2026-11-20).
   - 챔버 묶음은 wafer 수만큼, EQP 묶음은 그 안 챔버 칸 수 합만큼 칸을 차지한다(둘 다 최대 5칸, 넘치면 그 묶음 안에서 다음 줄로). 그래서 1매짜리 EQP는 한 줄에 5개, 5매짜리 EQP는 한 줄에 1개가 들어간다. 묶음 순서는 이름순이라 줄 끝 칸이 빌 수 있다.
   - `_`가 없는 eqpid는 EQP와 챔버 이름을 eqpid 그대로 쓴다. 여러 장비가 섞인 wafer(`EQA01_PM2,EQB02_PM1`)는 EQP `EQA01,EQB02` 묶음에 넣고 챔버 칸에 eqpid 전체를 쓴다. prc_group이 여러 값인 wafer는 `ETCH,CVD` 같은 묶음 하나에 넣고, `(None)` 묶음은 맨 뒤에 둔다.
-  - PRC_Group을 하나 고르면 그 값을 포함한 wafer만 나온다. 예: CVD를 고르면 `CVD` 카드와 `ETCH,CVD` 카드가 나온다. 좌표는 결과의 `path` 파일에서 `lot_wf`, `coorx`, `coory` 컬럼만 읽는다.
+  - PRC_Group을 하나 고르면 그 값을 포함한 wafer만 나온다. 예: CVD를 고르면 `CVD` 카드와 `ETCH,CVD` 카드가 나온다. 좌표는 결과의 `path` 파일에서 `lot_wf`, `coorx`, `coory` 컬럼을 읽는다. 같은 파일의 `tkout_time`(wafer의 가장 늦은 값, `YYYY-MM-DD HH:MM:SS`), `root_lot_id`, `slot`도 읽어 map 우측 상단에 "설비 진행시간", `device`, `main_step`(main_seq), `met_step`(met_seq), `root_lot_id`, `slot`으로 표시한다(2026-11-20, 컬럼이 없으면 `-`). map 우측 하단에는 defect 수를 `UCC:{n}개`로 표시한다.
 - 한 번에 최대 400매까지 표시하고, 넘으면 필터를 좁히라는 안내를 띄운다.
 - 빠르게 그리기: 서버가 좌표를 0.1mm 정수 배열로 줄여 보내고(gzip), 화면은 canvas에 직접 그린다. 화면에 보이는 wafer만 먼저 그리고 나머지는 스크롤할 때 그린다.
   - 측정(synthetic, 개발 PC): 400매(wafer당 480~3,000점) 응답 약 0.4~0.5초, 클릭 후 첫 화면 약 1.1초

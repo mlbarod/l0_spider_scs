@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
-import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, parseClusters, splitValues } from "./defectClusterPc.mjs"
+import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, formatTkout, waferInfo, parseClusters, splitValues } from "./defectClusterPc.mjs"
 import { clusterFilterOptions, clusterLabel, eqpSpan, groupByEqp, groupByPrcEqp, splitEqpid } from "../src/features/fdc-trend/utils/defectClusterPc.mjs"
 
 const url = (path) => new URL(`/api/defect-spider/cluster-pc/${path}`, "http://localhost")
@@ -35,6 +35,21 @@ test("좌표는 lot_wf가 같은 행만 0.1mm 정수로 묶고 숫자가 아닌 
   assert.deepEqual(packPoints(rows, "L1"), [123, -68, 0, 1500])
 })
 
+test("카드 상단 정보는 wafer의 가장 늦은 tkout_time과 root_lot_id, slot을 쓴다", () => {
+  assert.equal(formatTkout(new Date("2026-10-01T02:03:04Z")), "2026-10-01 02:03:04")
+  assert.equal(formatTkout("2026-10-01T02:03:04.123+09:00"), "2026-10-01 02:03:04")
+  assert.equal(formatTkout("2026-10-01 02:03"), "2026-10-01 02:03:00")
+  assert.equal(formatTkout(null), "")
+  assert.equal(formatTkout("invalid"), "")
+  const rows = [
+    { lot_wf: "L1", tkout_time: "2026-10-01 02:00:00", root_lot_id: "R1", slot: 5 },
+    { lot_wf: "L1", tkout_time: "2026-10-01 03:00:00", root_lot_id: "R1", slot: 5 },
+    { lot_wf: "L2", tkout_time: "2026-10-02 00:00:00", root_lot_id: "R2", slot: 6 },
+  ]
+  assert.deepEqual(waferInfo(rows, "L1"), { tkoutTime: "2026-10-01 03:00:00", rootLotId: "R1", slot: "5" })
+  assert.deepEqual(waferInfo([{ lot_wf: "L1" }], "L1"), { tkoutTime: "", rootLotId: "", slot: "" })
+})
+
 test("catalog은 결과가 있는 가장 최근 폴더를 읽고 파일 경로는 보내지 않는다", async () => {
   const { base, config, eads } = await fixture()
   try {
@@ -63,12 +78,13 @@ test("maps는 필터에 맞는 wafer만 읽고, 허용 폴더 밖 경로와 갱�
     const sourceReads = []
     const service = createClusterPcService({
       readList: async () => list,
-      readSource: async (path) => { sourceReads.push(path); return [{ lot_wf: "W1", coorx: 1000, coory: 2000 }, { lot_wf: "W2", coorx: -1000, coory: 0 }] },
+      readSource: async (path) => { sourceReads.push(path); return [{ lot_wf: "W1", coorx: 1000, coory: 2000, tkout_time: "2026-11-18 01:02:03", root_lot_id: "R1", slot: "01" }, { lot_wf: "W2", coorx: -1000, coory: 0 }] },
     })
     const params = new URLSearchParams({ snapshot: "2026-11-18 09:00", line: "L", sdwt: "S1", prcGroup: "CVD" })
     const body = await service({ method: "GET" }, url(`maps?${params}`), config)
     assert.equal(body.total, 2)
     assert.deepEqual(body.wafers.map((wafer) => [wafer.lotWf, wafer.xy, wafer.error]), [["W1", [10, 20], undefined], ["W3", [], "Path is not allowed."]])
+    assert.deepEqual([body.wafers[0].tkoutTime, body.wafers[0].rootLotId, body.wafers[0].slot], ["2026-11-18 01:02:03", "R1", "01"])
     assert.equal(sourceReads.length, 1)
 
     params.set("prcGroup", "ALL")
@@ -224,7 +240,8 @@ test("wafer map은 PRC_Group별, 그 안을 EQP별·챔버별로 묶고 묶음 �
   assert.deepEqual(splitEqpid("EQA01_PM1,EQA01_PM2"), { eqp: "EQA01", chamber: "PM1,PM2" })
   assert.deepEqual(splitEqpid("EQA01_PM2,EQB02_PM1"), { eqp: "EQA01,EQB02", chamber: "EQA01_PM2,EQB02_PM1" })
   assert.deepEqual(splitEqpid("EQC03"), { eqp: "EQC03", chamber: "EQC03" })
-  assert.deepEqual(splitEqpid("EQD_CH_A"), { eqp: "EQD", chamber: "CH_A" })
+  assert.deepEqual(splitEqpid("EQD_CH_A"), { eqp: "EQD", chamber: "PMCH_A" })
+  assert.deepEqual(splitEqpid("EQE01_1,EQE01_A"), { eqp: "EQE01", chamber: "PM1,PMA" })
 })
 
 test("결과와 원본 좌표는 /appdata/abnormal_trend/pic/defect 아래에서 읽는다", () => {

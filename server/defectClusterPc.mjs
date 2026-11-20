@@ -44,8 +44,8 @@ function createParquetReader(read, maxEntries = 32) {
 }
 
 const readList = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors }), 4)
-// 좌표 파일은 판정에 쓰는 3개 컬럼만 읽는다(12개 컬럼 전체를 풀지 않아 빠르다).
-const readPoints = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf", "coorx", "coory"] }))
+// 좌표 파일은 좌표 3개 컬럼과 카드 표시용 3개 컬럼만 읽는다(12개 컬럼 전체를 풀지 않아 빠르다). 없는 컬럼은 빈 값이 된다.
+const readPoints = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf", "coorx", "coory", "tkout_time", "root_lot_id", "slot"] }))
 
 // 실제 경로(symlink 해석 후)가 허용 폴더 안일 때만 그 경로를 돌려준다.
 export async function confinedPath(path, roots) {
@@ -141,6 +141,27 @@ export function packPoints(rows, lotWf) {
   return xy
 }
 
+// tkout_time -> "YYYY-MM-DD HH:MM:SS". 시간대 없는 시각은 원문 시각 그대로 쓴다(Date는 UTC 기준으로 읽는다).
+export function formatTkout(value) {
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString().slice(0, 19).replace("T", " ") : ""
+  if (typeof value === "number" || typeof value === "bigint") return formatTkout(new Date(Number(value)))
+  const match = text(value).match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(:\d{2})?/)
+  return match ? `${match[1]} ${match[2]}${match[3] || ":00"}` : ""
+}
+
+// 카드 상단 정보: wafer 행 중 가장 늦은 tkout_time, 처음 나온 root_lot_id·slot 값.
+export function waferInfo(rows, lotWf) {
+  const info = { tkoutTime: "", rootLotId: "", slot: "" }
+  for (const row of rows) {
+    if (text(row.lot_wf) !== lotWf) continue
+    const time = formatTkout(row.tkout_time)
+    if (time > info.tkoutTime) info.tkoutTime = time
+    info.rootLotId ||= text(row.root_lot_id)
+    info.slot ||= text(row.slot)
+  }
+  return info
+}
+
 // 판정 피드백: 화면은 wafer 식별값과 판정만 보낸다. clusters는 서버가 최신 결과 파일에서 꺼낸다.
 // 값 길이 상한은 DB 컬럼 길이와 같다(scripts/defect_cluster_pc_feedback.sql).
 export const FEEDBACK_VERDICTS = { correct: "Y", wrong: "N" }
@@ -233,8 +254,8 @@ export function createClusterPcService({ readList: readListFile = readList, read
       const base = { line: row.line, device: row.device, mainSeq: row.mainSeq, metSeq: row.metSeq, eqpid: row.eqpid, prcGroup: row.prcGroup, lotWf: row.lotWf, clusters: row.clusters }
       try {
         if (!row.path.endsWith(".parquet")) throw requestError("Not a parquet file.")
-        const xy = packPoints(await readSource(await confinedPath(row.path, roots)), row.lotWf)
-        return { ...base, xy }
+        const source = await readSource(await confinedPath(row.path, roots))
+        return { ...base, ...waferInfo(source, row.lotWf), xy: packPoints(source, row.lotWf) }
       } catch (error) {
         return { ...base, xy: [], error: error.code === "ENOENT" ? "Source file not found." : error.code === "DEFECT_PATH_DENIED" ? "Path is not allowed." : "Unable to read the source file." }
       }

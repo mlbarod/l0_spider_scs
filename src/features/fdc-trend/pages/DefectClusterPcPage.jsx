@@ -30,7 +30,7 @@ export const CLUSTER_PC_TEXT = {
     legend: "몰림으로 검출된 wafer · 파란 원: 군집 창, 파란 음영: 비교 영역",
     groupSummary: (eqps, chambers, wafers) => `EQP ${eqps}개 · 챔버 ${chambers}개 · ${wafers}매`,
     eqpSummary: (chambers, wafers) => `챔버 ${chambers}개 · ${wafers}매`, wafers: (count) => `${count}매`,
-    defects: (count) => `defect ${count.toLocaleString()}개`, more: (count) => ` 외 ${count}`, hit: " (몰림 근거)",
+    tkout: "설비 진행시간", ucc: (count) => `UCC:${count.toLocaleString()}개`, more: (count) => ` 외 ${count}`, hit: " (몰림 근거)",
     verdict: "몰림PC 판정", correct: "몰림PC 맞음", wrong: "몰림PC 아님", saving: "저장 중…", deleting: "취소 중…", top: "맨 위로",
     reason: "몰림PC 판정 사유",
     none: "(없음)", noEqpid: "(EQPID 없음)",
@@ -47,7 +47,7 @@ export const CLUSTER_PC_TEXT = {
     legend: "Wafers detected as clustered · Blue circle: cluster window, blue shading: comparison area",
     groupSummary: (eqps, chambers, wafers) => `${eqps} EQP · ${chambers} chambers · ${wafers} wafers`,
     eqpSummary: (chambers, wafers) => `${chambers} chambers · ${wafers} wafers`, wafers: (count) => `${count} wafers`,
-    defects: (count) => `${count.toLocaleString()} defects`, more: (count) => ` +${count} more`, hit: " (clustering evidence)",
+    tkout: "Equipment process time", ucc: (count) => `UCC:${count.toLocaleString()}`, more: (count) => ` +${count} more`, hit: " (clustering evidence)",
     verdict: "Clustered PC verdict", correct: "Clustered PC", wrong: "Not clustered PC", saving: "Saving…", deleting: "Canceling…", top: "Back to top",
     reason: "Clustered PC verdict reason",
     none: "(None)", noEqpid: "(No EQPID)",
@@ -64,7 +64,7 @@ export const CLUSTER_PC_TEXT = {
     legend: "检测为聚集的晶圆 · 蓝色圆圈：聚集窗口，蓝色阴影：比较区域",
     groupSummary: (eqps, chambers, wafers) => `EQP ${eqps} 个 · 腔室 ${chambers} 个 · ${wafers} 片`,
     eqpSummary: (chambers, wafers) => `腔室 ${chambers} 个 · ${wafers} 片`, wafers: (count) => `${count} 片`,
-    defects: (count) => `defect ${count.toLocaleString()} 个`, more: (count) => ` 等 ${count} 个`, hit: "（聚集依据）",
+    tkout: "设备进行时间", ucc: (count) => `UCC:${count.toLocaleString()}个`, more: (count) => ` 等 ${count} 个`, hit: "（聚集依据）",
     verdict: "聚集PC判定", correct: "是聚集PC", wrong: "不是聚集PC", saving: "保存中…", deleting: "取消中…", top: "回到顶部",
     reason: "聚集PC判定依据",
     none: "（无）", noEqpid: "（无 EQPID）",
@@ -172,11 +172,16 @@ function WaferCard({ wafer, feedback, onFeedback, showReason, t, language }) {
   const main = clusters.filter((cluster) => cluster.hit).sort((a, b) => b.zoneRatio - a.zoneRatio)[0]
   const detail = clusters.map((cluster, index) => `#${index + 1} ${clusterLabel(cluster, language)}${cluster.hit ? t.hit : ""}`).join("\n")
   return <figure className="cluster-pc-wafer" title={`${wafer.lotWf}\n${wafer.device} · ${wafer.mainSeq} · ${wafer.metSeq}${detail ? `\n${detail}` : ""}`}>
+    {/* map 우측 상단: 설비 진행시간, device와 wafer 식별값(이전에는 map 하단에 표시). 값이 없으면 "-". */}
+    <dl className="cluster-pc-wafer-info">
+      {[[t.tkout, wafer.tkoutTime, " : "], ["device", wafer.device], ["main_step", wafer.mainSeq], ["met_step", wafer.metSeq], ["root_lot_id", wafer.rootLotId], ["slot", wafer.slot]].map(([label, value, separator = ": "]) =>
+        <div key={label}><dt>{label}{separator}</dt><dd>{value || "-"}</dd></div>)}
+    </dl>
     <WaferCanvas xy={wafer.xy} clusters={clusters} showReason={showReason} />
+    {/* map 우측 하단: defect 수(UCC). 좌표 파일을 못 읽었으면 대신 오류를 하단 가운데에 보여준다. */}
+    {!wafer.error && <div className="cluster-pc-wafer-ucc">{t.ucc(count)}</div>}
     <figcaption>
-      <strong>{wafer.lotWf}</strong>
-      <span>{wafer.device} · {wafer.mainSeq} · {wafer.metSeq}</span>
-      <span>{wafer.error ? <em>{wafer.error}</em> : t.defects(count)}</span>
+      {wafer.error && <span><em>{wafer.error}</em></span>}
       {main && <span className="cluster-pc-reason">{clusterLabel(main, language)}{clusters.length > 1 ? t.more(clusters.length - 1) : ""}</span>}
     </figcaption>
     <FeedbackButtons state={feedback} onSave={(verdict) => onFeedback(wafer, verdict)} t={t} />
