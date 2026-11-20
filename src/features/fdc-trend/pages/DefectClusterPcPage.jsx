@@ -172,11 +172,12 @@ function WaferCard({ wafer, feedback, onFeedback, showReason, t, language }) {
   const main = clusters.filter((cluster) => cluster.hit).sort((a, b) => b.zoneRatio - a.zoneRatio)[0]
   const detail = clusters.map((cluster, index) => `#${index + 1} ${clusterLabel(cluster, language)}${cluster.hit ? t.hit : ""}`).join("\n")
   return <figure className="cluster-pc-wafer" title={`${wafer.lotWf}\n${wafer.device} · ${wafer.mainSeq} · ${wafer.metSeq}${detail ? `\n${detail}` : ""}`}>
-    {/* map 우측 상단: 설비 진행시간, device와 wafer 식별값(이전에는 map 하단에 표시). 값이 없으면 "-". */}
-    <dl className="cluster-pc-wafer-info">
-      {[[t.tkout, wafer.tkoutTime, " : "], ["device", wafer.device], ["main_step", wafer.mainSeq], ["met_step", wafer.metSeq], ["root_lot_id", wafer.rootLotId], ["slot", wafer.slot]].map(([label, value, separator = ": "]) =>
-        <div key={label}><dt>{label}{separator}</dt><dd>{value || "-"}</dd></div>)}
-    </dl>
+    {/* map 좌측 상단: 설비 진행시간, device / 우측 상단: wafer 식별값(이전에는 map 하단에 표시). 값이 없으면 "-". */}
+    <div className="cluster-pc-wafer-info">
+      {[[[t.tkout, wafer.tkoutTime, " : "], ["device", wafer.device]],
+        [["main_step", wafer.mainSeq], ["met_step", wafer.metSeq], ["root_lot_id", wafer.rootLotId], ["slot", wafer.slot]]].map((items, side) =>
+        <dl key={side}>{items.map(([label, value, separator = ": "]) => <div key={label}><dt>{label}{separator}</dt><dd>{value || "-"}</dd></div>)}</dl>)}
+    </div>
     <WaferCanvas xy={wafer.xy} clusters={clusters} showReason={showReason} />
     {/* map 우측 하단: defect 수(UCC). 좌표 파일을 못 읽었으면 대신 오류를 하단 가운데에 보여준다. */}
     {!wafer.error && <div className="cluster-pc-wafer-ucc">{t.ucc(count)}</div>}

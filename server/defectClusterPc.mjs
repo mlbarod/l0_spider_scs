@@ -44,8 +44,8 @@ function createParquetReader(read, maxEntries = 32) {
 }
 
 const readList = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors }), 4)
-// 좌표 파일은 좌표 3개 컬럼과 카드 표시용 3개 컬럼만 읽는다(12개 컬럼 전체를 풀지 않아 빠르다). 없는 컬럼은 빈 값이 된다.
-const readPoints = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf", "coorx", "coory", "tkout_time", "root_lot_id", "slot"] }))
+// 좌표 파일은 좌표 3개 컬럼과 카드 표시용 2개 컬럼만 읽는다(12개 컬럼 전체를 풀지 않아 빠르다). 없는 컬럼은 빈 값이 된다.
+const readPoints = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf", "coorx", "coory", "tkout_time", "root_lot_id"] }))
 
 // 실제 경로(symlink 해석 후)가 허용 폴더 안일 때만 그 경로를 돌려준다.
 export async function confinedPath(path, roots) {
@@ -149,15 +149,15 @@ export function formatTkout(value) {
   return match ? `${match[1]} ${match[2]}${match[3] || ":00"}` : ""
 }
 
-// 카드 상단 정보: wafer 행 중 가장 늦은 tkout_time, 처음 나온 root_lot_id·slot 값.
+// 카드 상단 정보: wafer 행 중 가장 늦은 tkout_time, 처음 나온 root_lot_id 값.
+// slot은 원본에 값이 없어 lot_wf의 마지막 "_" 뒤 값을 쓴다("ABC1234.1_05" -> "05", "_"가 없으면 빈 값).
 export function waferInfo(rows, lotWf) {
-  const info = { tkoutTime: "", rootLotId: "", slot: "" }
+  const info = { tkoutTime: "", rootLotId: "", slot: lotWf.includes("_") ? lotWf.slice(lotWf.lastIndexOf("_") + 1) : "" }
   for (const row of rows) {
     if (text(row.lot_wf) !== lotWf) continue
     const time = formatTkout(row.tkout_time)
     if (time > info.tkoutTime) info.tkoutTime = time
     info.rootLotId ||= text(row.root_lot_id)
-    info.slot ||= text(row.slot)
   }
   return info
 }

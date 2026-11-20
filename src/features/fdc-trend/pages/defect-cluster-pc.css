@@ -249,19 +249,29 @@
 }
 
 .cluster-pc-wafer-info {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
   align-self: stretch;
-  margin: 0;
   min-width: 0;
   color: var(--defect-secondary);
   font-size: 11px;
   line-height: 15px;
+}
+
+.cluster-pc-wafer-info dl {
+  flex: 1 1 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.cluster-pc-wafer-info dl + dl {
   text-align: right;
 }
 
-.cluster-pc-wafer-info > div {
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+/* 카드가 좁으면 값을 자르지 않고 다음 줄로 넘긴다. */
+.cluster-pc-wafer-info dl > div {
+  overflow-wrap: anywhere;
 }
 
 .cluster-pc-wafer-info dt,

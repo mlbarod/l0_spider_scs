@@ -35,18 +35,19 @@ test("좌표는 lot_wf가 같은 행만 0.1mm 정수로 묶고 숫자가 아닌 
   assert.deepEqual(packPoints(rows, "L1"), [123, -68, 0, 1500])
 })
 
-test("카드 상단 정보는 wafer의 가장 늦은 tkout_time과 root_lot_id, slot을 쓴다", () => {
+test("카드 상단 정보는 wafer의 가장 늦은 tkout_time과 root_lot_id를 쓰고 slot은 lot_wf의 _ 뒤 값이다", () => {
   assert.equal(formatTkout(new Date("2026-10-01T02:03:04Z")), "2026-10-01 02:03:04")
   assert.equal(formatTkout("2026-10-01T02:03:04.123+09:00"), "2026-10-01 02:03:04")
   assert.equal(formatTkout("2026-10-01 02:03"), "2026-10-01 02:03:00")
   assert.equal(formatTkout(null), "")
   assert.equal(formatTkout("invalid"), "")
   const rows = [
-    { lot_wf: "L1", tkout_time: "2026-10-01 02:00:00", root_lot_id: "R1", slot: 5 },
-    { lot_wf: "L1", tkout_time: "2026-10-01 03:00:00", root_lot_id: "R1", slot: 5 },
-    { lot_wf: "L2", tkout_time: "2026-10-02 00:00:00", root_lot_id: "R2", slot: 6 },
+    { lot_wf: "L1_05", tkout_time: "2026-10-01 02:00:00", root_lot_id: "R1" },
+    { lot_wf: "L1_05", tkout_time: "2026-10-01 03:00:00", root_lot_id: "R1" },
+    { lot_wf: "L2_06", tkout_time: "2026-10-02 00:00:00", root_lot_id: "R2" },
   ]
-  assert.deepEqual(waferInfo(rows, "L1"), { tkoutTime: "2026-10-01 03:00:00", rootLotId: "R1", slot: "5" })
+  assert.deepEqual(waferInfo(rows, "L1_05"), { tkoutTime: "2026-10-01 03:00:00", rootLotId: "R1", slot: "05" })
+  assert.equal(waferInfo([], "A_B.1_12").slot, "12")
   assert.deepEqual(waferInfo([{ lot_wf: "L1" }], "L1"), { tkoutTime: "", rootLotId: "", slot: "" })
 })
 
@@ -78,13 +79,13 @@ test("maps는 필터에 맞는 wafer만 읽고, 허용 폴더 밖 경로와 갱�
     const sourceReads = []
     const service = createClusterPcService({
       readList: async () => list,
-      readSource: async (path) => { sourceReads.push(path); return [{ lot_wf: "W1", coorx: 1000, coory: 2000, tkout_time: "2026-11-18 01:02:03", root_lot_id: "R1", slot: "01" }, { lot_wf: "W2", coorx: -1000, coory: 0 }] },
+      readSource: async (path) => { sourceReads.push(path); return [{ lot_wf: "W1", coorx: 1000, coory: 2000, tkout_time: "2026-11-18 01:02:03", root_lot_id: "R1" }, { lot_wf: "W2", coorx: -1000, coory: 0 }] },
     })
     const params = new URLSearchParams({ snapshot: "2026-11-18 09:00", line: "L", sdwt: "S1", prcGroup: "CVD" })
     const body = await service({ method: "GET" }, url(`maps?${params}`), config)
     assert.equal(body.total, 2)
     assert.deepEqual(body.wafers.map((wafer) => [wafer.lotWf, wafer.xy, wafer.error]), [["W1", [10, 20], undefined], ["W3", [], "Path is not allowed."]])
-    assert.deepEqual([body.wafers[0].tkoutTime, body.wafers[0].rootLotId, body.wafers[0].slot], ["2026-11-18 01:02:03", "R1", "01"])
+    assert.deepEqual([body.wafers[0].tkoutTime, body.wafers[0].rootLotId, body.wafers[0].slot], ["2026-11-18 01:02:03", "R1", ""])
     assert.equal(sourceReads.length, 1)
 
     params.set("prcGroup", "ALL")
