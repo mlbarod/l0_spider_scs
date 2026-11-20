@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils"
 
 import { createClickedCategoryHistory } from "../api/clickedCategoryHistoryApi"
 import { ChartHistoryDialog } from "../components/ChartHistoryDialog"
+import { ChartClipboardButton } from "../components/ChartClipboardButton"
 import { loadChartPng } from "../utils/historyChartImage"
 import { FilterSearchInput } from "../components/FilterSearchInput"
 import { filterItems as filterValues, filterItemsWithAll, getAllFilterSearch } from "../utils/filterSearch.mjs"
@@ -214,6 +215,7 @@ function CommonalityImageCard({ row, config, lineId }) {
         )}
       </div>
       <footer className="flex flex-wrap items-center justify-end gap-2 border-t bg-muted/20 px-4 py-2.5">
+        <ChartClipboardButton prepareImage={() => loadChartPng(imageUrl)} disabled={imageFailed} />
         <ChartHistoryDialog
           title={historyEntryTitle}
           details={historyEntryDetails}
