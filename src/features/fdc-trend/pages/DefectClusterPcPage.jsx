@@ -4,9 +4,10 @@ import { ArrowLeft, ArrowUp, LoaderCircle } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useLanguage } from "@/i18n"
 
-import { fetchClusterPcCatalog, fetchClusterPcMaps, saveClusterPcFeedback } from "../api/defectClusterPcApi"
+import { fetchClusterPcCatalog, fetchClusterPcHistory, fetchClusterPcMaps, saveClusterPcFeedback } from "../api/defectClusterPcApi"
 import { clusterFilterOptions, clusterLabel, groupByPrcEqp, waferKey, EMPTY_FILTERS, FILTERS, GRID_COLUMNS, NO_EQPID, NO_VALUE } from "../utils/defectClusterPc.mjs"
 import "./defect-cluster-pc.css"
 
@@ -33,6 +34,10 @@ export const CLUSTER_PC_TEXT = {
     tkout: "설비 진행시간", ucc: (count) => `UCC:${count.toLocaleString()}개`, more: (count) => ` 외 ${count}`, hit: " (몰림 근거)",
     verdict: "몰림PC 판정", correct: "몰림PC 맞음", wrong: "몰림PC 아님", saving: "저장 중…", deleting: "취소 중…", top: "맨 위로",
     reason: "몰림PC 판정 사유",
+    history: "과거 7일내 이상건수:", historyCount: (count) => `${count.toLocaleString()}건`,
+    historyOpen: (chamber, count) => `${chamber} 과거 7일내 이상 ${count}건 wafer map 보기`,
+    historyTitle: (chamber) => `${chamber} 과거 7일내 이상 wafer map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 최신 결과 제외 · 최근 결과부터 표시`,
+    historyLoading: "과거 wafer map을 불러오는 중입니다.", noHistory: "과거 7일내 이상 이력이 없습니다.", resultTime: "결과 기준",
     none: "(없음)", noEqpid: "(EQPID 없음)",
   },
   en: {
@@ -50,6 +55,10 @@ export const CLUSTER_PC_TEXT = {
     tkout: "Equipment process time", ucc: (count) => `UCC:${count.toLocaleString()}`, more: (count) => ` +${count} more`, hit: " (clustering evidence)",
     verdict: "Clustered PC verdict", correct: "Clustered PC", wrong: "Not clustered PC", saving: "Saving…", deleting: "Canceling…", top: "Back to top",
     reason: "Clustered PC verdict reason",
+    history: "Anomalies in past 7 days:", historyCount: (count) => `${count.toLocaleString()}`,
+    historyOpen: (chamber, count) => `View ${count} wafer maps detected on ${chamber} in the past 7 days`,
+    historyTitle: (chamber) => `${chamber} anomaly wafer maps in the past 7 days`, historyDescription: (eqpid) => `EQPID ${eqpid} · Latest results excluded · Newest first`,
+    historyLoading: "Loading past wafer maps.", noHistory: "No anomalies in the past 7 days.", resultTime: "Result time",
     none: "(None)", noEqpid: "(No EQPID)",
   },
   "zh-CN": {
@@ -67,6 +76,10 @@ export const CLUSTER_PC_TEXT = {
     tkout: "设备进行时间", ucc: (count) => `UCC:${count.toLocaleString()}个`, more: (count) => ` 等 ${count} 个`, hit: "（聚集依据）",
     verdict: "聚集PC判定", correct: "是聚集PC", wrong: "不是聚集PC", saving: "保存中…", deleting: "取消中…", top: "回到顶部",
     reason: "聚集PC判定依据",
+    history: "过去7天内异常数：", historyCount: (count) => `${count.toLocaleString()}件`,
+    historyOpen: (chamber, count) => `查看 ${chamber} 过去7天内 ${count} 件异常晶圆 map`,
+    historyTitle: (chamber) => `${chamber} 过去7天内异常晶圆 map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 不含最新结果 · 从最近结果开始显示`,
+    historyLoading: "正在加载过去的晶圆 map。", noHistory: "过去7天内没有异常记录。", resultTime: "结果基准",
     none: "（无）", noEqpid: "（无 EQPID）",
   },
 }
@@ -166,7 +179,8 @@ function FeedbackButtons({ state, onSave, t }) {
   </div>
 }
 
-function WaferCard({ wafer, feedback, onFeedback, showReason, t, language }) {
+// showFeedback = false: 과거 이력 팝업(판정 저장은 최신 결과 wafer만 가능하다)
+function WaferCard({ wafer, feedback, onFeedback, showReason, t, language, showFeedback = true }) {
   const count = wafer.xy.length / 2
   const clusters = wafer.clusters || NO_CLUSTERS
   const main = clusters.filter((cluster) => cluster.hit).sort((a, b) => b.zoneRatio - a.zoneRatio)[0]
@@ -174,7 +188,7 @@ function WaferCard({ wafer, feedback, onFeedback, showReason, t, language }) {
   return <figure className="cluster-pc-wafer" title={`${wafer.lotWf}\n${wafer.device} · ${wafer.mainSeq} · ${wafer.metSeq}${detail ? `\n${detail}` : ""}`}>
     {/* map 좌측 상단: 설비 진행시간, device / 우측 상단: wafer 식별값(이전에는 map 하단에 표시). 값이 없으면 "-". */}
     <div className="cluster-pc-wafer-info">
-      {[[[t.tkout, wafer.tkoutTime, " : "], ["device", wafer.device]],
+      {[[...(wafer.snapshot ? [[t.resultTime, wafer.snapshot, " : "]] : []), [t.tkout, wafer.tkoutTime, " : "], ["device", wafer.device]],
         [["main_step", wafer.mainSeq], ["met_step", wafer.metSeq], ["root_lot_id", wafer.rootLotId], ["slot", wafer.slot]]].map((items, side) =>
         <dl key={side}>{items.map(([label, value, separator = ": "]) => <div key={label}><dt>{label}{separator}</dt><dd>{value || "-"}</dd></div>)}</dl>)}
     </div>
@@ -185,8 +199,43 @@ function WaferCard({ wafer, feedback, onFeedback, showReason, t, language }) {
       {wafer.error && <span><em>{wafer.error}</em></span>}
       {main && <span className="cluster-pc-reason">{clusterLabel(main, language)}{clusters.length > 1 ? t.more(clusters.length - 1) : ""}</span>}
     </figcaption>
-    <FeedbackButtons state={feedback} onSave={(verdict) => onFeedback(wafer, verdict)} t={t} />
+    {showFeedback && <FeedbackButtons state={feedback} onSave={(verdict) => onFeedback(wafer, verdict)} t={t} />}
   </figure>
+}
+
+// 챔버의 과거 7일 이상 wafer map 팝업. target = { line, eqpid, chamber } | null
+function HistoryDialog({ snapshot, target, onClose, t, language }) {
+  const [state, setState] = useState({ data: null, error: "" })
+  useEffect(() => {
+    if (!target) return
+    const controller = new AbortController()
+    let active = true
+    setState({ data: null, error: "" })
+    fetchClusterPcHistory(snapshot, target.line, target.eqpid, controller.signal).then((data) => {
+      if (active) setState({ data, error: "" })
+    }).catch((error) => {
+      if (active && error.name !== "AbortError") setState({ data: null, error: error.message })
+    })
+    return () => { active = false; controller.abort() }
+  }, [snapshot, target])
+  const wafers = state.data?.wafers || []
+  return <Dialog open={Boolean(target)} onOpenChange={(open) => { if (!open) onClose() }}>
+    <DialogContent className="cluster-pc-history-dialog sm:max-w-6xl">
+      <DialogHeader>
+        <DialogTitle>{target && t.historyTitle(target.chamber)}</DialogTitle>
+        <DialogDescription>{target && t.historyDescription(target.eqpid)}</DialogDescription>
+      </DialogHeader>
+      <div>
+        {!state.data && !state.error && <p role="status" className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />{t.historyLoading}</p>}
+        {state.error && <p role="alert" className="py-12 text-center text-sm text-destructive">{state.error}</p>}
+        {state.data && state.data.total > state.data.limit && <p role="status" className="mb-3 text-sm text-amber-900">{t.limit(state.data.total, state.data.limit)}</p>}
+        {state.data && !wafers.length && <p className="py-12 text-center text-sm text-muted-foreground">{t.noHistory}</p>}
+        {wafers.length > 0 && <div className="cluster-pc-history-grid">
+          {wafers.map((wafer, index) => <WaferCard key={`${index}|${wafer.snapshot}|${waferKey(wafer)}`} wafer={wafer} showReason={false} showFeedback={false} t={t} language={language} />)}
+        </div>}
+      </div>
+    </DialogContent>
+  </Dialog>
 }
 
 export function DefectClusterPcPage() {
@@ -226,6 +275,8 @@ export function DefectClusterPcPage() {
   const [reasons, setReasons] = useState({})
   useEffect(() => { setReasons({}) }, [maps.data])
   const toggleReason = (key) => setReasons((previous) => ({ ...previous, [key]: !previous[key] }))
+  // 과거 7일 이상 이력 팝업 대상 챔버
+  const [historyTarget, setHistoryTarget] = useState(null)
 
   async function saveFeedback(wafer, verdict) {
     const key = waferKey(wafer)
@@ -300,7 +351,16 @@ export function DefectClusterPcPage() {
             </div>
             <div className="cluster-pc-chamber-grid" style={{ gridTemplateColumns: `repeat(${eqp.span}, minmax(0, 1fr))` }}>
               {eqp.chambers.map((chamber) => <div key={chamber.eqpid} role="group" aria-label={`EQPID ${chamber.eqpid}`} className="cluster-pc-chamber" style={{ gridColumn: `span ${chamber.span}` }}>
-                <div className="cluster-pc-chamber-title" title={chamber.eqpid}><strong>{displayValue(chamber.chamber, t)}</strong><span>{t.wafers(chamber.wafers.length)}</span></div>
+                <div className="cluster-pc-chamber-title" title={chamber.eqpid}>
+                  <div className="cluster-pc-chamber-name"><strong>{displayValue(chamber.chamber, t)}</strong>
+                    {/* 과거 7일 이상 wafer 수. 1건 이상이면 눌러서 그 wafer map을 팝업으로 본다. */}
+                    {typeof maps.data.history?.[chamber.eqpid] === "number" && <span className="cluster-pc-history">{t.history}
+                      {maps.data.history[chamber.eqpid] > 0
+                        ? <button type="button" aria-label={t.historyOpen(displayValue(chamber.chamber, t), maps.data.history[chamber.eqpid])} onClick={() => setHistoryTarget({ line: chamber.wafers[0].line, eqpid: chamber.eqpid, chamber: displayValue(chamber.chamber, t) })}>{t.historyCount(maps.data.history[chamber.eqpid])}</button>
+                        : <b>{t.historyCount(0)}</b>}</span>}
+                  </div>
+                  <span>{t.wafers(chamber.wafers.length)}</span>
+                </div>
                 <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, Boolean(reasons[`${prcGroup}|${eqp.eqp}`])))}</div>
               </div>)}
             </div>
@@ -308,6 +368,7 @@ export function DefectClusterPcPage() {
         </div>
       </section>)}
     </main>
+    <HistoryDialog snapshot={catalog?.snapshot} target={historyTarget} onClose={() => setHistoryTarget(null)} t={t} language={language} />
     <button type="button" className="defect-back-to-top" aria-label={t.top} title={t.top} onClick={() => container.current?.scrollTo({ top: 0, behavior: "smooth" })}><ArrowUp aria-hidden="true" className="size-4" /></button>
   </div>
 }

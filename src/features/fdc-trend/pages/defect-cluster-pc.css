@@ -1,6 +1,8 @@
 /* Defect SPIDER 몰림PC 이상감지 화면 (l0_spider defect-list.css + cluster-pc.css에서 이 화면이 쓰는 부분) */
 
-.defect-list-page {
+/* 과거 이력 팝업은 화면 밖(portal)에 그려지므로 같은 색 변수를 함께 준다. */
+.defect-list-page,
+.cluster-pc-history-dialog {
   --defect-text: #1d1d1f;
   --defect-secondary: #7a7a7a;
   --defect-border: #e0e0e0;
@@ -450,9 +452,45 @@
   text-overflow: ellipsis;
 }
 
-.cluster-pc-chamber-title span {
+.cluster-pc-chamber-title > span {
   flex-shrink: 0;
   color: var(--defect-secondary);
+}
+
+.cluster-pc-chamber-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+  min-width: 0;
+}
+
+/* PM 옆 "과거 7일내 이상건수": 건수를 누르면 과거 wafer map 팝업을 연다. */
+.cluster-pc-history {
+  color: var(--defect-secondary);
+  white-space: nowrap;
+}
+
+.cluster-pc-history button,
+.cluster-pc-history b {
+  margin-left: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+}
+
+.cluster-pc-history button {
+  color: #d9480f;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.cluster-pc-history-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 8px;
 }
 
 /* EQP 이름 옆 "몰림PC 판정 사유" 버튼: 누르면 그 EQP wafer map에 군집 원·비교 영역을 그린다. */

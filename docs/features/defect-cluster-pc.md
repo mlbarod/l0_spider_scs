@@ -16,6 +16,11 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
   - 챔버 묶음은 wafer 수만큼, EQP 묶음은 그 안 챔버 칸 수 합만큼 칸을 차지한다(둘 다 최대 5칸, 넘치면 그 묶음 안에서 다음 줄로). 그래서 1매짜리 EQP는 한 줄에 5개, 5매짜리 EQP는 한 줄에 1개가 들어간다. 묶음 순서는 이름순이라 줄 끝 칸이 빌 수 있다.
   - `_`가 없는 eqpid는 EQP와 챔버 이름을 eqpid 그대로 쓴다. 여러 장비가 섞인 wafer(`EQA01_PM2,EQB02_PM1`)는 EQP `EQA01,EQB02` 묶음에 넣고 챔버 칸에 eqpid 전체를 쓴다. prc_group이 여러 값인 wafer는 `ETCH,CVD` 같은 묶음 하나에 넣고, `(None)` 묶음은 맨 뒤에 둔다.
   - PRC_Group을 하나 고르면 그 값을 포함한 wafer만 나온다. 예: CVD를 고르면 `CVD` 카드와 `ETCH,CVD` 카드가 나온다. 좌표는 결과의 `path` 파일에서 `lot_wf`, `coorx`, `coory` 컬럼을 읽는다. 같은 파일의 `tkout_time`(wafer의 가장 늦은 값, `YYYY-MM-DD HH:MM:SS`), `root_lot_id`도 읽는다. map 좌측 상단에 "설비 진행시간", `device`를, 우측 상단에 `main_step`(main_seq), `met_step`(met_seq), `root_lot_id`, `slot`을 표시한다(2026-11-20, 값이 없으면 `-`). `slot`은 `lot_wf`의 마지막 `_` 뒤 값이다(예: `ABC1234.1_05` → `05`). map 우측 하단에는 defect 수를 `UCC:{n}개`로 표시한다.
+- 과거 7일내 이상건수(2026-11-20): 챔버 이름(PM{chamber}) 옆에 "과거 7일내 이상건수:{n}건"을 표시한다.
+  - 기간: 서버 날짜 기준 오늘 이전 7일(예: 11-20이면 11-13 ~ 11-19) 결과 폴더. 최신 결과 폴더는 빼고, `fail_list_bias_pc.parquet`가 없는 폴더는 이력이 없는 것으로 본다. 읽지 못한 이력 파일은 건너뛴다.
+  - 건수: 같은 line에서 eqpid 값이 하나라도 겹치는 결과 행(wafer) 수다. eqpid가 빈 wafer는 표시하지 않는다.
+  - 1건 이상이면 건수를 눌러 그 wafer map들을 팝업으로 본다(최근 결과부터, 최대 400매, 카드에 결과 기준 시각 표시, 판정 버튼 없음). 원본 좌표 파일이 지워졌으면 그 카드에 오류만 보인다.
+  - API: `maps` 응답에 `history: { eqpid: 건수 }`를 더했다. 팝업은 `GET /api/defect-spider/cluster-pc/history?snapshot=&line=&eqpid=`(최신 결과 시각이 다르면 410).
 - 한 번에 최대 400매까지 표시하고, 넘으면 필터를 좁히라는 안내를 띄운다.
 - 빠르게 그리기: 서버가 좌표를 0.1mm 정수 배열로 줄여 보내고(gzip), 화면은 canvas에 직접 그린다. 화면에 보이는 wafer만 먼저 그리고 나머지는 스크롤할 때 그린다.
   - 측정(synthetic, 개발 PC): 400매(wafer당 480~3,000점) 응답 약 0.4~0.5초, 클릭 후 첫 화면 약 1.1초

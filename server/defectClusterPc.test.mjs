@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
-import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, formatTkout, waferInfo, parseClusters, splitValues } from "./defectClusterPc.mjs"
+import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, formatTkout, waferInfo, historySnapshots, historyCounts, parseClusters, splitValues } from "./defectClusterPc.mjs"
 import { clusterFilterOptions, clusterLabel, eqpSpan, groupByEqp, groupByPrcEqp, splitEqpid } from "../src/features/fdc-trend/utils/defectClusterPc.mjs"
 
 const url = (path) => new URL(`/api/defect-spider/cluster-pc/${path}`, "http://localhost")
@@ -296,5 +296,58 @@ test("같은 판정을 다시 누르면 DELETE로 그 판정 행만 지우도록
     const failing = createClusterPcService({ readList: async () => [{ line: "L", device: "D", main_seq: "U%100", met_seq: "200_RANDOM_PC", lot_wf: "W1", path: join(eads, "a.parquet") }],
       saveFeedback: async () => ({ ok: false }), currentUser: async () => ({ ok: true, knoxId: "user1" }) })
     await assert.rejects(failing(feedbackRequest({ ...key, verdict: "wrong" }, { method: "DELETE" }), url("feedback"), config), { status: 500, message: "Unable to cancel the clustered PC verdict." })
+  } finally { await rm(base, { recursive: true, force: true }) }
+})
+
+test("과거 이력은 오늘 이전 7일 폴더 중 결과 파일이 있는 폴더만 쓰고 최신 결과는 뺀다", async () => {
+  const base = await mkdtemp(join(tmpdir(), "cluster-pc-history-"))
+  try {
+    const names = ["2026-11-12 09:00", "2026-11-13 09:00", "2026-11-15 09:00", "2026-11-16 09:00", "2026-11-19 09:00", "2026-11-20 09:00"]
+    for (const name of names) await mkdir(join(base, name))
+    for (const name of names.filter((value) => value !== "2026-11-16 09:00")) await writeFile(join(base, name, "fail_list_bias_pc.parquet"), "")
+    const found = await historySnapshots(base, "2026-11-19 09:00", new Date(2026, 10, 20, 8, 0))
+    // 11-12는 기간 밖, 11-16은 파일 없음, 11-19는 최신 결과, 11-20은 오늘이라 뺀다.
+    assert.deepEqual(found.map((item) => item.snapshot), ["2026-11-13 09:00", "2026-11-15 09:00"])
+  } finally { await rm(base, { recursive: true, force: true }) }
+})
+
+test("이력 건수는 같은 line에서 eqpid 값이 하나라도 겹치는 wafer 수다", () => {
+  const history = [
+    { line: "L", eqpid: "EQ_1" }, { line: "L", eqpid: "EQ_1" }, { line: "L", eqpid: "EQ_1,EQ_2" },
+    { line: "M", eqpid: "EQ_1" }, { line: "L", eqpid: "EQ_3" },
+  ]
+  const wafers = [{ line: "L", eqpid: "EQ_1" }, { line: "L", eqpid: "EQ_2" }, { line: "L", eqpid: "EQ_4" }, { line: "L", eqpid: "" }]
+  assert.deepEqual(historyCounts(history, wafers), { EQ_1: 3, EQ_2: 1, EQ_4: 0 })
+})
+
+test("maps는 챔버별 과거 이력 건수를, history는 그 챔버의 과거 wafer map을 돌려준다", async () => {
+  const base = await mkdtemp(join(tmpdir(), "cluster-pc-history-"))
+  try {
+    const listRoot = join(base, "list"), eads = join(base, "eads")
+    for (const name of ["2026-11-18 09:00", "2026-11-19 09:00", "2026-11-20 09:00"]) {
+      await mkdir(join(listRoot, name), { recursive: true })
+      await writeFile(join(listRoot, name, "fail_list_bias_pc.parquet"), "")
+    }
+    await mkdir(eads)
+    await writeFile(join(eads, "a.parquet"), "")
+    const row = (lotWf, eqpid) => ({ line: "L", device: "D", sdwt: "S", prc_group: "CVD", main_seq: "M", met_seq: "1", eqpid, lot_wf: lotWf, path: join(eads, "a.parquet") })
+    const lists = {
+      "2026-11-18 09:00": [row("H1_01", "EQ_1"), row("H2_02", "EQ_2")],
+      "2026-11-19 09:00": [row("H3_03", "EQ_1")],
+      "2026-11-20 09:00": [row("W1_05", "EQ_1")],
+    }
+    const service = createClusterPcService({
+      readList: async (path) => lists[Object.keys(lists).find((name) => path.includes(name))],
+      readSource: async () => [{ lot_wf: "H1_01", coorx: 100, coory: 100 }],
+      now: () => new Date(2026, 10, 20, 12, 0),
+    })
+    const config = { listRoot, rawRoots: [eads] }
+    const maps = await service({ method: "GET" }, url(`maps?${new URLSearchParams({ snapshot: "2026-11-20 09:00", line: "L", sdwt: "S" })}`), config)
+    assert.deepEqual(maps.history, { EQ_1: 2 })
+    const history = await service({ method: "GET" }, url(`history?${new URLSearchParams({ snapshot: "2026-11-20 09:00", line: "L", eqpid: "EQ_1" })}`), config)
+    assert.equal(history.total, 2)
+    assert.deepEqual(history.wafers.map((wafer) => [wafer.snapshot, wafer.lotWf, wafer.slot, wafer.xy]), [["2026-11-19 09:00", "H3_03", "03", []], ["2026-11-18 09:00", "H1_01", "01", [1, 1]]])
+    await assert.rejects(service({ method: "GET" }, url(`history?${new URLSearchParams({ snapshot: "2026-11-19 09:00", line: "L", eqpid: "EQ_1" })}`), config), { status: 410 })
+    await assert.rejects(service({ method: "GET" }, url(`history?${new URLSearchParams({ snapshot: "2026-11-20 09:00", line: "L" })}`), config), { status: 400 })
   } finally { await rm(base, { recursive: true, force: true }) }
 })

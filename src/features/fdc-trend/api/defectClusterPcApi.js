@@ -19,6 +19,8 @@ async function get(resource, params, signal) {
 
 export const fetchClusterPcCatalog = (signal) => get("catalog", {}, signal)
 export const fetchClusterPcMaps = (snapshot, filters, signal) => get("maps", { snapshot, ...filters }, signal)
+// 챔버(eqpid)의 과거 7일 몰림 wafer map(최신 결과 제외)
+export const fetchClusterPcHistory = (snapshot, line, eqpid, signal) => get("history", { snapshot, line, eqpid }, signal)
 
 // verdict: "correct"(몰림PC 맞음) | "wrong"(몰림PC 아님). remove = true면 저장된 그 판정을 지운다(같은 버튼을 다시 누른 경우).
 export async function saveClusterPcFeedback({ snapshot, wafer, verdict, remove = false }) {

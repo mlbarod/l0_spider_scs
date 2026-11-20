@@ -43,7 +43,8 @@ function createParquetReader(read, maxEntries = 32) {
   }
 }
 
-const readList = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors }), 4)
+// 최신 결과 1개 + 과거 7일 이력 폴더를 함께 쓰므로 8개까지 기억한다.
+const readList = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors }), 8)
 // 좌표 파일은 좌표 3개 컬럼과 카드 표시용 2개 컬럼만 읽는다(12개 컬럼 전체를 풀지 않아 빠르다). 없는 컬럼은 빈 값이 된다.
 const readPoints = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf", "coorx", "coory", "tkout_time", "root_lot_id"] }))
 
@@ -81,6 +82,44 @@ export async function latestClusterSnapshot(root) {
     }
   }
   return null
+}
+
+// 과거 이상 이력: 오늘(서버 날짜) 이전 HISTORY_DAYS일(어제까지) 결과 폴더를 쓴다. 최신 결과 폴더는 빼고,
+// 결과 파일이 없는 폴더는 이력이 없는 것으로 본다(예: 11-20 기준 11-13 ~ 11-19 폴더).
+export const HISTORY_DAYS = 7
+const localDate = (date) => [date.getFullYear(), date.getMonth() + 1, date.getDate()].map((value) => String(value).padStart(2, "0")).join("-")
+export async function historySnapshots(root, latest, now = new Date()) {
+  const end = localDate(now)
+  const start = localDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - HISTORY_DAYS))
+  const entries = await readdir(root, { withFileTypes: true })
+  const names = entries.filter((entry) => entry.isDirectory() && /^\d{4}-\d{2}-\d{2}/.test(entry.name)).map((entry) => entry.name).sort()
+  const found = []
+  for (const name of names) {
+    const day = name.slice(0, 10)
+    if (name === latest || day < start || day >= end) continue
+    const candidate = join(root, name, LIST_FILE)
+    try {
+      if ((await stat(candidate)).isFile()) found.push({ snapshot: name, listPath: await confinedPath(candidate, [root]) })
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error
+    }
+  }
+  return found
+}
+
+// eqpid는 "A_1,A_2"처럼 여러 값일 수 있다. 값이 하나라도 겹치면 같은 챔버 이력으로 센다.
+const eqpidParts = (value) => text(value).split(",").map((item) => item.trim()).filter(Boolean)
+export const sameChamber = (a, b) => { const parts = eqpidParts(b); return eqpidParts(a).some((part) => parts.includes(part)) }
+
+// 화면에 나온 챔버(eqpid)마다 같은 line의 과거 이력 wafer 수. eqpid가 빈 wafer는 세지 않는다.
+export function historyCounts(historyRows, wafers) {
+  const counts = {}
+  for (const wafer of wafers) {
+    const key = text(wafer.eqpid)
+    if (!key || Object.hasOwn(counts, key)) continue
+    counts[key] = historyRows.filter((row) => row.line === wafer.line && sameChamber(row.eqpid, key)).length
+  }
+  return counts
 }
 
 // 배치 결과의 clusters 컬럼(JSON 문자열)을 화면 표시용으로 검증한다. 컬럼이 없거나(이전 결과) 깨졌으면 빈 배열.
@@ -198,7 +237,7 @@ async function requestCurrentUser(req) {
   return resolveCurrentUser(getRemoteIp(req))
 }
 
-export function createClusterPcService({ readList: readListFile = readList, readSource = readPoints, saveFeedback = runClusterPcFeedback, currentUser = requestCurrentUser } = {}) {
+export function createClusterPcService({ readList: readListFile = readList, readSource = readPoints, saveFeedback = runClusterPcFeedback, currentUser = requestCurrentUser, now = () => new Date() } = {}) {
   async function load(config) {
     const root = config.listRoot
     let latest
@@ -206,6 +245,29 @@ export function createClusterPcService({ readList: readListFile = readList, read
     catch (error) { if (error.code === "ENOENT") return { configured: false }; throw error }
     if (!latest) return { configured: true, snapshot: "", rows: [] }
     return { configured: true, snapshot: latest.snapshot, rows: clusterRows(await readListFile(latest.listPath)) }
+  }
+
+  // 과거 이력 행(각 행에 결과 폴더 이름 snapshot을 붙인다). 읽지 못한 이력 파일은 건너뛰어 최신 결과 화면은 그대로 보여준다.
+  async function loadHistory(config, latest) {
+    const rows = []
+    for (const item of await historySnapshots(config.listRoot, latest, now())) {
+      try { rows.push(...clusterRows(await readListFile(item.listPath)).map((row) => ({ ...row, snapshot: item.snapshot }))) }
+      catch (error) { console.error(`[defect-cluster-pc] history skipped: ${item.snapshot}`, error.message) }
+    }
+    return rows
+  }
+
+  function readWafers(rows, roots) {
+    return mapLimit(rows, READ_CONCURRENCY, async (row) => {
+      const base = { line: row.line, device: row.device, mainSeq: row.mainSeq, metSeq: row.metSeq, eqpid: row.eqpid, prcGroup: row.prcGroup, lotWf: row.lotWf, clusters: row.clusters, ...(row.snapshot ? { snapshot: row.snapshot } : {}) }
+      try {
+        if (!row.path.endsWith(".parquet")) throw requestError("Not a parquet file.")
+        const source = await readSource(await confinedPath(row.path, roots))
+        return { ...base, ...waferInfo(source, row.lotWf), xy: packPoints(source, row.lotWf) }
+      } catch (error) {
+        return { ...base, xy: [], error: error.code === "ENOENT" ? "Source file not found." : error.code === "DEFECT_PATH_DENIED" ? "Path is not allowed." : "Unable to read the source file." }
+      }
+    })
   }
 
   // POST = 판정 저장(덮어쓰기), DELETE = 같은 판정을 다시 눌러 취소(그 판정 행만 지운다).
@@ -239,6 +301,18 @@ export function createClusterPcService({ readList: readListFile = readList, read
       return { ok: true, configured: data.configured, snapshot: data.snapshot || "",
         rows: (data.rows || []).map((row) => [row.line, row.sdwt, row.prcGroup]) }
     }
+    if (command === "history") {
+      const line = text(url.searchParams.get("line")), eqpid = text(url.searchParams.get("eqpid"))
+      if (!line || !eqpid) throw requestError("Select a chamber.")
+      const data = await load(config)
+      if (!data.configured) throw requestError(RESULT_NOT_FOUND, 404)
+      if (text(url.searchParams.get("snapshot")) !== data.snapshot) throw requestError(RESULT_CHANGED, 410)
+      const compare = (a, b) => a.localeCompare(b, undefined, { numeric: true })
+      // 최근 결과부터 보여준다.
+      const selected = (await loadHistory(config, data.snapshot)).filter((row) => row.line === line && sameChamber(row.eqpid, eqpid))
+        .sort((a, b) => compare(b.snapshot, a.snapshot) || compare(a.lotWf, b.lotWf))
+      return { ok: true, snapshot: data.snapshot, total: selected.length, limit: MAX_WAFERS, wafers: await readWafers(selected.slice(0, MAX_WAFERS), config.rawRoots) }
+    }
     if (command !== "maps") throw requestError("Unsupported clustered PC request.", 404)
     const filters = Object.fromEntries(FILTER_KEYS.map((key) => [key, text(url.searchParams.get(key))]))
     if (!filters.line) throw requestError("Select a Line.")
@@ -248,19 +322,9 @@ export function createClusterPcService({ readList: readListFile = readList, read
     // 화면이 본 결과와 다른 시각의 결과를 섞어 그리지 않는다.
     if (text(url.searchParams.get("snapshot")) !== data.snapshot) throw requestError(RESULT_CHANGED, 410)
     const selected = selectRows(data.rows, filters)
-    const rows = selected.slice(0, MAX_WAFERS)
-    const roots = config.rawRoots
-    const wafers = await mapLimit(rows, READ_CONCURRENCY, async (row) => {
-      const base = { line: row.line, device: row.device, mainSeq: row.mainSeq, metSeq: row.metSeq, eqpid: row.eqpid, prcGroup: row.prcGroup, lotWf: row.lotWf, clusters: row.clusters }
-      try {
-        if (!row.path.endsWith(".parquet")) throw requestError("Not a parquet file.")
-        const source = await readSource(await confinedPath(row.path, roots))
-        return { ...base, ...waferInfo(source, row.lotWf), xy: packPoints(source, row.lotWf) }
-      } catch (error) {
-        return { ...base, xy: [], error: error.code === "ENOENT" ? "Source file not found." : error.code === "DEFECT_PATH_DENIED" ? "Path is not allowed." : "Unable to read the source file." }
-      }
-    })
-    return { ok: true, snapshot: data.snapshot, total: selected.length, limit: MAX_WAFERS, wafers }
+    const wafers = await readWafers(selected.slice(0, MAX_WAFERS), config.rawRoots)
+    // history = { eqpid: 과거 7일 이상 wafer 수 }
+    return { ok: true, snapshot: data.snapshot, total: selected.length, limit: MAX_WAFERS, wafers, history: historyCounts(await loadHistory(config, data.snapshot), wafers) }
   }
 }
 
