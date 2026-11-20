@@ -451,3 +451,11 @@ test("MY EQP 기준정보는 DB 상태와 무관하게 자설비 파일 연결 �
     }
   }
 })
+
+test("data connections disabled still allows clustered PC file reads including history", () => {
+  for (const pathname of ["/api/defect-spider/cluster-pc/catalog", "/api/defect-spider/cluster-pc/maps", "/api/defect-spider/cluster-pc/history"]) {
+    const response = createResponse()
+    const blocked = blockDisabledDataRequest({ method: "GET", url: `${pathname}?line=L`, headers: { host: "localhost" } }, response, {}, () => {})
+    assert.equal(blocked, false, pathname)
+  }
+})

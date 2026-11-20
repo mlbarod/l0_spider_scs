@@ -137,7 +137,7 @@ export function blockDisabledDataRequest(
   const isAllowedDefectRead = (
     isDefaultEnabled(environment, "SCS_DEFECT_DATA_ENABLED")
     && isExactPath
-    && ["/api/defect-filters", "/api/defect-file", "/api/defect-spider/cluster-pc/catalog", "/api/defect-spider/cluster-pc/maps"].includes(normalizedPathname)
+    && ["/api/defect-filters", "/api/defect-file", "/api/defect-spider/cluster-pc/catalog", "/api/defect-spider/cluster-pc/maps", "/api/defect-spider/cluster-pc/history"].includes(normalizedPathname)
     && req.method === "GET"
   )
   const isAllowedMappingRead = (
