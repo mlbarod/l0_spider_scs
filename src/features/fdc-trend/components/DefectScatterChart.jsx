@@ -6,7 +6,6 @@ import { useLanguage } from "@/i18n"
 import { CHANGE_HISTORY_TEXT, DefectPmHistory } from "./DefectPmHistory"
 import { sanitizeErrorMessage } from "../api/errorMessage.js"
 import { ChartHistoryDialog } from "./ChartHistoryDialog"
-import { ChartClipboardButton } from "./ChartClipboardButton"
 import { renderDefectChartPng } from "../utils/defectChartImage"
 
 const EMPTY_LIST = []
@@ -70,8 +69,7 @@ export function DefectScatterChart({ failData, allData, eqpCh, historyEntry }) {
       <p className="flex items-center gap-1 px-4 pb-3 text-[11px] text-muted-foreground" data-i18n-skip><span className="w-4 border-t border-dashed border-green-600" />{(CHANGE_HISTORY_TEXT[language] ?? CHANGE_HISTORY_TEXT.ko).legend}</p>
       {invalidCount > 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">시간 또는 값이 유효하지 않은 {invalidCount}행은 표시에서 제외했습니다.</p> : null}
       {historyEntry ? (
-        <div className="flex justify-end gap-2 px-4 pb-3">
-          <ChartClipboardButton prepareImage={() => renderDefectChartPng({ series, domain: baseDomain, pmRows })} />
+        <div className="flex justify-end px-4 pb-3">
           <ChartHistoryDialog {...historyEntry} app="defect-spider"
             prepareImage={() => renderDefectChartPng({ series, domain: baseDomain, pmRows })} />
         </div>

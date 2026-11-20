@@ -45,7 +45,6 @@ import { ResizableFilterArea } from "../components/ResizableFilterArea"
 import { fetchMyEqpRegistrations } from "../api/myEqpRegistrationApi"
 import { fetchCurrentUser } from "../api/currentUserApi"
 import { ChartHistoryDialog } from "../components/ChartHistoryDialog"
-import { ChartClipboardButton } from "../components/ChartClipboardButton"
 import { renderChartPng } from "../utils/historyChartImage"
 import { fetchLineMapping } from "../api/mappingConfigApi"
 import {
@@ -1507,7 +1506,6 @@ const ErdScatterCard = memo(function ErdScatterCard({
             )}
             </DialogContent>
           </Dialog>
-          <ChartClipboardButton prepareImage={prepareHistoryImage} disabled={chartQuery.isLoading || chartQuery.isError || !points.length} />
           {historyActionsEnabled ? (
             <ChartHistoryDialog
               title={historyEntryTitle}
