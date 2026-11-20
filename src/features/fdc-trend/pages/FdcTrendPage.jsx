@@ -293,10 +293,12 @@ function formatActTimeTick(value) {
 }
 
 function safeHistoryUrl(value) {
-  const url = String(value ?? "").trim()
+  // ctttm_url values arrive as "ttps://ctttm.eqms...."; restore "https://" and the "eqmsscs." host.
+  let url = String(value ?? "").trim().replace(/^ttps:\/\//i, "https://")
   if (!url || /^(javascript|data|vbscript):/i.test(url)) return ""
   // ctttm_url may omit the scheme (e.g. "ctttm.eqmsscs...:7443/..."); open it as an absolute https URL.
-  return /^([a-z][a-z\d+.-]*:\/\/|\/)/i.test(url) ? url : `https://${url}`
+  url = /^([a-z][a-z\d+.-]*:\/\/|\/)/i.test(url) ? url : `https://${url}`
+  return url.replace(/^([a-z][a-z\d+.-]*:\/\/(?:[^/?#]*\.)?)eqms\./i, "$1eqmsscs.")
 }
 
 function numericDomain(values, fallbackPadding) {
