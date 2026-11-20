@@ -234,17 +234,17 @@ test("wafer map은 PRC_Group별, 그 안을 EQP별·챔버별로 묶고 묶음 �
   ]
   const view = groupByPrcEqp(wafers).map(([prc, eqps]) => [prc, eqps.map((eqp) => [eqp.eqp, eqp.span, eqp.count, eqp.chambers.map((item) => [item.chamber, item.span, item.wafers.map((wafer) => wafer.lotWf)])])])
   assert.deepEqual(view, [
-    ["CVD", [["E1", 2, 2, [["PM1", 1, ["W6"]], ["PM2", 1, ["W4"]]]], ["E2", 2, 2, [["PM1", 2, ["W1", "W5"]]]], ["E3", 5, 5, [["PM1", 4, ["W7", "W8", "W9", "W10"]], ["PM2", 1, ["W11"]]]]]],
-    ["ETCH,CVD", [["E1", 1, 1, [["PM1", 1, ["W3"]]]]]],
-    [NO_VALUE, [["E9", 1, 1, [["PM1", 1, ["W2"]]]]]],
+    ["CVD", [["E1", 2, 2, [["Chamber: PM1", 1, ["W6"]], ["Chamber: PM2", 1, ["W4"]]]], ["E2", 2, 2, [["Chamber: PM1", 2, ["W1", "W5"]]]], ["E3", 5, 5, [["Chamber: PM1", 4, ["W7", "W8", "W9", "W10"]], ["Chamber: PM2", 1, ["W11"]]]]]],
+    ["ETCH,CVD", [["E1", 1, 1, [["Chamber: PM1", 1, ["W3"]]]]]],
+    [NO_VALUE, [["E9", 1, 1, [["Chamber: PM1", 1, ["W2"]]]]]],
   ])
   assert.deepEqual([1, 3, 5, 6, 12].map(eqpSpan), [1, 3, 5, 5, 5])
-  assert.deepEqual(splitEqpid("EQA01_PM1"), { eqp: "EQA01", chamber: "PM1" })
-  assert.deepEqual(splitEqpid("EQA01_PM1,EQA01_PM2"), { eqp: "EQA01", chamber: "PM1,PM2" })
+  assert.deepEqual(splitEqpid("EQA01_PM1"), { eqp: "EQA01", chamber: "Chamber: PM1" })
+  assert.deepEqual(splitEqpid("EQA01_PM1,EQA01_PM2"), { eqp: "EQA01", chamber: "Chamber: PM1,PM2" })
   assert.deepEqual(splitEqpid("EQA01_PM2,EQB02_PM1"), { eqp: "EQA01,EQB02", chamber: "EQA01_PM2,EQB02_PM1" })
   assert.deepEqual(splitEqpid("EQC03"), { eqp: "EQC03", chamber: "EQC03" })
-  assert.deepEqual(splitEqpid("EQD_CH_A"), { eqp: "EQD", chamber: "PMCH_A" })
-  assert.deepEqual(splitEqpid("EQE01_1,EQE01_A"), { eqp: "EQE01", chamber: "PM1,PMA" })
+  assert.deepEqual(splitEqpid("EQD_CH_A"), { eqp: "EQD", chamber: "Chamber: CH_A" })
+  assert.deepEqual(splitEqpid("EQE01_1,EQE01_A"), { eqp: "EQE01", chamber: "Chamber: 1,A" })
 })
 
 test("결과와 원본 좌표는 /appdata/abnormal_trend/pic/defect 아래에서 읽는다", () => {

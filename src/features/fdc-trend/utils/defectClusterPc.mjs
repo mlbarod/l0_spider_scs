@@ -41,17 +41,16 @@ export function groupByEqp(wafers) {
 // "ETCH,CVD" 묶음 하나에 넣는다(같은 wafer를 두 번 그리지 않게). NO_VALUE 묶음은 맨 뒤에 둔다.
 export const GRID_COLUMNS = 5
 
-// 챔버는 "PM{chamber}"로 표시한다("EQA01_1" -> "PM1"). 이미 PM으로 시작하면 그대로 둔다.
-const chamberName = (value) => (/^PM/i.test(value) ? value : `PM${value}`)
-
-// eqpid "EQA01_1" = EQP "EQA01" + 챔버 "PM1". 쉼표로 여러 값이면 EQP는 중복 없이 쉼표로 잇고,
+// eqpid "EQA01_1" = EQP "EQA01" + 챔버 "1"(화면 표시 "Chamber: 1"). 쉼표로 여러 값이면 EQP는 중복 없이 쉼표로 잇고,
 // 챔버 이름은 EQP가 하나일 때만 "_" 뒤 값으로 줄인다(여러 EQP가 섞이면 eqpid 전체를 쓴다).
+// "_"가 없는 eqpid는 챔버 값이 없으므로 "Chamber: "를 붙이지 않고 eqpid 그대로 쓴다.
 export function splitEqpid(eqpid) {
   const parts = String(eqpid || "").split(",").map((value) => value.trim()).filter(Boolean)
   if (!parts.length) return { eqp: NO_EQPID, chamber: NO_EQPID }
   const eqps = [...new Set(parts.map((value) => value.split("_")[0]))]
-  const chambers = parts.map((value) => (value.includes("_") ? chamberName(value.slice(value.indexOf("_") + 1)) : value))
-  return { eqp: eqps.join(","), chamber: eqps.length === 1 ? chambers.join(",") : parts.join(",") }
+  const chambers = parts.map((value) => (value.includes("_") ? value.slice(value.indexOf("_") + 1) : value))
+  const label = parts.every((value) => value.includes("_")) ? `Chamber: ${chambers.join(",")}` : chambers.join(",")
+  return { eqp: eqps.join(","), chamber: eqps.length === 1 ? label : parts.join(",") }
 }
 
 // EQP 묶음 = { eqp, span, count, chambers: [{ eqpid, chamber, span, wafers }] }

@@ -529,3 +529,48 @@
   outline: 2px solid var(--defect-focus);
   outline-offset: 2px;
 }
+
+/* 필터 영역: 왼쪽 필터, 오른쪽 "몰림PC 알고리즘 설명" 버튼 */
+.cluster-pc-filter-body {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.cluster-pc-filter-body > .defect-filter-rows {
+  flex: 1;
+  min-width: 0;
+}
+
+.cluster-pc-guide-button {
+  flex-shrink: 0;
+  height: auto;
+  gap: 10px;
+  padding: 18px 28px;
+  border: 1px solid #c9dafc;
+  border-radius: 14px;
+  background: #fff;
+  color: #2563eb;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.cluster-pc-guide-button:hover {
+  border-color: #2563eb;
+  background: #eef4ff;
+  color: #2563eb;
+}
+
+/* 알고리즘 설명 팝업: 설명 페이지(약 980px 폭)를 iframe으로 보여주고 iframe 안에서 스크롤한다. */
+.cluster-pc-guide-dialog {
+  height: 85vh;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.cluster-pc-guide-frame {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 8px;
+}

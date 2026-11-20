@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { ArrowLeft, ArrowUp, LoaderCircle } from "lucide-react"
+import { ArrowLeft, ArrowUp, BookOpen, LoaderCircle } from "lucide-react"
 import { Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
@@ -39,6 +39,7 @@ export const CLUSTER_PC_TEXT = {
     historyTitle: (chamber) => `${chamber} 과거 7일내 이상 wafer map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 최신 결과 제외 · 최근 결과부터 표시`,
     historyLoading: "과거 wafer map을 불러오는 중입니다.", noHistory: "과거 7일내 이상 이력이 없습니다.", resultTime: "결과 기준",
     none: "(없음)", noEqpid: "(EQPID 없음)",
+    guide: "몰림PC 알고리즘 설명", guideDescription: "몰림PC 이상감지가 wafer를 판정하는 방법", guidePage: "/cluster-pc-algorithm.html",
   },
   en: {
     title: "Clustered PC Anomaly Detection", home: "SPIDER Home", refresh: "Refresh list", retry: "Retry",
@@ -60,6 +61,7 @@ export const CLUSTER_PC_TEXT = {
     historyTitle: (chamber) => `${chamber} anomaly wafer maps in the past 7 days`, historyDescription: (eqpid) => `EQPID ${eqpid} · Latest results excluded · Newest first`,
     historyLoading: "Loading past wafer maps.", noHistory: "No anomalies in the past 7 days.", resultTime: "Result time",
     none: "(None)", noEqpid: "(No EQPID)",
+    guide: "Clustered PC Algorithm Guide", guideDescription: "How Clustered PC Anomaly Detection judges wafers", guidePage: "/cluster-pc-algorithm.en.html",
   },
   "zh-CN": {
     title: "聚集PC异常检测", home: "返回 SPIDER 首页", refresh: "刷新列表", retry: "重试",
@@ -81,6 +83,7 @@ export const CLUSTER_PC_TEXT = {
     historyTitle: (chamber) => `${chamber} 过去7天内异常晶圆 map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 不含最新结果 · 从最近结果开始显示`,
     historyLoading: "正在加载过去的晶圆 map。", noHistory: "过去7天内没有异常记录。", resultTime: "结果基准",
     none: "（无）", noEqpid: "（无 EQPID）",
+    guide: "聚集PC算法说明", guideDescription: "聚集PC异常检测如何判定晶圆", guidePage: "/cluster-pc-algorithm.zh-CN.html",
   },
 }
 
@@ -277,6 +280,8 @@ export function DefectClusterPcPage() {
   const toggleReason = (key) => setReasons((previous) => ({ ...previous, [key]: !previous[key] }))
   // 과거 7일 이상 이력 팝업 대상 챔버
   const [historyTarget, setHistoryTarget] = useState(null)
+  // 몰림PC 알고리즘 설명 팝업
+  const [guideOpen, setGuideOpen] = useState(false)
 
   async function saveFeedback(wafer, verdict) {
     const key = waferKey(wafer)
@@ -324,10 +329,14 @@ export function DefectClusterPcPage() {
       {catalogError && <div role="alert" className="defect-filter-error"><span>{catalogError}</span><button type="button" className="defect-filter-pill" onClick={refresh}>{t.retry}</button></div>}
       {catalog?.configured === false && <p role="status" className="defect-filter-notice">{t.notConfigured}</p>}
       {catalog?.configured && !catalog.rows.length && <p role="status" className="defect-filter-notice">{t.noResults}</p>}
+      {/* 필터 오른쪽 빈 공간: 몰림PC 알고리즘 설명(public/cluster-pc-algorithm*.html) 팝업 버튼 */}
+      <div className="cluster-pc-filter-body">
       <div className="defect-filter-rows">
         <Pills t={t} title="Line Name" values={options.line} selected={filters.line} loading={!catalog && !catalogError} onSelect={(value) => select("line", value)} />
         <Pills t={t} title="SDWT" values={filters.line ? options.sdwt : []} selected={filters.sdwt} disabled={!filters.line} placeholder={!filters.line ? t.lineFirst : undefined} onSelect={(value) => select("sdwt", value)} />
         <Pills t={t} title="PRC_Group" values={["ALL", ...options.prcGroup]} selected={filters.prcGroup} disabled={!filters.line || !filters.sdwt} placeholder={!filters.line ? t.lineFirst : !filters.sdwt ? t.sdwtFirst : undefined} onSelect={(value) => select("prcGroup", value)} />
+      </div>
+      <Button type="button" variant="outline" className="cluster-pc-guide-button" onClick={() => setGuideOpen(true)}><BookOpen aria-hidden="true" className="size-5" />{t.guide}</Button>
       </div>
     </section>
     <main className="defect-list-content space-y-4">
@@ -368,6 +377,17 @@ export function DefectClusterPcPage() {
         </div>
       </section>)}
     </main>
+    <Dialog open={guideOpen} onOpenChange={setGuideOpen}>
+      <DialogContent className="cluster-pc-guide-dialog sm:max-w-[1040px]">
+        <DialogHeader>
+          <DialogTitle>{t.guide}</DialogTitle>
+          <DialogDescription className="sr-only">{t.guideDescription}</DialogDescription>
+        </DialogHeader>
+        {/* 팝업을 열면 포커스가 iframe 안으로 들어가 Esc가 팝업에 전달되지 않는다. 같은 출처 페이지라 안에서 Esc를 받아 닫는다. */}
+        <iframe src={t.guidePage} title={t.guide} className="cluster-pc-guide-frame"
+          onLoad={(event) => event.currentTarget.contentWindow?.addEventListener("keydown", (key) => { if (key.key === "Escape") setGuideOpen(false) })} />
+      </DialogContent>
+    </Dialog>
     <HistoryDialog snapshot={catalog?.snapshot} target={historyTarget} onClose={() => setHistoryTarget(null)} t={t} language={language} />
     <button type="button" className="defect-back-to-top" aria-label={t.top} title={t.top} onClick={() => container.current?.scrollTo({ top: 0, behavior: "smooth" })}><ArrowUp aria-hidden="true" className="size-4" /></button>
   </div>
