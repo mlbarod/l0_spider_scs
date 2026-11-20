@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
-import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, formatTkout, waferInfo, historySnapshots, historyCounts, parseClusters, splitValues } from "./defectClusterPc.mjs"
+import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, formatTkout, waferInfo, historySnapshots, historyCounts, uniqueHistoryRows, parseClusters, splitValues } from "./defectClusterPc.mjs"
 import { clusterFilterOptions, clusterLabel, eqpSpan, groupByEqp, groupByPrcEqp, splitEqpid } from "../src/features/fdc-trend/utils/defectClusterPc.mjs"
 
 const url = (path) => new URL(`/api/defect-spider/cluster-pc/${path}`, "http://localhost")
@@ -80,6 +80,8 @@ test("maps는 필터에 맞는 wafer만 읽고, 허용 폴더 밖 경로와 갱�
     const service = createClusterPcService({
       readList: async () => list,
       readSource: async (path) => { sourceReads.push(path); return [{ lot_wf: "W1", coorx: 1000, coory: 2000, tkout_time: "2026-11-18 01:02:03", root_lot_id: "R1" }, { lot_wf: "W2", coorx: -1000, coory: 0 }] },
+      // 과거 7일 이력 폴더가 없는 날짜로 고정해 필터에 맞는 wafer 읽기만 센다.
+      now: () => new Date(2026, 11, 31),
     })
     const params = new URLSearchParams({ snapshot: "2026-11-18 09:00", line: "L", sdwt: "S1", prcGroup: "CVD" })
     const body = await service({ method: "GET" }, url(`maps?${params}`), config)
@@ -349,5 +351,51 @@ test("maps는 챔버별 과거 이력 건수를, history는 그 챔버의 과거
     assert.deepEqual(history.wafers.map((wafer) => [wafer.snapshot, wafer.lotWf, wafer.slot, wafer.xy]), [["2026-11-19 09:00", "H3_03", "03", []], ["2026-11-18 09:00", "H1_01", "01", [1, 1]]])
     await assert.rejects(service({ method: "GET" }, url(`history?${new URLSearchParams({ snapshot: "2026-11-19 09:00", line: "L", eqpid: "EQ_1" })}`), config), { status: 410 })
     await assert.rejects(service({ method: "GET" }, url(`history?${new URLSearchParams({ snapshot: "2026-11-20 09:00", line: "L" })}`), config), { status: 400 })
+  } finally { await rm(base, { recursive: true, force: true }) }
+})
+
+test("이력은 line + lot_wf + 설비 진행시간이 같은 감지를 한 번만 세고, 최신 결과에 있는 감지는 뺀다", () => {
+  const history = [
+    { line: "L", lotWf: "W_01", tkoutTime: "2026-11-19 10:00:00", snapshot: "2026-11-19" },
+    { line: "L", lotWf: "W_02", tkoutTime: "2026-11-18 10:00:00", snapshot: "2026-11-19" },
+    { line: "L", lotWf: "W_02", tkoutTime: "2026-11-18 10:00:00", snapshot: "2026-11-18" },
+    { line: "L", lotWf: "W_02", tkoutTime: "2026-11-17 10:00:00", snapshot: "2026-11-18" },
+    { line: "L", lotWf: "W_03", tkoutTime: "", snapshot: "2026-11-19" },
+    { line: "L", lotWf: "W_03", tkoutTime: "", snapshot: "2026-11-18" },
+  ]
+  const current = [{ line: "L", lotWf: "W_01", tkoutTime: "2026-11-19 10:00:00" }]
+  assert.deepEqual(uniqueHistoryRows(history, current).map((row) => [row.lotWf, row.snapshot]),
+    [["W_02", "2026-11-19"], ["W_02", "2026-11-18"], ["W_03", "2026-11-19"], ["W_03", "2026-11-18"]])
+})
+
+test("maps 이력 건수와 history 팝업은 2일치 중복 적재와 최신 결과 감지를 빼고 센다", async () => {
+  const base = await mkdtemp(join(tmpdir(), "cluster-pc-history-"))
+  try {
+    const listRoot = join(base, "list"), eads = join(base, "eads")
+    for (const name of ["2026-11-18 09:00", "2026-11-19 09:00", "2026-11-20 09:00"]) {
+      await mkdir(join(listRoot, name), { recursive: true })
+      await writeFile(join(listRoot, name, "fail_list_bias_pc.parquet"), "")
+    }
+    await mkdir(eads)
+    await writeFile(join(eads, "a.parquet"), "")
+    const row = (lotWf) => ({ line: "L", device: "D", sdwt: "S", prc_group: "CVD", main_seq: "M", met_seq: "1", eqpid: "EQ_1", lot_wf: lotWf, path: join(eads, "a.parquet") })
+    const lists = {
+      // 11-18 결과의 H1은 11-19 결과에 다시 들어오고, 11-19 결과의 W1은 최신(11-20) 결과에 다시 들어온다.
+      "2026-11-18 09:00": [row("H0_01"), row("H1_02")],
+      "2026-11-19 09:00": [row("H1_02"), row("W1_05")],
+      "2026-11-20 09:00": [row("W1_05"), row("W2_06")],
+    }
+    const tkout = { H0_01: "2026-11-17 01:00:00", H1_02: "2026-11-18 01:00:00", W1_05: "2026-11-19 01:00:00", W2_06: "2026-11-20 01:00:00" }
+    const service = createClusterPcService({
+      readList: async (path) => lists[Object.keys(lists).find((name) => path.includes(name))],
+      readSource: async () => Object.entries(tkout).map(([lot_wf, tkout_time]) => ({ lot_wf, coorx: 100, coory: 100, tkout_time })),
+      now: () => new Date(2026, 10, 20, 12, 0),
+    })
+    const config = { listRoot, rawRoots: [eads] }
+    const maps = await service({ method: "GET" }, url(`maps?${new URLSearchParams({ snapshot: "2026-11-20 09:00", line: "L", sdwt: "S" })}`), config)
+    assert.deepEqual(maps.history, { EQ_1: 2 })
+    const history = await service({ method: "GET" }, url(`history?${new URLSearchParams({ snapshot: "2026-11-20 09:00", line: "L", eqpid: "EQ_1" })}`), config)
+    assert.equal(history.total, 2)
+    assert.deepEqual(history.wafers.map((wafer) => [wafer.snapshot, wafer.lotWf]), [["2026-11-19 09:00", "H1_02"], ["2026-11-18 09:00", "H0_01"]])
   } finally { await rm(base, { recursive: true, force: true }) }
 })

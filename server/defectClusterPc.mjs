@@ -111,6 +111,22 @@ export async function historySnapshots(root, latest, now = new Date()) {
 const eqpidParts = (value) => text(value).split(",").map((item) => item.trim()).filter(Boolean)
 export const sameChamber = (a, b) => { const parts = eqpidParts(b); return eqpidParts(a).some((part) => parts.includes(part)) }
 
+// 일일 배치가 2일치씩 적재해 같은 감지가 여러 결과 폴더(최신 결과 포함)에 다시 나온다.
+// line + lot_wf + 설비 진행시간(tkoutTime)이 같으면 같은 감지로 보고 한 번만 센다.
+// historyRows는 최근 결과부터 정렬되어 있어 가장 최근 결과 행을 남긴다. currentRows(최신 결과)에 있는 감지는 이력에서 뺀다.
+// 설비 진행시간을 읽지 못한 행은 같은 감지인지 알 수 없어 그대로 둔다.
+const detectionKey = (row) => row.tkoutTime ? `${row.line}\u0000${row.lotWf}\u0000${row.tkoutTime}` : ""
+export function uniqueHistoryRows(historyRows, currentRows) {
+  const seen = new Set(currentRows.map(detectionKey).filter(Boolean))
+  return historyRows.filter((row) => {
+    const key = detectionKey(row)
+    if (!key) return true
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 // 화면에 나온 챔버(eqpid)마다 같은 line의 과거 이력 wafer 수. eqpid가 빈 wafer는 세지 않는다.
 export function historyCounts(historyRows, wafers) {
   const counts = {}
@@ -257,6 +273,35 @@ export function createClusterPcService({ readList: readListFile = readList, read
     return rows
   }
 
+  // 행마다 설비 진행시간(원본 좌표 파일의 tkout_time)을 붙인다. known(행 -> 이미 읽은 값)에 있으면 다시 읽지 않는다. 못 읽으면 빈 값.
+  function withTkout(rows, roots, known = new Map()) {
+    return mapLimit(rows, READ_CONCURRENCY, async (row) => {
+      if (known.has(row)) return { ...row, tkoutTime: known.get(row) }
+      try {
+        if (!row.path.endsWith(".parquet")) return { ...row, tkoutTime: "" }
+        return { ...row, tkoutTime: waferInfo(await readSource(await confinedPath(row.path, roots)), row.lotWf).tkoutTime }
+      } catch { return { ...row, tkoutTime: "" } }
+    })
+  }
+
+  // related(행)에 해당하는 과거 이력을 최근 결과부터 정렬하고, 같은 감지(lot_wf + 설비 진행시간)를 한 번만 남긴다.
+  async function relatedHistory(config, data, related, known) {
+    const compare = (a, b) => a.localeCompare(b, undefined, { numeric: true })
+    const history = (await loadHistory(config, data.snapshot)).filter(related)
+      .sort((a, b) => compare(b.snapshot, a.snapshot) || compare(a.lotWf, b.lotWf))
+    if (!history.length) return history
+    // lot_wf가 한 번만 나오면 중복일 수 없으므로 원본 파일을 읽지 않는다.
+    const current = data.rows.filter(related)
+    const waferId = (row) => `${row.line}\u0000${row.lotWf}`
+    const seen = new Map()
+    for (const row of [...history, ...current]) seen.set(waferId(row), (seen.get(waferId(row)) || 0) + 1)
+    const repeated = (rows) => rows.filter((row) => seen.get(waferId(row)) > 1)
+    const repeatedHistory = repeated(history)
+    const [timed, currentRows] = await Promise.all([withTkout(repeatedHistory, config.rawRoots), withTkout(repeated(current), config.rawRoots, known)])
+    const timedByRow = new Map(repeatedHistory.map((row, index) => [row, timed[index]]))
+    return uniqueHistoryRows(history.map((row) => timedByRow.get(row) || row), currentRows)
+  }
+
   function readWafers(rows, roots) {
     return mapLimit(rows, READ_CONCURRENCY, async (row) => {
       const base = { line: row.line, device: row.device, mainSeq: row.mainSeq, metSeq: row.metSeq, eqpid: row.eqpid, prcGroup: row.prcGroup, lotWf: row.lotWf, clusters: row.clusters, ...(row.snapshot ? { snapshot: row.snapshot } : {}) }
@@ -307,10 +352,8 @@ export function createClusterPcService({ readList: readListFile = readList, read
       const data = await load(config)
       if (!data.configured) throw requestError(RESULT_NOT_FOUND, 404)
       if (text(url.searchParams.get("snapshot")) !== data.snapshot) throw requestError(RESULT_CHANGED, 410)
-      const compare = (a, b) => a.localeCompare(b, undefined, { numeric: true })
       // 최근 결과부터 보여준다.
-      const selected = (await loadHistory(config, data.snapshot)).filter((row) => row.line === line && sameChamber(row.eqpid, eqpid))
-        .sort((a, b) => compare(b.snapshot, a.snapshot) || compare(a.lotWf, b.lotWf))
+      const selected = await relatedHistory(config, data, (row) => row.line === line && sameChamber(row.eqpid, eqpid))
       return { ok: true, snapshot: data.snapshot, total: selected.length, limit: MAX_WAFERS, wafers: await readWafers(selected.slice(0, MAX_WAFERS), config.rawRoots) }
     }
     if (command !== "maps") throw requestError("Unsupported clustered PC request.", 404)
@@ -322,9 +365,13 @@ export function createClusterPcService({ readList: readListFile = readList, read
     // 화면이 본 결과와 다른 시각의 결과를 섞어 그리지 않는다.
     if (text(url.searchParams.get("snapshot")) !== data.snapshot) throw requestError(RESULT_CHANGED, 410)
     const selected = selectRows(data.rows, filters)
-    const wafers = await readWafers(selected.slice(0, MAX_WAFERS), config.rawRoots)
-    // history = { eqpid: 과거 7일 이상 wafer 수 }
-    return { ok: true, snapshot: data.snapshot, total: selected.length, limit: MAX_WAFERS, wafers, history: historyCounts(await loadHistory(config, data.snapshot), wafers) }
+    const shown = selected.slice(0, MAX_WAFERS)
+    const wafers = await readWafers(shown, config.rawRoots)
+    // history = { eqpid: 과거 7일 이상 wafer 수 }. 화면에 나온 챔버의 이력만 읽고, 이미 읽은 최신 결과 진행시간은 다시 읽지 않는다.
+    const chambers = [...new Map(wafers.filter((wafer) => text(wafer.eqpid)).map((wafer) => [`${wafer.line}\u0000${wafer.eqpid}`, wafer])).values()]
+    const related = (row) => chambers.some((wafer) => row.line === wafer.line && sameChamber(row.eqpid, wafer.eqpid))
+    const known = new Map(shown.map((row, index) => [row, wafers[index].tkoutTime || ""]))
+    return { ok: true, snapshot: data.snapshot, total: selected.length, limit: MAX_WAFERS, wafers, history: historyCounts(await relatedHistory(config, data, related, known), wafers) }
   }
 }
 
