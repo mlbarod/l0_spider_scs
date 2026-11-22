@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useLanguage } from "@/i18n"
 
 import { fetchClusterPcCatalog, fetchClusterPcHistory, fetchClusterPcMaps, saveClusterPcFeedback } from "../api/defectClusterPcApi"
-import { clusterFilterOptions, clusterLabel, groupByPrcEqp, waferKey, EMPTY_FILTERS, FILTERS, GRID_COLUMNS, NO_EQPID, NO_VALUE } from "../utils/defectClusterPc.mjs"
+import { clusterFilterOptions, clusterLabel, groupByHistory, groupByPrcEqp, waferKey, EMPTY_FILTERS, FILTERS, GRID_COLUMNS, NO_EQPID, NO_VALUE } from "../utils/defectClusterPc.mjs"
 import "./defect-cluster-pc.css"
 
 const MAP_SIZE = 168          // CSS px
@@ -39,6 +39,7 @@ export const CLUSTER_PC_TEXT = {
     historyTitle: (chamber) => `${chamber} 과거 7일내 이상 wafer map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 최신 결과 제외 · 최근 결과부터 표시`,
     historyLoading: "과거 wafer map을 불러오는 중입니다.", noHistory: "과거 7일내 이상 이력이 없습니다.", resultTime: "결과 기준",
     none: "(없음)", noEqpid: "(EQPID 없음)",
+    sortTitle: "설비호기 정렬 순서", sortPrc: "PRC Group", sortHistory: "7일내 이상건수", historyGroup: "과거 7일내 이상건수 많은 순",
     guide: "몰림PC 알고리즘 설명", guideDescription: "몰림PC 이상감지가 wafer를 판정하는 방법", guidePage: "/cluster-pc-algorithm.html",
   },
   en: {
@@ -61,6 +62,7 @@ export const CLUSTER_PC_TEXT = {
     historyTitle: (chamber) => `${chamber} anomaly wafer maps in the past 7 days`, historyDescription: (eqpid) => `EQPID ${eqpid} · Latest results excluded · Newest first`,
     historyLoading: "Loading past wafer maps.", noHistory: "No anomalies in the past 7 days.", resultTime: "Result time",
     none: "(None)", noEqpid: "(No EQPID)",
+    sortTitle: "Equipment sort order", sortPrc: "PRC Group", sortHistory: "Anomalies in 7 days", historyGroup: "Most anomalies in past 7 days first",
     guide: "Clustered PC Algorithm Guide", guideDescription: "How Clustered PC Anomaly Detection judges wafers", guidePage: "/cluster-pc-algorithm.en.html",
   },
   "zh-CN": {
@@ -83,6 +85,7 @@ export const CLUSTER_PC_TEXT = {
     historyTitle: (chamber) => `${chamber} 过去7天内异常晶圆 map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 不含最新结果 · 从最近结果开始显示`,
     historyLoading: "正在加载过去的晶圆 map。", noHistory: "过去7天内没有异常记录。", resultTime: "结果基准",
     none: "（无）", noEqpid: "（无 EQPID）",
+    sortTitle: "设备号排序方式", sortPrc: "PRC Group", sortHistory: "7天内异常数", historyGroup: "按过去7天内异常数从多到少",
     guide: "聚集PC算法说明", guideDescription: "聚集PC异常检测如何判定晶圆", guidePage: "/cluster-pc-algorithm.zh-CN.html",
   },
 }
@@ -251,6 +254,8 @@ export function DefectClusterPcPage() {
   const [filters, setFilters] = useState(EMPTY_FILTERS)
   const [maps, setMaps] = useState({ data: null, loading: false, error: "" })
   const [feedback, setFeedback] = useState({})   // waferKey -> { saved, saving }. 결과 시각이 바뀌면 비운다.
+  // 설비호기 정렬 순서: "prc"(PRC_Group별 묶음, 기본) | "history"(과거 7일내 이상건수 많은 챔버 순)
+  const [sortMode, setSortMode] = useState("prc")
 
   useEffect(() => {
     const controller = new AbortController()
@@ -297,7 +302,9 @@ export function DefectClusterPcPage() {
   }
 
   const options = useMemo(() => clusterFilterOptions(catalog?.rows || [], filters), [catalog, filters])
-  const prcGroups = useMemo(() => groupByPrcEqp(maps.data?.wafers || []), [maps.data])
+  const prcGroups = useMemo(() => sortMode === "history"
+    ? (maps.data?.wafers.length ? [[t.historyGroup, groupByHistory(maps.data.wafers, maps.data.history)]] : [])
+    : groupByPrcEqp(maps.data?.wafers || []), [maps.data, sortMode, t])
   const card = (wafer, index, showReason) => <WaferCard key={`${index}|${waferKey(wafer)}`} wafer={wafer} feedback={feedback[waferKey(wafer)]} onFeedback={saveFeedback} showReason={showReason} t={t} language={language} />
 
   // 상위 필터를 바꾸면 하위 필터는 처음 값(SDWT는 미선택, PRC_Group은 ALL)으로 되돌린다.
@@ -335,6 +342,12 @@ export function DefectClusterPcPage() {
         <Pills t={t} title="Line Name" values={options.line} selected={filters.line} loading={!catalog && !catalogError} onSelect={(value) => select("line", value)} />
         <Pills t={t} title="SDWT" values={filters.line ? options.sdwt : []} selected={filters.sdwt} disabled={!filters.line} placeholder={!filters.line ? t.lineFirst : undefined} onSelect={(value) => select("sdwt", value)} />
         <Pills t={t} title="PRC_Group" values={["ALL", ...options.prcGroup]} selected={filters.prcGroup} disabled={!filters.line || !filters.sdwt} placeholder={!filters.line ? t.lineFirst : !filters.sdwt ? t.sdwtFirst : undefined} onSelect={(value) => select("prcGroup", value)} />
+        <div className="defect-filter-row" role="group" aria-label={t.sortTitle}>
+          <div className="defect-filter-label">{t.sortTitle}</div>
+          <div className="defect-filter-options">
+            {[["prc", t.sortPrc], ["history", t.sortHistory]].map(([mode, label]) => <button type="button" key={mode} className="defect-filter-pill" aria-pressed={sortMode === mode} onClick={() => setSortMode(mode)} title={label}><span>{label}</span></button>)}
+          </div>
+        </div>
       </div>
       <Button type="button" variant="outline" className="cluster-pc-guide-button" onClick={() => setGuideOpen(true)}><BookOpen aria-hidden="true" className="size-5" />{t.guide}</Button>
       </div>
@@ -347,15 +360,15 @@ export function DefectClusterPcPage() {
       {maps.loading && <p role="status" className="flex items-center justify-center gap-2 py-20 text-sm text-muted-foreground"><LoaderCircle className="size-4 animate-spin" />{t.mapsLoading}</p>}
       {maps.error && <div role="alert" className="py-12 text-center text-sm"><p className="text-destructive">{maps.error}</p><Button className="mt-4" variant="outline" onClick={() => { setMaps({ data: null, loading: true, error: "" }); setFilters({ ...filters }) }}>{t.retry}</Button></div>}
       {maps.data && !waferCount && <p className="py-20 text-center text-sm text-muted-foreground">{t.noWafers}</p>}
-      {prcGroups.map(([prcGroup, eqps]) => <section key={prcGroup} aria-label={`PRC_Group ${prcGroup}`} className="defect-scatter-card cluster-pc-group">
+      {prcGroups.map(([prcGroup, eqps]) => <section key={prcGroup} aria-label={sortMode === "history" ? prcGroup : `PRC_Group ${prcGroup}`} className="defect-scatter-card cluster-pc-group">
         <div className="defect-scatter-header"><div><h2>{displayValue(prcGroup, t)}</h2><p>{t.legend}</p></div>
-          <span>{t.groupSummary(eqps.length, eqps.reduce((sum, eqp) => sum + eqp.chambers.length, 0), eqps.reduce((sum, eqp) => sum + eqp.count, 0))}</span></div>
+          <span>{t.groupSummary(new Set(eqps.map((eqp) => eqp.eqp)).size, eqps.reduce((sum, eqp) => sum + eqp.chambers.length, 0), eqps.reduce((sum, eqp) => sum + eqp.count, 0))}</span></div>
         {/* 5칸 격자: EQP 묶음은 챔버 칸 수 합만큼, 챔버 묶음은 wafer 수만큼(각각 최대 5칸) 차지한다. */}
         <div className="cluster-pc-eqp-grid" style={{ gridTemplateColumns: `repeat(${GRID_COLUMNS}, minmax(0, 1fr))` }}>
-          {eqps.map((eqp) => <div key={eqp.eqp} role="group" aria-label={`EQP ${eqp.eqp}`} className="cluster-pc-eqp" style={{ gridColumn: `span ${eqp.span}` }}>
+          {eqps.map((eqp) => <div key={eqp.id ?? eqp.eqp} role="group" aria-label={`EQP ${eqp.eqp}`} className="cluster-pc-eqp" style={{ gridColumn: `span ${eqp.span}` }}>
             <div className="cluster-pc-eqp-title">
               <div className="cluster-pc-eqp-name"><strong title={eqp.eqp}>{displayValue(eqp.eqp, t)}</strong>
-                <button type="button" className="cluster-pc-reason-toggle" aria-pressed={Boolean(reasons[`${prcGroup}|${eqp.eqp}`])} onClick={() => toggleReason(`${prcGroup}|${eqp.eqp}`)}>{t.reason}</button></div>
+                <button type="button" className="cluster-pc-reason-toggle" aria-pressed={Boolean(reasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`])} onClick={() => toggleReason(`${prcGroup}|${eqp.id ?? eqp.eqp}`)}>{t.reason}</button></div>
               <span>{t.eqpSummary(eqp.chambers.length, eqp.count)}</span>
             </div>
             <div className="cluster-pc-chamber-grid" style={{ gridTemplateColumns: `repeat(${eqp.span}, minmax(0, 1fr))` }}>
@@ -370,7 +383,7 @@ export function DefectClusterPcPage() {
                   </div>
                   <span>{t.wafers(chamber.wafers.length)}</span>
                 </div>
-                <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, Boolean(reasons[`${prcGroup}|${eqp.eqp}`])))}</div>
+                <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, Boolean(reasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`])))}</div>
               </div>)}
             </div>
           </div>)}

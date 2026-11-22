@@ -83,6 +83,20 @@ export function groupByPrcEqp(wafers) {
     .map(([key, list]) => [key, groupEqpChambers(list)])
 }
 
+// "7일내 이상건수" 정렬: PRC_Group·EQP로 묶지 않고 챔버(EQPID)를 과거 7일 이상건수가 많은 순(같으면 이름 순)으로 늘어놓는다.
+// 화면이 EQP 묶음 구조를 그대로 쓰도록 챔버 하나를 EQP 묶음 하나로 감싼다. id는 같은 EQP의 챔버끼리 겹치지 않게 eqpid를 쓴다.
+// history = { eqpid: 건수 }. 값이 없는 챔버는 0건으로 본다.
+export function groupByHistory(wafers, history = {}) {
+  const count = (eqpid) => (typeof history?.[eqpid] === "number" ? history[eqpid] : 0)
+  return groupByEqp(wafers)
+    .sort(([a], [b]) => count(b) - count(a) || a.localeCompare(b, undefined, { numeric: true }))
+    .map(([eqpid, list]) => {
+      const { eqp, chamber } = splitEqpid(eqpid)
+      const span = eqpSpan(list.length)
+      return { id: eqpid, eqp, span, count: list.length, chambers: [{ eqpid, chamber, span, wafers: list }] }
+    })
+}
+
 // 묶음이 차지할 칸 수: 1 ~ GRID_COLUMNS칸.
 export const eqpSpan = (count) => Math.max(1, Math.min(GRID_COLUMNS, count))
 
