@@ -185,8 +185,8 @@ function FeedbackButtons({ state, onSave, t }) {
   </div>
 }
 
-// showFeedback = false: 과거 이력 팝업(판정 저장은 최신 결과 wafer만 가능하다)
-function WaferCard({ wafer, feedback, onFeedback, showReason, t, language, showFeedback = true }) {
+// showFeedback = false: 과거 이력 팝업(판정 저장은 최신 결과 wafer만 가능하다), Defect SPIDER 이상 wafer map 팝업
+export function WaferCard({ wafer, feedback, onFeedback, showReason, t, language, showFeedback = true }) {
   const count = wafer.xy.length / 2
   const clusters = wafer.clusters || NO_CLUSTERS
   const main = clusters.filter((cluster) => cluster.hit).sort((a, b) => b.zoneRatio - a.zoneRatio)[0]

@@ -35,3 +35,16 @@ export async function fetchDefectFile({ filePath, signal, ...selection }) {
   if (!response.ok) throw new Error(getApiErrorMessage(payload, "파일을 읽을 수 없습니다."))
   return payload
 }
+
+// 차트 빨간 점(NG) wafer의 map 좌표. 좌표가 없는 wafer는 서버가 빼고 보낸다.
+export async function fetchDefectMaps({ filePath, eqpCh, signal, ...selection }) {
+  const params = buildParams(selection)
+  params.set("filePath", filePath)
+  params.set("eqpCh", eqpCh)
+  const response = await fetch(`/api/defect-map?${params}`, {
+    headers: { Accept: "application/json" }, signal,
+  })
+  const payload = await response.json().catch(() => ({}))
+  if (!response.ok) throw new Error(getApiErrorMessage(payload, "wafer map을 불러올 수 없습니다."))
+  return payload
+}

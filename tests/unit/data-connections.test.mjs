@@ -459,3 +459,9 @@ test("data connections disabled still allows clustered PC file reads including h
     assert.equal(blocked, false, pathname)
   }
 })
+
+test("data connections disabled still allows defect anomaly wafer map reads", () => {
+  const response = createResponse()
+  const blocked = blockDisabledDataRequest({ method: "GET", url: "/api/defect-map?line=L", headers: { host: "localhost" } }, response, {}, () => {})
+  assert.equal(blocked, false)
+})

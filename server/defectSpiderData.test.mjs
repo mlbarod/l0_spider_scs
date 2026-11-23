@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import { buildDefectFilters, handleDefectFiltersRequest, handleDefectFileRequest, scopeDefectRows, selectDefectRows } from "./defectSpiderData.mjs"
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { buildDefectFilters, handleDefectFiltersRequest, handleDefectFileRequest, handleDefectMapRequest, readDefectMapWafers, scopeDefectRows, selectDefectMapWafers, selectDefectRows } from "./defectSpiderData.mjs"
 import { buildDefectFilePairs } from "./defectFiles.mjs"
 import { blockDisabledDataRequest } from "./dataConnections.mjs"
 
@@ -306,4 +309,68 @@ test("두 API는 step 값을 목록 경로 결정에 전달한다", async () => 
       new URL(`http://localhost/api/defect-file?line=L1&pathSdwt=RAW-A${query}`), { ...dependencies, resolvePath })
   }
   assert.deepEqual(steps, ["", "", "depo", "depo"])
+})
+
+// 이상 wafer map: 차트 빨간 점과 같은 기준의 NG wafer만, xy_path가 있는 wafer만 고른다.
+const mapPoint = (lot_wf, extra = {}) => ({ tkout_time: 1, fab_value: 1, eqp_ch: "EQ01", lot_wf, wafer_id: lot_wf.slice(-2), xy_path: `/xy/${lot_wf}.parquet`, device: "D1", ...extra })
+
+test("이상 wafer map은 선택 eqp_ch의 빨간 점(NG, 같은 lot/wafer 보호 포함) wafer를 한 번씩 고른다", () => {
+  const points = [
+    mapPoint("LOT1_01", { final_decision: "NG" }), mapPoint("LOT1_01", { final_decision: "NG" }),
+    mapPoint("LOT1_02", { final_decision: "NG", step_seq: "A" }), mapPoint("LOT1_02", { final_decision: "OK", step_seq: "B" }),
+    mapPoint("LOT1_03", { final_decision: "OK" }),
+    mapPoint("LOT1_04", { anomaly_type: "std", std_result: "NG" }),
+    mapPoint("LOT1_05", { final_decision: "NG", xy_path: "" }),
+    mapPoint("LOT1_06", { final_decision: "NG", eqp_ch: "EQ02" }),
+  ]
+  assert.deepEqual(selectDefectMapWafers(points, "EQ01").map((wafer) => wafer.lotWf), ["LOT1_01", "LOT1_02", "LOT1_04"])
+  assert.deepEqual(selectDefectMapWafers(points, "EQ01")[0], { lotWf: "LOT1_01", device: "D1", path: "/xy/LOT1_01.parquet" })
+})
+
+test("이상 wafer map은 좌표가 없거나 읽지 못한 wafer를 빼고 같은 좌표 파일은 한 번만 읽는다", async () => {
+  const base = await mkdtemp(join(tmpdir(), "defect-map-"))
+  try {
+    const root = join(base, "defect")
+    await mkdir(root)
+    const shared = join(root, "100_measure_data_xy.parquet")
+    await writeFile(shared, "")
+    const outside = join(base, "outside.parquet")
+    await writeFile(outside, "")
+    const reads = []
+    const readSource = async (path) => { reads.push(path); return [
+      { lot_wf: "W1", coorx: 1000, coory: -2000, tkout_time: "2026-11-20 10:00:00", root_lot_id: "R1" },
+      { lot_wf: "W2", coorx: 500, coory: 500, tkout_time: "2026-11-21 10:00:00", root_lot_id: "R1" },
+    ] }
+    const wafers = [
+      { lotWf: "W1", device: "D1", path: shared }, { lotWf: "W2", device: "D1", path: shared },
+      { lotWf: "W3", device: "D1", path: shared },
+      { lotWf: "W4", device: "D1", path: join(root, "missing.parquet") },
+      { lotWf: "W5", device: "D1", path: outside },
+    ]
+    const result = await readDefectMapWafers(wafers, { mainSeq: "U%100", metSeq: "200_RANDOM_PC" }, readSource, [root])
+    assert.deepEqual(reads, [shared])
+    assert.deepEqual(result.map((wafer) => [wafer.lotWf, wafer.tkoutTime, wafer.xy]), [["W2", "2026-11-21 10:00:00", [5, 5]], ["W1", "2026-11-20 10:00:00", [10, -20]]])
+    assert.deepEqual({ ...result[1], xy: undefined }, { lotWf: "W1", device: "D1", mainSeq: "U%100", metSeq: "200", tkoutTime: "2026-11-20 10:00:00", rootLotId: "R1", slot: "", xy: undefined, clusters: [] })
+  } finally {
+    await rm(base, { recursive: true, force: true })
+  }
+})
+
+test("이상 wafer map API는 선택 조건의 fail 파일과 eqp_ch만 받는다", async () => {
+  const list = [{ ...fileRows[0], eqpid: "EQ01" }, ...fileRows.slice(1)]
+  const request = (filePath, eqpCh) => new URL(`http://localhost/api/defect-map?${new URLSearchParams({ line: "L1", pathSdwt: "RAW-A", prcGroup: "ETCH", mainAll: "1", metAll: "1", filePath, eqpCh })}`)
+  for (const [filePath, eqpCh, status] of [[fileRows[0].path, "EQ01", 200], [fileRows[0].path, "EQ09", 400], [fileRows[0].path, "", 400],
+    ["/fixture/fail_dir/all_1.parquet", "EQ01", 400], ["/fixture/fail_other.parquet", "EQ01", 400], ["/etc/passwd", "EQ01", 400]]) {
+    const res = response()
+    let readPath
+    await handleDefectMapRequest({ method: "GET" }, res, request(filePath, eqpCh), {
+      ...dependencies, readRows: async () => list,
+      readMapPoints: async (path) => { readPath = path; return [mapPoint("W1", { final_decision: "NG", xy_path: "/outside/a.parquet" })] },
+      readSource: async () => { throw new Error("must not read outside the allowed folder") },
+    })
+    assert.equal(res.status, status, `${filePath} ${eqpCh}`)
+    assert.equal(readPath, status === 200 ? filePath : undefined)
+    // 허용 폴더 밖 좌표 파일은 읽지 않고, 그 wafer는 문구 없이 뺀다.
+    if (status === 200) assert.deepEqual(res.body, { total: 1, limit: 400, wafers: [] })
+  }
 })

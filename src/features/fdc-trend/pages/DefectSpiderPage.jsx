@@ -125,6 +125,7 @@ function DefectChartTrellis({ pair, selection, sdwtLabel, listDate }) {
           </header>
           {allQuery.isSuccess ? (
             <DefectScatterChart failData={failQuery.data} allData={allQuery.data} eqpCh={eqp_ch}
+              mapRequest={{ ...failSelection, filePath: pair.fail_path }}
               historyEntry={buildDefectHistoryEntry({ pair, selection, sdwtLabel, listDate, eqpCh: eqp_ch })} />
           ) : (
             <div className="grid h-[340px] place-items-center p-4 text-sm text-muted-foreground">

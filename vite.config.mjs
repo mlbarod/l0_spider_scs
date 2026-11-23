@@ -32,7 +32,7 @@ import {
 } from "./server/commonCommonalityData.mjs"
 import { handleLatestCommonalityPathRequest } from "./server/latestCommonalityPath.mjs"
 import { handleMappingConfigRequest } from "./server/mappingConfig.mjs"
-import { handleDefectFiltersRequest, handleDefectFileRequest } from "./server/defectSpiderData.mjs"
+import { handleDefectFiltersRequest, handleDefectFileRequest, handleDefectMapRequest } from "./server/defectSpiderData.mjs"
 import { handleDefectClusterPcRequest } from "./server/defectClusterPc.mjs"
 import { handlePassHistoryRequest } from "./server/passHistory.mjs"
 import {
@@ -153,6 +153,11 @@ function mappingConfigApi() {
 
         if (url.pathname === "/api/defect-file") {
           handleDefectFileRequest(req, res, url)
+          return
+        }
+
+        if (url.pathname === "/api/defect-map") {
+          handleDefectMapRequest(req, res, url)
           return
         }
 

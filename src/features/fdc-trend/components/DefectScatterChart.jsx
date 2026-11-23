@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react"
 import { buildDefectScatterSeries, defectInitialDomain, defectScatterDomain } from "../utils/defectScatter.mjs"
 import { DefectScatterPlot } from "./DefectScatterPlot"
 import { DefectWaferList } from "./DefectWaferList"
+import { DefectWaferMapButton } from "./DefectWaferMapDialog"
 import { useLanguage } from "@/i18n"
 import { CHANGE_HISTORY_TEXT, DefectPmHistory } from "./DefectPmHistory"
 import { sanitizeErrorMessage } from "../api/errorMessage.js"
@@ -10,7 +11,7 @@ import { renderDefectChartPng } from "../utils/defectChartImage"
 
 const EMPTY_LIST = []
 
-export function DefectScatterChart({ failData, allData, eqpCh, historyEntry }) {
+export function DefectScatterChart({ failData, allData, eqpCh, historyEntry, mapRequest }) {
   const { language } = useLanguage()
   const [hidden, setHidden] = useState([])
   const [hiddenSteps, setHiddenSteps] = useState([])
@@ -74,6 +75,7 @@ export function DefectScatterChart({ failData, allData, eqpCh, historyEntry }) {
             prepareImage={() => renderDefectChartPng({ series, domain: baseDomain, pmRows })} />
         </div>
       ) : null}
+      {mapRequest && series.selected.some((point) => point.isNg) ? <DefectWaferMapButton request={mapRequest} eqpCh={eqpCh} /> : null}
       <DefectWaferList points={series.selected} />
       <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} line={historyEntry?.fields?.lineId} />
     </div>

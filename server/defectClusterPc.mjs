@@ -46,7 +46,7 @@ function createParquetReader(read, maxEntries = 32) {
 // 최신 결과 1개 + 과거 7일 이력 폴더를 함께 쓰므로 8개까지 기억한다.
 const readList = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors }), 8)
 // 좌표 파일은 좌표 3개 컬럼과 카드 표시용 2개 컬럼만 읽는다(12개 컬럼 전체를 풀지 않아 빠르다). 없는 컬럼은 빈 값이 된다.
-const readPoints = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf", "coorx", "coory", "tkout_time", "root_lot_id"] }))
+export const readPoints = createParquetReader(async (path) => parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf", "coorx", "coory", "tkout_time", "root_lot_id"] }))
 
 // 실제 경로(symlink 해석 후)가 허용 폴더 안일 때만 그 경로를 돌려준다.
 export async function confinedPath(path, roots) {
