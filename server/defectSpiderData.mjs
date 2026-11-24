@@ -223,40 +223,69 @@ async function listNames(path) {
 }
 
 // 각 wafer의 좌표 파일을 찾는다. 날짜 폴더는 진행일 범위(MAP_DATE_WINDOW) 안에서 이른 날짜부터 보고,
-// 그 파일의 lot_wf 목록에 wafer가 처음 나온 파일을 쓴다. 찾지 못한 wafer는 빼고 돌려준다.
+// 그 파일의 lot_wf 목록에 wafer가 처음 나온 파일을 쓴다.
+// 찾지 못한 wafer는 이유별로 센다: 읽을 수 있는 좌표 파일이 하나도 없으면 notFound(찾아본 경로를 missingPaths에 남긴다),
+// 파일은 읽었지만 그 lot_wf가 없으면 lotWfMismatch.
+export const MAX_MISSING_PATHS = 20
 export async function locateDefectMapWafers(wafers, { line, mainSeq, metSeq }, { root = DEFECT_CLUSTER_PC_ROOT, readLotWfs = readDefectMapLotWfs } = {}) {
   const mainNumber = mainSeqNumber(mainSeq)
   const metDir = `${metSeqNumber(metSeq)}_RANDOM_PC`
-  const mapRoot = join(root, text(line), "defect_map")
-  if (!mainNumber || !safeSegment(text(line)) || !safeSegment(metDir)) return []
+  const fileName = `${mainNumber || "{main_seq}"}_measure_data_xy.parquet`
+  const mapRoot = join(root, text(line) || "{line}", "defect_map")
+  const items = wafers.map((wafer) => ({
+    wafer, refs: new Set(), opened: false,
+    from: dateText(wafer.tkoutTime - MAP_DATE_WINDOW.beforeDays * DAY_MS), to: dateText(wafer.tkoutTime + MAP_DATE_WINDOW.afterDays * DAY_MS),
+  }))
   const found = new Map()
-  const byDevice = new Map()
-  for (const wafer of wafers) {
-    const range = { from: dateText(wafer.tkoutTime - MAP_DATE_WINDOW.beforeDays * DAY_MS), to: dateText(wafer.tkoutTime + MAP_DATE_WINDOW.afterDays * DAY_MS) }
-    const list = byDevice.get(wafer.device) ?? []
-    list.push({ wafer, ...range })
-    byDevice.set(wafer.device, list)
-  }
-  for (const [device, items] of byDevice) {
-    // device 값이 없으면 defect_map 아래 모든 device 폴더에서 찾는다.
-    const devices = device ? [device] : await listNames(mapRoot)
-    for (const deviceName of devices.filter(safeSegment)) {
-      const devicePath = join(mapRoot, deviceName)
-      const mainDirs = (await listNames(devicePath)).filter((name) => safeSegment(name) && mainSeqNumber(name) === mainNumber).sort()
-      for (const mainDir of mainDirs) {
-        const metPath = join(devicePath, mainDir, metDir)
-        for (const date of (await listNames(metPath)).filter((name) => DATE_DIR.test(name)).sort()) {
-          const pending = items.filter((item) => !found.has(item.wafer.lotWf) && item.from <= date && date <= item.to)
-          if (!pending.length) continue
-          const path = join(metPath, date, `${mainNumber}_measure_data_xy.parquet`)
-          const lotWfs = await confinedPath(path, [root]).then(readLotWfs).catch(() => null)
-          if (!lotWfs) continue
-          for (const { wafer } of pending) if (lotWfs.has(wafer.lotWf)) found.set(wafer.lotWf, { lotWf: wafer.lotWf, device: wafer.device || deviceName, path })
+  if (mainNumber && safeSegment(text(line)) && safeSegment(metDir)) {
+    const byDevice = new Map()
+    for (const item of items) byDevice.set(item.wafer.device, [...(byDevice.get(item.wafer.device) ?? []), item])
+    for (const [device, group] of byDevice) {
+      // device 값이 없으면 defect_map 아래 모든 device 폴더에서 찾는다.
+      const devices = (device ? [device] : await listNames(mapRoot)).filter(safeSegment)
+      if (!devices.length) for (const item of group) item.refs.add(join(mapRoot, device || "{device}", `*${mainNumber}`, metDir, "{yyyy-mm-dd}", fileName))
+      for (const deviceName of devices) {
+        const devicePath = join(mapRoot, deviceName)
+        const mainDirs = (await listNames(devicePath)).filter((name) => safeSegment(name) && mainSeqNumber(name) === mainNumber).sort()
+        if (!mainDirs.length) for (const item of group) item.refs.add(join(devicePath, `*${mainNumber}`, metDir, "{yyyy-mm-dd}", fileName))
+        for (const mainDir of mainDirs) {
+          const metPath = join(devicePath, mainDir, metDir)
+          for (const item of group) item.refs.add(join(metPath, "{yyyy-mm-dd}", fileName))
+          for (const date of (await listNames(metPath)).filter((name) => DATE_DIR.test(name)).sort()) {
+            const pending = group.filter((item) => !found.has(item.wafer.lotWf) && item.from <= date && date <= item.to)
+            if (!pending.length) continue
+            const path = join(metPath, date, fileName)
+            const lotWfs = await confinedPath(path, [root]).then(readLotWfs).catch(() => null)
+            if (!lotWfs) continue
+            for (const item of pending) {
+              item.opened = true
+              if (lotWfs.has(item.wafer.lotWf)) found.set(item.wafer.lotWf, { lotWf: item.wafer.lotWf, device: item.wafer.device || deviceName, path })
+            }
+          }
         }
       }
     }
+  } else {
+    for (const item of items) item.refs.add(join(mapRoot, "{device}", `*${mainNumber || "{main_seq}"}`, metDir, "{yyyy-mm-dd}", fileName))
   }
-  return wafers.map((wafer) => found.get(wafer.lotWf)).filter(Boolean)
+  // 같은 경로는 한 줄로 합치고, 날짜 범위는 그 경로를 찾아본 wafer들의 범위를 모두 덮게 한다.
+  const missing = new Map()
+  let notFound = 0
+  let lotWfMismatch = 0
+  for (const item of items) {
+    if (found.has(item.wafer.lotWf)) continue
+    if (item.opened) { lotWfMismatch += 1; continue }
+    notFound += 1
+    for (const path of item.refs) {
+      const range = missing.get(path)
+      missing.set(path, range ? { path, from: item.from < range.from ? item.from : range.from, to: item.to > range.to ? item.to : range.to } : { path, from: item.from, to: item.to })
+    }
+  }
+  const missingPaths = [...missing.values()].sort((x, y) => x.path.localeCompare(y.path))
+  return {
+    wafers: wafers.map((wafer) => found.get(wafer.lotWf)).filter(Boolean),
+    notFound, lotWfMismatch, missingPaths: missingPaths.slice(0, MAX_MISSING_PATHS), missingPathTotal: missingPaths.length,
+  }
 }
 
 // 좌표 파일을 읽지 못했거나 좌표가 없는 wafer는 빼고 보낸다. 같은 좌표 파일은 한 번만 읽는다.
@@ -312,9 +341,12 @@ export async function handleDefectMapRequest(req, res, url, dependencies = {}) {
       return
     }
     const wafers = selectDefectMapWafers(await (dependencies.readMapPoints ?? readDefectMapPoints)(filePath), eqpCh)
-    const located = await locateDefectMapWafers(wafers.slice(0, MAX_WAFERS), { line, mainSeq: pair.main_seq, metSeq: pair.met_seq }, dependencies.locate)
+    const checked = wafers.slice(0, MAX_WAFERS)
+    const { wafers: located, ...locateResult } = await locateDefectMapWafers(checked, { line, mainSeq: pair.main_seq, metSeq: pair.met_seq }, dependencies.locate)
     const shown = await readDefectMapWafers(located, { mainSeq: pair.main_seq, metSeq: pair.met_seq }, dependencies.readSource)
-    send(200, { total: wafers.length, limit: MAX_WAFERS, wafers: shown })
+    // 빠진 wafer의 이유별 매수. noCoords는 좌표 파일에서 lot_wf는 찾았지만 좌표를 읽지 못한 wafer다.
+    send(200, { total: wafers.length, limit: MAX_WAFERS, wafers: shown,
+      diagnostics: { checked: checked.length, ...locateResult, noCoords: located.length - shown.length } })
   } catch (error) {
     send(error.code === "MAPPING_SCOPE_MISMATCH" ? 400 : 503, {
       error: error.code === "ENOENT" ? "파일이 없습니다."

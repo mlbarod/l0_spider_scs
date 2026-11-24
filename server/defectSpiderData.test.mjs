@@ -361,18 +361,28 @@ test("이상 wafer map 좌표 파일은 main_seq 폴더·met_seq_RANDOM_PC·진�
       { lotWf: "W0", device: "D1", tkoutTime: at("2026-11-20") }, { lotWf: "W3", device: "D1", tkoutTime: at("2026-11-20") },
       { lotWf: "W4", device: "D1", tkoutTime: at("2026-11-20") }, { lotWf: "W5", device: "D1", tkoutTime: at("2026-11-20") },
       { lotWf: "W6", device: "", tkoutTime: at("2026-11-20") },
+      { lotWf: "W7", device: "D9", tkoutTime: at("2026-11-20") }, { lotWf: "W8", device: "D1", tkoutTime: at("2026-10-01") },
     ]
     const result = await locateDefectMapWafers(wafers, { line: "L1", mainSeq: "100", metSeq: "200" }, { root, readLotWfs })
     const file = (device, mainDir, date) => join(met(device, mainDir), date, "100_measure_data_xy.parquet")
     // W0: 하루 전 폴더, W1: 가장 이른 날짜 파일, W3: 7일 뒤 범위 밖, W4: 숫자가 다른 main_seq 폴더, W5: _RANDOM_PC가 없는 폴더, W6: device가 없으면 모든 device에서 찾는다.
-    assert.deepEqual(result, [
+    assert.deepEqual(result.wafers, [
       { lotWf: "W1", device: "D1", path: file("D1", "U%100", "2026-11-20") },
       { lotWf: "W2", device: "D1", path: file("D1", "U%100", "2026-11-21") },
       { lotWf: "W0", device: "D1", path: file("D1", "U%100", "2026-11-19") },
       { lotWf: "W6", device: "D2", path: file("D2", "X%100", "2026-11-20") },
     ])
     assert.equal(reads.includes(file("D1", "U%100", "2026-11-30")), false)
-    assert.deepEqual(await locateDefectMapWafers(wafers, { line: "../L1", mainSeq: "100", metSeq: "200" }, { root, readLotWfs }), [])
+    // W3·W4·W5: 파일은 읽었지만 lot_wf 없음. W7: device 폴더 없음, W8: 범위 안 날짜 폴더 없음 -> 찾아본 경로를 남긴다.
+    assert.deepEqual({ ...result, wafers: undefined }, {
+      wafers: undefined, notFound: 2, lotWfMismatch: 3, missingPathTotal: 2,
+      missingPaths: [
+        { path: join(met("D1", "U%100"), "{yyyy-mm-dd}", "100_measure_data_xy.parquet"), from: "2026-09-30", to: "2026-10-08" },
+        { path: join(root, "L1", "defect_map", "D9", "*100", "200_RANDOM_PC", "{yyyy-mm-dd}", "100_measure_data_xy.parquet"), from: "2026-11-19", to: "2026-11-27" },
+      ],
+    })
+    const invalid = await locateDefectMapWafers(wafers, { line: "../L1", mainSeq: "100", metSeq: "200" }, { root, readLotWfs })
+    assert.deepEqual([invalid.wafers, invalid.notFound], [[], wafers.length])
   } finally {
     await rm(root, { recursive: true, force: true })
   }
@@ -423,6 +433,9 @@ test("이상 wafer map API는 선택 조건의 fail 파일과 eqp_ch만 받는�
     assert.equal(res.status, status, `${filePath} ${eqpCh}`)
     assert.equal(readPath, status === 200 ? filePath : undefined)
     // 좌표 파일을 찾지 못한 wafer는 문구 없이 뺀다.
-    if (status === 200) assert.deepEqual(res.body, { total: 1, limit: 400, wafers: [] })
+    if (status === 200) assert.deepEqual(res.body, { total: 1, limit: 400, wafers: [], diagnostics: {
+      checked: 1, notFound: 1, lotWfMismatch: 0, noCoords: 0, missingPathTotal: 1,
+      missingPaths: [{ path: "/nonexistent-defect-root/L1/defect_map/D1/*10/20_RANDOM_PC/{yyyy-mm-dd}/10_measure_data_xy.parquet", from: "1969-12-31", to: "1970-01-08" }],
+    } })
   }
 })
