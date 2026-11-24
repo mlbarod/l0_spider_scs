@@ -218,22 +218,41 @@ export function selectDefectMapWafers(points, eqpCh) {
   return [...wafers.values()]
 }
 
+// 숨김 폴더(.ipynb_checkpoints 같은 Jupyter 자동 저장 폴더 등)는 좌표 폴더가 아니므로 뺀다.
 async function listNames(path) {
-  try { return await readdir(path) } catch { return [] }
+  try { return (await readdir(path)).filter((name) => !name.startsWith(".")) } catch { return [] }
 }
 
 // 각 wafer의 좌표 파일을 찾는다. 날짜 폴더는 진행일 범위(MAP_DATE_WINDOW) 안에서 이른 날짜부터 보고,
 // 그 파일의 lot_wf 목록에 wafer가 처음 나온 파일을 쓴다.
 // 찾지 못한 wafer는 이유별로 센다: 읽을 수 있는 좌표 파일이 하나도 없으면 notFound(찾아본 경로를 missingPaths에 남긴다),
-// 파일은 읽었지만 그 lot_wf가 없으면 lotWfMismatch.
+// 파일은 읽었지만 그 lot_wf가 없으면 lotWfMismatch(열어본 파일과 그 파일의 비슷한 lot_wf 예시를 lotWfMismatches에 남긴다).
 export const MAX_MISSING_PATHS = 20
+export const MAX_MISMATCH_WAFERS = 20
+const MAX_MISMATCH_FILES = 5
+const MAX_LOT_WF_SAMPLES = 5
+// 파일 안 lot_wf 예시: 같은 lot(첫 "."·"_" 앞부분)을 포함한 값을 먼저, 없으면 앞에서부터 고른다.
+export function lotWfSamples(lotWf, sets) {
+  const key = lotWf.split(/[._]/)[0]
+  const similar = []
+  const others = []
+  for (const values of sets) {
+    for (const value of values) {
+      if (!value || similar.includes(value) || others.includes(value)) continue
+      if (key && value.includes(key)) { if (similar.length < MAX_LOT_WF_SAMPLES) similar.push(value) }
+      else if (others.length < MAX_LOT_WF_SAMPLES) others.push(value)
+      if (similar.length >= MAX_LOT_WF_SAMPLES) return similar
+    }
+  }
+  return [...similar, ...others].slice(0, MAX_LOT_WF_SAMPLES)
+}
 export async function locateDefectMapWafers(wafers, { line, mainSeq, metSeq }, { root = DEFECT_CLUSTER_PC_ROOT, readLotWfs = readDefectMapLotWfs } = {}) {
   const mainNumber = mainSeqNumber(mainSeq)
   const metDir = `${metSeqNumber(metSeq)}_RANDOM_PC`
   const fileName = `${mainNumber || "{main_seq}"}_measure_data_xy.parquet`
   const mapRoot = join(root, text(line) || "{line}", "defect_map")
   const items = wafers.map((wafer) => ({
-    wafer, refs: new Set(), opened: false,
+    wafer, refs: new Set(), opened: [],
     from: dateText(wafer.tkoutTime - MAP_DATE_WINDOW.beforeDays * DAY_MS), to: dateText(wafer.tkoutTime + MAP_DATE_WINDOW.afterDays * DAY_MS),
   }))
   const found = new Map()
@@ -258,7 +277,7 @@ export async function locateDefectMapWafers(wafers, { line, mainSeq, metSeq }, {
             const lotWfs = await confinedPath(path, [root]).then(readLotWfs).catch(() => null)
             if (!lotWfs) continue
             for (const item of pending) {
-              item.opened = true
+              item.opened.push({ path, lotWfs })
               if (lotWfs.has(item.wafer.lotWf)) found.set(item.wafer.lotWf, { lotWf: item.wafer.lotWf, device: item.wafer.device || deviceName, path })
             }
           }
@@ -272,9 +291,20 @@ export async function locateDefectMapWafers(wafers, { line, mainSeq, metSeq }, {
   const missing = new Map()
   let notFound = 0
   let lotWfMismatch = 0
+  const lotWfMismatches = []
   for (const item of items) {
     if (found.has(item.wafer.lotWf)) continue
-    if (item.opened) { lotWfMismatch += 1; continue }
+    if (item.opened.length) {
+      lotWfMismatch += 1
+      if (lotWfMismatches.length < MAX_MISMATCH_WAFERS) {
+        lotWfMismatches.push({
+          lotWf: item.wafer.lotWf, from: item.from, to: item.to,
+          files: item.opened.slice(0, MAX_MISMATCH_FILES).map((file) => file.path), fileTotal: item.opened.length,
+          samples: lotWfSamples(item.wafer.lotWf, item.opened.map((file) => file.lotWfs)),
+        })
+      }
+      continue
+    }
     notFound += 1
     for (const path of item.refs) {
       const range = missing.get(path)
@@ -284,7 +314,7 @@ export async function locateDefectMapWafers(wafers, { line, mainSeq, metSeq }, {
   const missingPaths = [...missing.values()].sort((x, y) => x.path.localeCompare(y.path))
   return {
     wafers: wafers.map((wafer) => found.get(wafer.lotWf)).filter(Boolean),
-    notFound, lotWfMismatch, missingPaths: missingPaths.slice(0, MAX_MISSING_PATHS), missingPathTotal: missingPaths.length,
+    notFound, lotWfMismatch, lotWfMismatches, missingPaths: missingPaths.slice(0, MAX_MISSING_PATHS), missingPathTotal: missingPaths.length,
   }
 }
 
