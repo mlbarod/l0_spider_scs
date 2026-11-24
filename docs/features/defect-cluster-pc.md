@@ -51,6 +51,9 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
 
 - 챔버별 이상감지(`/defect-spider`) 차트 카드에 빨간 점(NG)이 있으면 "이상 wafer map보기" 버튼이 나온다. 누르면 그 카드(eqp_ch)의 빨간 점 wafer map을 팝업에 한 번에 그린다. map 모양은 몰림PC 이상감지 카드와 같다(판정 버튼·판정 사유 없음).
 - 빨간 점 기준은 차트와 같다(`final_decision` NG, `anomaly_type=std`이면서 `std_result` NG, 같은 lot/wafer 보호 포함). wafer는 `lot_wf` 단위로 한 번씩 그리고, 최근 설비 진행시간부터 보여준다(최대 400매).
-- 좌표: l0_spider 배치가 이상감지 RAW(`fail_*.parquet`) 각 행에 적은 `xy_path` 컬럼(`.../{line}/defect_map/{device}/{main_seq}/{met_seq}/{적재일}/{main_step 숫자}_measure_data_xy.parquet`)을 읽는다. 몰림PC와 같이 앞부분을 `/appdata/abnormal_trend/pic/defect`로 바꾸고 그 안쪽 파일만 읽는다.
-- `xy_path`가 없거나(이전 결과), 좌표 파일이 없거나, 좌표가 없는 wafer는 문구 없이 빼고 보여준다. 그릴 wafer가 하나도 없으면 "표시할 wafer map이 없습니다."만 보인다.
+- 좌표: 차트 카드의 fail 파일이 쓴 `main_seq`·`met_seq`로 좌표 파일을 찾는다(`locateDefectMapWafers`). 경로는 `/appdata/abnormal_trend/pic/defect/{line}/defect_map/{device}/{문자+main_seq 숫자}/{met_seq}_RANDOM_PC/{yyyy-mm-dd}/{main_seq 숫자}_measure_data_xy.parquet`이다.
+  - main_seq 폴더는 이름에서 알파벳과 `%`를 뺀 숫자가 main_seq 숫자와 같은 폴더다(예: `U%100` → `100`). 파일 이름 앞 숫자도 이 값이다.
+  - 날짜 폴더는 미리 알 수 없어서, wafer의 가장 이른 설비 진행일(`tkout_time`) 하루 전부터 7일 뒤까지의 폴더를 이른 날짜부터 보고, 좌표 파일의 `lot_wf` 컬럼에 그 wafer가 처음 나온 파일을 쓴다(`MAP_DATE_WINDOW`). 후보 파일은 `lot_wf` 컬럼만 읽고 파일 버전이 같으면 다시 읽지 않는다.
+  - fail 파일 행에 `device`가 없으면 `defect_map` 아래 모든 device 폴더에서 찾는다.
+- 좌표 파일을 찾지 못했거나 좌표가 없는 wafer는 문구 없이 빼고 보여준다. 그릴 wafer가 하나도 없으면 "표시할 wafer map이 없습니다."만 보인다.
 - API: `GET /api/defect-map?line=&pathSdwt=&step=&prcGroup=&mainSeq=&metSeq=&filePath=&eqpCh=`(`server/defectSpiderData.mjs`의 `handleDefectMapRequest`). `filePath`와 `eqpCh`는 선택 조건의 fail 파일·eqpid와 맞을 때만 받는다. 응답 `{ total, limit, wafers }`의 wafer 형식은 몰림PC `maps`와 같고, 좌표 파일 경로는 보내지 않는다.

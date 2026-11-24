@@ -1,4 +1,5 @@
-import { stat } from "node:fs/promises"
+import { readdir, stat } from "node:fs/promises"
+import { join } from "node:path"
 import { asyncBufferFromFile, parquetMetadataAsync, parquetReadObjects, parquetSchema } from "hyparquet"
 import { compressors } from "hyparquet-compressors"
 
@@ -7,7 +8,7 @@ import { assertKnownMappingLineSdwt, requireLineMapping } from "./mappingConfig.
 import { buildDefectFilePairs, buildDefectScatterData, readDefectFileSummary, resolveDefectRawPath, selectDefectFileSummary } from "./defectFiles.mjs"
 import { DEFECT_CHANGE_HISTORY_PATHS, DEFECT_PM_HISTORY_PATH, readDefectPmHistory, selectDefectPmHistory } from "./defectPmHistory.mjs"
 import { getLruEntry, setLruEntry } from "./boundedCache.mjs"
-import { DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, confinedPath, metSeqNumber, packPoints, readPoints, sourcePath, waferInfo } from "./defectClusterPc.mjs"
+import { DEFECT_CLUSTER_PC_CONFIG, DEFECT_CLUSTER_PC_ROOT, MAX_WAFERS, confinedPath, metSeqNumber, packPoints, readPoints, sourcePath, waferInfo } from "./defectClusterPc.mjs"
 import { buildDefectScatterSeries } from "../src/features/fdc-trend/utils/defectScatter.mjs"
 
 export const DEFECT_COLUMNS = ["sdwt", "prc_group", "main_seq", "met_seq", "eqpid", "path"]
@@ -163,11 +164,21 @@ export async function handleDefectFileRequest(req, res, url, dependencies = {}) 
   }
 }
 
-// 이상 wafer map: 이상감지 RAW(fail_*.parquet)의 xy_path 컬럼(l0_spider 배치가 적은 measure_data_xy 경로)으로
-// 차트의 빨간 점(NG) wafer 좌표를 읽어 몰림PC 이상감지와 같은 형식으로 돌려준다.
+// 이상 wafer map: 이상감지 RAW(fail_*.parquet)에서 차트의 빨간 점(NG) wafer를 고르고,
+// 그 fail 파일의 main_seq·met_seq로 measure_data_xy 좌표 파일을 찾아 몰림PC 이상감지와 같은 형식으로 돌려준다.
+// 좌표 파일 경로: {root}/{line}/defect_map/{device}/{문자+main_seq 숫자}/{met_seq}_RANDOM_PC/{yyyy-mm-dd}/{main_seq 숫자}_measure_data_xy.parquet
 const mapRowCache = new Map()
+const lotWfCache = new Map()
+const DAY_MS = 24 * 60 * 60 * 1000
+// 측정 적재일은 설비 진행일 이후이므로 진행일 하루 전부터 7일 뒤까지의 날짜 폴더만 찾아본다.
+export const MAP_DATE_WINDOW = Object.freeze({ beforeDays: 1, afterDays: 7 })
+const DATE_DIR = /^\d{4}-\d{2}-\d{2}$/
+// main_seq 폴더 이름(예: "U%100")에서 알파벳과 %를 뺀 숫자 부분.
+export const mainSeqNumber = (value) => text(value).replace(/[A-Za-z%]/g, "")
+const safeSegment = (value) => Boolean(value) && value !== "." && value !== ".." && !/[\\/\0]/.test(value)
+const dateText = (timestamp) => new Date(timestamp).toISOString().slice(0, 10)
 
-// 차트와 같은 점(tkout_time·fab_value가 유효한 행)만 쓰고, 화면에 보내지 않는 xy_path·device를 붙인다.
+// 차트와 같은 점(tkout_time·fab_value가 유효한 행)만 쓰고, 화면에 보내지 않는 device를 붙인다.
 export async function readDefectMapPoints(filePath) {
   const info = await stat(filePath)
   const cached = getLruEntry(mapRowCache, filePath)
@@ -177,22 +188,75 @@ export async function readDefectMapPoints(filePath) {
   const points = []
   for (const row of await parquetReadObjects({ file, compressors })) {
     const [point] = buildDefectScatterData([row], columns).points
-    if (point) points.push({ ...point, xy_path: text(row.xy_path ?? row.XY_PATH), device: text(row.device ?? row.DEVICE) })
+    if (point) points.push({ ...point, device: text(row.device ?? row.DEVICE) })
   }
   setLruEntry(mapRowCache, filePath, { mtimeMs: info.mtimeMs, size: info.size, points }, 8)
   return points
 }
 
-// 차트의 빨간 점과 같은 기준(같은 lot/wafer 보호 포함)으로 eqp_ch의 NG wafer를 lot_wf + xy_path 단위로 한 번씩 고른다.
+// 좌표 파일에 어떤 lot_wf가 있는지만 본다(lot_wf 컬럼만 읽는다). 파일 버전(mtime, size)이 같으면 다시 읽지 않는다.
+export async function readDefectMapLotWfs(path) {
+  const info = await stat(path)
+  const key = `${path}|${info.mtimeMs}|${info.size}`
+  const cached = getLruEntry(lotWfCache, key)
+  if (cached) return cached
+  const rows = await parquetReadObjects({ file: await asyncBufferFromFile(path), compressors, columns: ["lot_wf"] })
+  return setLruEntry(lotWfCache, key, new Set(rows.map((row) => text(row.lot_wf))), 64)
+}
+
+// 차트의 빨간 점과 같은 기준(같은 lot/wafer 보호 포함)으로 eqp_ch의 NG wafer를 lot_wf 단위로 한 번씩 고른다.
+// 날짜 폴더를 좁히기 위해 그 wafer의 가장 이른 설비 진행시간(tkout_time)을 함께 둔다.
 export function selectDefectMapWafers(points, eqpCh) {
   const wafers = new Map()
   for (const point of buildDefectScatterSeries(points, [], eqpCh).selected) {
     const lotWf = text(point.lot_wf)
-    if (!point.isNg || !lotWf || !point.xy_path) continue
-    const key = `${lotWf}\u0000${point.xy_path}`
-    if (!wafers.has(key)) wafers.set(key, { lotWf, device: point.device, path: point.xy_path })
+    if (!point.isNg || !lotWf) continue
+    const wafer = wafers.get(lotWf)
+    if (!wafer) wafers.set(lotWf, { lotWf, device: point.device, tkoutTime: point.tkout_time })
+    else if (point.tkout_time < wafer.tkoutTime) wafer.tkoutTime = point.tkout_time
   }
   return [...wafers.values()]
+}
+
+async function listNames(path) {
+  try { return await readdir(path) } catch { return [] }
+}
+
+// 각 wafer의 좌표 파일을 찾는다. 날짜 폴더는 진행일 범위(MAP_DATE_WINDOW) 안에서 이른 날짜부터 보고,
+// 그 파일의 lot_wf 목록에 wafer가 처음 나온 파일을 쓴다. 찾지 못한 wafer는 빼고 돌려준다.
+export async function locateDefectMapWafers(wafers, { line, mainSeq, metSeq }, { root = DEFECT_CLUSTER_PC_ROOT, readLotWfs = readDefectMapLotWfs } = {}) {
+  const mainNumber = mainSeqNumber(mainSeq)
+  const metDir = `${metSeqNumber(metSeq)}_RANDOM_PC`
+  const mapRoot = join(root, text(line), "defect_map")
+  if (!mainNumber || !safeSegment(text(line)) || !safeSegment(metDir)) return []
+  const found = new Map()
+  const byDevice = new Map()
+  for (const wafer of wafers) {
+    const range = { from: dateText(wafer.tkoutTime - MAP_DATE_WINDOW.beforeDays * DAY_MS), to: dateText(wafer.tkoutTime + MAP_DATE_WINDOW.afterDays * DAY_MS) }
+    const list = byDevice.get(wafer.device) ?? []
+    list.push({ wafer, ...range })
+    byDevice.set(wafer.device, list)
+  }
+  for (const [device, items] of byDevice) {
+    // device 값이 없으면 defect_map 아래 모든 device 폴더에서 찾는다.
+    const devices = device ? [device] : await listNames(mapRoot)
+    for (const deviceName of devices.filter(safeSegment)) {
+      const devicePath = join(mapRoot, deviceName)
+      const mainDirs = (await listNames(devicePath)).filter((name) => safeSegment(name) && mainSeqNumber(name) === mainNumber).sort()
+      for (const mainDir of mainDirs) {
+        const metPath = join(devicePath, mainDir, metDir)
+        for (const date of (await listNames(metPath)).filter((name) => DATE_DIR.test(name)).sort()) {
+          const pending = items.filter((item) => !found.has(item.wafer.lotWf) && item.from <= date && date <= item.to)
+          if (!pending.length) continue
+          const path = join(metPath, date, `${mainNumber}_measure_data_xy.parquet`)
+          const lotWfs = await confinedPath(path, [root]).then(readLotWfs).catch(() => null)
+          if (!lotWfs) continue
+          for (const { wafer } of pending) if (lotWfs.has(wafer.lotWf)) found.set(wafer.lotWf, { lotWf: wafer.lotWf, device: wafer.device || deviceName, path })
+        }
+      }
+    }
+  }
+  return wafers.map((wafer) => found.get(wafer.lotWf)).filter(Boolean)
 }
 
 // 좌표 파일을 읽지 못했거나 좌표가 없는 wafer는 빼고 보낸다. 같은 좌표 파일은 한 번만 읽는다.
@@ -248,7 +312,8 @@ export async function handleDefectMapRequest(req, res, url, dependencies = {}) {
       return
     }
     const wafers = selectDefectMapWafers(await (dependencies.readMapPoints ?? readDefectMapPoints)(filePath), eqpCh)
-    const shown = await readDefectMapWafers(wafers.slice(0, MAX_WAFERS), { mainSeq: pair.main_seq, metSeq: pair.met_seq }, dependencies.readSource)
+    const located = await locateDefectMapWafers(wafers.slice(0, MAX_WAFERS), { line, mainSeq: pair.main_seq, metSeq: pair.met_seq }, dependencies.locate)
+    const shown = await readDefectMapWafers(located, { mainSeq: pair.main_seq, metSeq: pair.met_seq }, dependencies.readSource)
     send(200, { total: wafers.length, limit: MAX_WAFERS, wafers: shown })
   } catch (error) {
     send(error.code === "MAPPING_SCOPE_MISMATCH" ? 400 : 503, {
