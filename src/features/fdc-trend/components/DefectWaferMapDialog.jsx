@@ -2,6 +2,7 @@ import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { LoaderCircle } from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useLanguage } from "@/i18n"
 
@@ -51,8 +52,8 @@ export function DefectWaferMapButton({ request, eqpCh }) {
   const diagnostics = query.data?.diagnostics
   const mismatches = diagnostics?.lotWfMismatches ?? []
   return (
-    <div className="flex justify-end px-4 pb-3" data-i18n-skip>
-      <button type="button" className="rounded border px-2 py-1 text-xs hover:bg-muted" onClick={() => setOpen(true)}>{text.open}</button>
+    <>
+      <Button type="button" variant="outline" size="sm" className="h-9 px-[0.9rem] text-sm" data-i18n-skip onClick={() => setOpen(true)}>{text.open}</Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="cluster-pc-history-dialog sm:max-w-6xl" data-i18n-skip>
           <DialogHeader>
@@ -80,6 +81,6 @@ export function DefectWaferMapButton({ request, eqpCh }) {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   )
 }

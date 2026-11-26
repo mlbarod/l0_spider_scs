@@ -29,6 +29,7 @@ export function DefectScatterChart({ failData, allData, eqpCh, historyEntry, map
   legendCounts.set(eqpCh, (legendCounts.get(eqpCh) ?? 0) + series.selected.length)
   const errors = [failData.scatter_error, allData.scatter_error].filter(Boolean)
   const invalidCount = (failData.invalid_point_count ?? 0) + (allData.invalid_point_count ?? 0)
+  const showMapButton = Boolean(mapRequest) && series.selected.some((point) => point.isNg)
   if (errors.length) return <p className="p-4 text-sm text-destructive" role="alert">{sanitizeErrorMessage(errors.join(" "))}</p>
   if (!series.selected.length && !series.background.some(({ points }) => points.length)) {
     return <p className="p-4 text-sm text-muted-foreground">표시할 tkout_time·fab_value 데이터가 없습니다.</p>
@@ -69,13 +70,13 @@ export function DefectScatterChart({ failData, allData, eqpCh, historyEntry, map
       <p className="px-4 pb-3 text-[11px] text-muted-foreground">작고 옅은 점: ALL (STEP별 색상) · 크고 진한 점: RAW (빨강 NG / 청록 그 외)</p>
       <p className="flex items-center gap-1 px-4 pb-3 text-[11px] text-muted-foreground" data-i18n-skip><span className="w-4 border-t border-dashed border-green-600" />{(CHANGE_HISTORY_TEXT[language] ?? CHANGE_HISTORY_TEXT.ko).legend}</p>
       {invalidCount > 0 ? <p className="px-4 pb-3 text-xs text-muted-foreground">시간 또는 값이 유효하지 않은 {invalidCount}행은 표시에서 제외했습니다.</p> : null}
-      {historyEntry ? (
-        <div className="flex justify-end px-4 pb-3">
-          <ChartHistoryDialog {...historyEntry} app="defect-spider"
-            prepareImage={() => renderDefectChartPng({ series, domain: baseDomain, pmRows })} />
+      {historyEntry || showMapButton ? (
+        <div className="flex justify-end gap-2 px-4 pb-3">
+          {showMapButton ? <DefectWaferMapButton request={mapRequest} eqpCh={eqpCh} /> : null}
+          {historyEntry ? <ChartHistoryDialog {...historyEntry} app="defect-spider"
+            prepareImage={() => renderDefectChartPng({ series, domain: baseDomain, pmRows })} /> : null}
         </div>
       ) : null}
-      {mapRequest && series.selected.some((point) => point.isNg) ? <DefectWaferMapButton request={mapRequest} eqpCh={eqpCh} /> : null}
       <DefectWaferList points={series.selected} />
       <DefectPmHistory rows={pmRows} columns={pmHistory?.columns ?? EMPTY_LIST} error={pmHistory?.error} line={historyEntry?.fields?.lineId} />
     </div>

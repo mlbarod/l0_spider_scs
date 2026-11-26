@@ -33,7 +33,7 @@ export const CLUSTER_PC_TEXT = {
     eqpSummary: (chambers, wafers) => `챔버 ${chambers}개 · ${wafers}매`, wafers: (count) => `${count}매`,
     tkout: "설비 진행시간", ucc: (count) => `UCC:${count.toLocaleString()}개`, more: (count) => ` 외 ${count}`, hit: " (몰림 근거)",
     verdict: "몰림PC 판정", correct: "몰림PC 맞음", wrong: "몰림PC 아님", saving: "저장 중…", deleting: "취소 중…", top: "맨 위로",
-    reason: "몰림PC 판정 사유",
+    reason: "몰림PC 판정 사유 숨기기",
     history: "과거 7일내 이상건수:", historyCount: (count) => `${count.toLocaleString()}건`,
     historyOpen: (chamber, count) => `${chamber} 과거 7일내 이상 ${count}건 wafer map 보기`,
     historyTitle: (chamber) => `${chamber} 과거 7일내 이상 wafer map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 최신 결과 제외 · 최근 결과부터 표시`,
@@ -56,7 +56,7 @@ export const CLUSTER_PC_TEXT = {
     eqpSummary: (chambers, wafers) => `${chambers} chambers · ${wafers} wafers`, wafers: (count) => `${count} wafers`,
     tkout: "Equipment process time", ucc: (count) => `UCC:${count.toLocaleString()}`, more: (count) => ` +${count} more`, hit: " (clustering evidence)",
     verdict: "Clustered PC verdict", correct: "Clustered PC", wrong: "Not clustered PC", saving: "Saving…", deleting: "Canceling…", top: "Back to top",
-    reason: "Clustered PC verdict reason",
+    reason: "Hide clustered PC verdict reason",
     history: "Anomalies in past 7 days:", historyCount: (count) => `${count.toLocaleString()}`,
     historyOpen: (chamber, count) => `View ${count} wafer maps detected on ${chamber} in the past 7 days`,
     historyTitle: (chamber) => `${chamber} anomaly wafer maps in the past 7 days`, historyDescription: (eqpid) => `EQPID ${eqpid} · Latest results excluded · Newest first`,
@@ -79,7 +79,7 @@ export const CLUSTER_PC_TEXT = {
     eqpSummary: (chambers, wafers) => `腔室 ${chambers} 个 · ${wafers} 片`, wafers: (count) => `${count} 片`,
     tkout: "设备进行时间", ucc: (count) => `UCC:${count.toLocaleString()}个`, more: (count) => ` 等 ${count} 个`, hit: "（聚集依据）",
     verdict: "聚集PC判定", correct: "是聚集PC", wrong: "不是聚集PC", saving: "保存中…", deleting: "取消中…", top: "回到顶部",
-    reason: "聚集PC判定依据",
+    reason: "隐藏聚集PC判定依据",
     history: "过去7天内异常数：", historyCount: (count) => `${count.toLocaleString()}件`,
     historyOpen: (chamber, count) => `查看 ${chamber} 过去7天内 ${count} 件异常晶圆 map`,
     historyTitle: (chamber) => `${chamber} 过去7天内异常晶圆 map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 不含最新结果 · 从最近结果开始显示`,
@@ -132,7 +132,7 @@ function drawCluster(ctx, c, r, cluster) {
 
 // canvas 1장에 점을 직접 찍는다(SVG/DOM 점 대비 수천 개도 즉시 그린다).
 // 화면에 보일 때만 그려서, wafer가 수백 매여도 첫 화면이 바로 나온다.
-// 판정 사유(군집 원, 비교 영역)는 showReason일 때만 그린다(처음에는 점만 그린다).
+// 판정 사유(군집 원, 비교 영역)는 showReason일 때만 그린다.
 const WaferCanvas = memo(function WaferCanvas({ xy, clusters, showReason }) {
   const ref = useRef(null)
   const [visible, setVisible] = useState(false)
@@ -279,10 +279,10 @@ export function DefectClusterPcPage() {
   }, [catalog?.snapshot, filters])
 
   useEffect(() => { setFeedback({}) }, [catalog?.snapshot])
-  // EQP별 "몰림PC 판정 사유" 표시 여부. 새 wafer map을 받으면 모두 끈 상태로 시작한다.
-  const [reasons, setReasons] = useState({})
-  useEffect(() => { setReasons({}) }, [maps.data])
-  const toggleReason = (key) => setReasons((previous) => ({ ...previous, [key]: !previous[key] }))
+  // EQP별 "몰림PC 판정 사유 숨기기" 여부. 새 wafer map을 받으면 모두 판정 사유를 보여주는 상태로 시작한다.
+  const [hiddenReasons, setHiddenReasons] = useState({})
+  useEffect(() => { setHiddenReasons({}) }, [maps.data])
+  const toggleReason = (key) => setHiddenReasons((previous) => ({ ...previous, [key]: !previous[key] }))
   // 과거 7일 이상 이력 팝업 대상 챔버
   const [historyTarget, setHistoryTarget] = useState(null)
   // 몰림PC 알고리즘 설명 팝업
@@ -368,7 +368,7 @@ export function DefectClusterPcPage() {
           {eqps.map((eqp) => <div key={eqp.id ?? eqp.eqp} role="group" aria-label={`EQP ${eqp.eqp}`} className="cluster-pc-eqp" style={{ gridColumn: `span ${eqp.span}` }}>
             <div className="cluster-pc-eqp-title">
               <div className="cluster-pc-eqp-name"><strong title={eqp.eqp}>{displayValue(eqp.eqp, t)}</strong>
-                <button type="button" className="cluster-pc-reason-toggle" aria-pressed={Boolean(reasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`])} onClick={() => toggleReason(`${prcGroup}|${eqp.id ?? eqp.eqp}`)}>{t.reason}</button></div>
+                <button type="button" className="cluster-pc-reason-toggle" aria-pressed={Boolean(hiddenReasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`])} onClick={() => toggleReason(`${prcGroup}|${eqp.id ?? eqp.eqp}`)}>{t.reason}</button></div>
               <span>{t.eqpSummary(eqp.chambers.length, eqp.count)}</span>
             </div>
             <div className="cluster-pc-chamber-grid" style={{ gridTemplateColumns: `repeat(${eqp.span}, minmax(0, 1fr))` }}>
@@ -383,7 +383,7 @@ export function DefectClusterPcPage() {
                   </div>
                   <span>{t.wafers(chamber.wafers.length)}</span>
                 </div>
-                <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, Boolean(reasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`])))}</div>
+                <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, !hiddenReasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`]))}</div>
               </div>)}
             </div>
           </div>)}

@@ -29,7 +29,7 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
   - 화면에서 받은 값은 파일 경로로 쓰지 않는다. 결과 파일의 `path`만 읽는다. `path`가 l0_spider 경로(`/appdata/hadoop/code/eads/...`)이면 앞부분을 `/appdata/abnormal_trend/pic/defect`로 바꿔 읽고, 바꾼 경로도 `/appdata/abnormal_trend/pic/defect` 안쪽일 때만 읽는다.
   - 화면이 본 결과 시각(`snapshot`)과 서버의 최신 결과가 다르면 410으로 새로고침을 요청한다.
 - 몰림 근거 표시(2026-11-19): 결과의 `clusters` 값으로 map 위에 그린다.
-  - wafer map을 처음 그릴 때는 점만 그린다. EQP 이름 옆 "몰림PC 판정 사유" 버튼을 누르면 그 EQP의 wafer map에 아래 원과 음영을 그리고, 다시 누르면 지운다. 필터를 바꾸거나 새로 조회하면 모두 꺼진 상태로 돌아간다.
+  - wafer map을 처음 그릴 때부터 아래 원과 음영(판정 사유)을 함께 그린다. EQP 이름 옆 "몰림PC 판정 사유 숨기기" 버튼을 누르면 그 EQP의 wafer map에서 지우고, 다시 누르면 다시 그린다. 필터를 바꾸거나 새로 조회하면 모두 보이는 상태로 돌아간다.
   - 파란 원은 군집 창이다(실제 반경). 1.5mm 창은 map에서 너무 작아 최소 4px로 그린다. 판정 근거가 아닌 군집(비교 배수 미달)은 회색 점선이다.
   - 파란 음영은 판정 근거 군집의 비교 영역이다. 방향 비교는 45° 부채꼴, 링 비교는 가장 안쪽 원(약 53mm)이다.
   - 카드 아래에는 가장 배수가 큰 근거 군집을 `r 25mm · 60개 · 방향 3.9배`처럼 표시한다. 마우스를 올리면 모든 군집이 보인다.
@@ -49,7 +49,7 @@ l0_spider의 같은 기능을 그대로 옮겼다(2026-11-19). 몰림 판정 알
 
 ## 챔버별 이상감지: 이상 wafer map보기 (2026-11-23)
 
-- 챔버별 이상감지(`/defect-spider`) 차트 카드에 빨간 점(NG)이 있으면 "이상 wafer map보기" 버튼이 나온다. 누르면 그 카드(eqp_ch)의 빨간 점 wafer map을 팝업에 한 번에 그린다. map 모양은 몰림PC 이상감지 카드와 같다(판정 버튼·판정 사유 없음).
+- 챔버별 이상감지(`/defect-spider`) 차트 카드에 빨간 점(NG)이 있으면 "이상 wafer map보기" 버튼이 이력 저장 버튼 옆에 같은 크기로 나온다. 누르면 그 카드(eqp_ch)의 빨간 점 wafer map을 팝업에 한 번에 그린다. map 모양은 몰림PC 이상감지 카드와 같다(판정 버튼·판정 사유 없음).
 - 빨간 점 기준은 차트와 같다(`final_decision` NG, `anomaly_type=std`이면서 `std_result` NG, 같은 lot/wafer 보호 포함). wafer는 `lot_wf` 단위로 한 번씩 그리고, 최근 설비 진행시간부터 보여준다(최대 400매).
 - 좌표: 차트 카드의 fail 파일이 쓴 `main_seq`·`met_seq`로 좌표 파일을 찾는다(`locateDefectMapWafers`). 경로는 `/appdata/abnormal_trend/pic/defect/{line}/defect_map/{device}/{문자+main_seq 숫자}/{met_seq}_RANDOM_PC/{yyyy-mm-dd}/{main_seq 숫자}_measure_data_xy.parquet`이다.
   - main_seq 폴더는 이름에서 알파벳과 `%`를 뺀 숫자가 main_seq 숫자와 같은 폴더다(예: `U%100` → `100`). 파일 이름 앞 숫자도 이 값이다.
