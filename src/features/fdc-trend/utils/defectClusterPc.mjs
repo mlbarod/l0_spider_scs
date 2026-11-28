@@ -53,14 +53,29 @@ export function splitEqpid(eqpid) {
   return { eqp: eqps.join(","), chamber: eqps.length === 1 ? label : parts.join(",") }
 }
 
-// EQP 묶음 = { eqp, span, count, chambers: [{ eqpid, chamber, span, wafers }] }
+// 챔버 안 unit_id 묶음 = [{ unit, wafers }]. unit_id 값 순서로 두고, unit_id가 없는(null) wafer는 unit ""로 맨 뒤에 둔다.
+// unit_id가 있는 wafer가 하나도 없으면 빈 배열(화면은 지금처럼 챔버 아래에 wafer를 바로 둔다).
+export function groupByUnit(wafers) {
+  if (!wafers.some((wafer) => wafer.unitId)) return []
+  const units = new Map()
+  for (const wafer of wafers) {
+    const unit = wafer.unitId || ""
+    if (!units.has(unit)) units.set(unit, [])
+    units.get(unit).push(wafer)
+  }
+  const rank = (unit) => (unit ? 0 : 1)
+  return [...units.entries()].sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b, undefined, { numeric: true }))
+    .map(([unit, list]) => ({ unit, wafers: list }))
+}
+
+// EQP 묶음 = { eqp, span, count, chambers: [{ eqpid, chamber, span, wafers, units }] }
 // 챔버 묶음은 wafer 수만큼, EQP 묶음은 챔버 칸 수 합만큼 칸을 차지한다(둘 다 최대 GRID_COLUMNS칸).
 export function groupEqpChambers(wafers) {
   const eqps = new Map()
   for (const [eqpid, list] of groupByEqp(wafers)) {
     const { eqp, chamber } = splitEqpid(eqpid)
     if (!eqps.has(eqp)) eqps.set(eqp, [])
-    eqps.get(eqp).push({ eqpid, chamber, span: eqpSpan(list.length), wafers: list })
+    eqps.get(eqp).push({ eqpid, chamber, span: eqpSpan(list.length), wafers: list, units: groupByUnit(list) })
   }
   const compare = (a, b) => a.localeCompare(b, undefined, { numeric: true })
   return [...eqps.entries()].sort(([a], [b]) => compare(a, b)).map(([eqp, chambers]) => ({
@@ -93,7 +108,7 @@ export function groupByHistory(wafers, history = {}) {
     .map(([eqpid, list]) => {
       const { eqp, chamber } = splitEqpid(eqpid)
       const span = eqpSpan(list.length)
-      return { id: eqpid, eqp, span, count: list.length, chambers: [{ eqpid, chamber, span, wafers: list }] }
+      return { id: eqpid, eqp, span, count: list.length, chambers: [{ eqpid, chamber, span, wafers: list, units: groupByUnit(list) }] }
     })
 }
 

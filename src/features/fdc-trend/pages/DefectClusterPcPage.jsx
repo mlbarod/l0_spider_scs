@@ -38,7 +38,7 @@ export const CLUSTER_PC_TEXT = {
     historyOpen: (chamber, count) => `${chamber} 과거 7일내 이상 ${count}건 wafer map 보기`,
     historyTitle: (chamber) => `${chamber} 과거 7일내 이상 wafer map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 최신 결과 제외 · 최근 결과부터 표시`,
     historyLoading: "과거 wafer map을 불러오는 중입니다.", noHistory: "과거 7일내 이상 이력이 없습니다.", resultTime: "결과 기준",
-    none: "(없음)", noEqpid: "(EQPID 없음)",
+    none: "(없음)", noEqpid: "(EQPID 없음)", noUnit: "(unit 없음)",
     sortTitle: "설비호기 정렬 순서", sortPrc: "PRC Group", sortHistory: "7일내 이상건수", historyGroup: "과거 7일내 이상건수 많은 순",
     guide: "몰림PC 알고리즘 설명", guideDescription: "몰림PC 이상감지가 wafer를 판정하는 방법", guidePage: "/cluster-pc-algorithm.html",
   },
@@ -61,7 +61,7 @@ export const CLUSTER_PC_TEXT = {
     historyOpen: (chamber, count) => `View ${count} wafer maps detected on ${chamber} in the past 7 days`,
     historyTitle: (chamber) => `${chamber} anomaly wafer maps in the past 7 days`, historyDescription: (eqpid) => `EQPID ${eqpid} · Latest results excluded · Newest first`,
     historyLoading: "Loading past wafer maps.", noHistory: "No anomalies in the past 7 days.", resultTime: "Result time",
-    none: "(None)", noEqpid: "(No EQPID)",
+    none: "(None)", noEqpid: "(No EQPID)", noUnit: "(No unit)",
     sortTitle: "Equipment sort order", sortPrc: "PRC Group", sortHistory: "Anomalies in 7 days", historyGroup: "Most anomalies in past 7 days first",
     guide: "Clustered PC Algorithm Guide", guideDescription: "How Clustered PC Anomaly Detection judges wafers", guidePage: "/cluster-pc-algorithm.en.html",
   },
@@ -84,7 +84,7 @@ export const CLUSTER_PC_TEXT = {
     historyOpen: (chamber, count) => `查看 ${chamber} 过去7天内 ${count} 件异常晶圆 map`,
     historyTitle: (chamber) => `${chamber} 过去7天内异常晶圆 map`, historyDescription: (eqpid) => `EQPID ${eqpid} · 不含最新结果 · 从最近结果开始显示`,
     historyLoading: "正在加载过去的晶圆 map。", noHistory: "过去7天内没有异常记录。", resultTime: "结果基准",
-    none: "（无）", noEqpid: "（无 EQPID）",
+    none: "（无）", noEqpid: "（无 EQPID）", noUnit: "（无 unit）",
     sortTitle: "设备号排序方式", sortPrc: "PRC Group", sortHistory: "7天内异常数", historyGroup: "按过去7天内异常数从多到少",
     guide: "聚集PC算法说明", guideDescription: "聚集PC异常检测如何判定晶圆", guidePage: "/cluster-pc-algorithm.zh-CN.html",
   },
@@ -195,7 +195,7 @@ export function WaferCard({ wafer, feedback, onFeedback, showReason, t, language
     {/* map 좌측 상단: 설비 진행시간, device / 우측 상단: wafer 식별값(이전에는 map 하단에 표시). 값이 없으면 "-". */}
     <div className="cluster-pc-wafer-info">
       {[[...(wafer.snapshot ? [[t.resultTime, wafer.snapshot, " : "]] : []), [t.tkout, wafer.tkoutTime, " : "], ["device", wafer.device]],
-        [["main_step", wafer.mainSeq], ["met_step", wafer.metSeq], ["root_lot_id", wafer.rootLotId], ["slot", wafer.slot]]].map((items, side) =>
+        [["main_step", wafer.mainSeq], ["met_step", wafer.metSeq], ["lot_id", `${wafer.rootLotId || ""}${wafer.lotId || ""}`], ["slot", wafer.slot]]].map((items, side) =>
         <dl key={side}>{items.map(([label, value, separator = ": "]) => <div key={label}><dt>{label}{separator}</dt><dd>{value || "-"}</dd></div>)}</dl>)}
     </div>
     <WaferCanvas xy={wafer.xy} clusters={clusters} showReason={showReason} />
@@ -383,7 +383,13 @@ export function DefectClusterPcPage() {
                   </div>
                   <span>{t.wafers(chamber.wafers.length)}</span>
                 </div>
-                <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, !hiddenReasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`]))}</div>
+                {/* unit_id가 있는 wafer가 있으면 챔버 안을 unit_id 값별로 묶는다. unit_id가 없는 wafer는 맨 뒤 묶음. */}
+                {chamber.units.length
+                  ? chamber.units.map((unit) => <div key={unit.unit} role="group" aria-label={unit.unit ? `Unit ${unit.unit}` : t.noUnit} className="cluster-pc-unit">
+                    <div className="cluster-pc-unit-title"><strong>{unit.unit ? `Unit: ${unit.unit}` : t.noUnit}</strong><span>{t.wafers(unit.wafers.length)}</span></div>
+                    <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{unit.wafers.map((wafer, index) => card(wafer, index, !hiddenReasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`]))}</div>
+                  </div>)
+                  : <div className="cluster-pc-eqp-wafers" style={{ gridTemplateColumns: `repeat(${chamber.span}, minmax(0, 1fr))` }}>{chamber.wafers.map((wafer, index) => card(wafer, index, !hiddenReasons[`${prcGroup}|${eqp.id ?? eqp.eqp}`]))}</div>}
               </div>)}
             </div>
           </div>)}

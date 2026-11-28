@@ -465,6 +465,34 @@
   min-width: 0;
 }
 
+/* 챔버 안 unit_id 묶음 */
+.cluster-pc-unit {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px var(--defect-border);
+}
+
+.cluster-pc-unit-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
+  font-size: 11px;
+}
+
+.cluster-pc-unit-title strong {
+  font-weight: 600;
+}
+
+.cluster-pc-unit-title > span {
+  color: var(--defect-secondary);
+}
+
 /* PM 옆 "과거 7일내 이상건수": 건수를 누르면 과거 wafer map 팝업을 연다. */
 .cluster-pc-history {
   color: var(--defect-secondary);

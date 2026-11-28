@@ -16,11 +16,6 @@ export function defectIsNg(point) {
     || (point.anomaly_type === "std" && isNg(point.std_result ?? point.STD_RESULT))
 }
 
-function pointIdentity(point) {
-  const lot = normalizeText(point.lot_id ?? point.lot_wf), wafer = normalizeText(point.wafer_id)
-  return lot && wafer ? JSON.stringify([lot, wafer]) : ""
-}
-
 export function defectStepPrefix(point) {
   return String(point.step_seq ?? "").trim().slice(0, 2) || "-"
 }
@@ -106,8 +101,8 @@ function prepareBackground(allPoints) {
 export function buildDefectScatterSeries(failPoints, allPoints, eqpCh) {
   const { background, stepColors, stepCounts } = prepareBackground(allPoints)
   const selectedPoints = failPoints.filter((point) => point.eqp_ch === eqpCh)
-  const ngIdentities = new Set(selectedPoints.filter(defectIsNg).map(pointIdentity).filter(Boolean))
-  const selected = selectedPoints.map((point) => ({ ...point, isNg: defectIsNg(point) || ngIdentities.has(pointIdentity(point)) }))
+  // 점마다 자기 판정만 본다. 같은 lot/wafer의 다른 점은 NG로 표시하지 않는다.
+  const selected = selectedPoints.map((point) => ({ ...point, isNg: defectIsNg(point) }))
   const eqps = [...new Set([...background.map((group) => group.eqp_ch), eqpCh])].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }))
   return {
     eqps,

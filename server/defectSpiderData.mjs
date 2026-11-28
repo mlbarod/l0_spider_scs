@@ -204,7 +204,7 @@ export async function readDefectMapLotWfs(path) {
   return setLruEntry(lotWfCache, key, new Set(rows.map((row) => text(row.lot_wf))), 64)
 }
 
-// 차트의 빨간 점과 같은 기준(같은 lot/wafer 보호 포함)으로 eqp_ch의 NG wafer를 lot_wf 단위로 한 번씩 고른다.
+// 차트의 빨간 점과 같은 기준(점 자신의 판정이 NG)으로 eqp_ch의 NG wafer를 lot_wf 단위로 한 번씩 고른다.
 // 날짜 폴더를 좁히기 위해 그 wafer의 가장 이른 설비 진행시간(tkout_time)을 함께 둔다.
 export function selectDefectMapWafers(points, eqpCh) {
   const wafers = new Map()

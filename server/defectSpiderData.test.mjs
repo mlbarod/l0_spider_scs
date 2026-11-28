@@ -314,7 +314,7 @@ test("두 API는 step 값을 목록 경로 결정에 전달한다", async () => 
 // 이상 wafer map: 차트 빨간 점과 같은 기준의 NG wafer만 고른다.
 const mapPoint = (lot_wf, extra = {}) => ({ tkout_time: 1, fab_value: 1, eqp_ch: "EQ01", lot_wf, wafer_id: lot_wf.slice(-2), device: "D1", ...extra })
 
-test("이상 wafer map은 선택 eqp_ch의 빨간 점(NG, 같은 lot/wafer 보호 포함) wafer를 한 번씩 고른다", () => {
+test("이상 wafer map은 선택 eqp_ch의 빨간 점(점 자신이 NG) wafer를 한 번씩 고른다", () => {
   const points = [
     mapPoint("LOT1_01", { final_decision: "NG" }), mapPoint("LOT1_01", { final_decision: "NG" }),
     mapPoint("LOT1_02", { final_decision: "NG", step_seq: "A" }), mapPoint("LOT1_02", { final_decision: "OK", step_seq: "B" }),
@@ -422,7 +422,7 @@ test("이상 wafer map은 좌표가 없거나 읽지 못한 wafer를 빼고 같�
     const result = await readDefectMapWafers(wafers, { mainSeq: "U%100", metSeq: "200_RANDOM_PC" }, readSource, [root])
     assert.deepEqual(reads, [shared])
     assert.deepEqual(result.map((wafer) => [wafer.lotWf, wafer.tkoutTime, wafer.xy]), [["W2", "2026-11-21 10:00:00", [5, 5]], ["W1", "2026-11-20 10:00:00", [10, -20]]])
-    assert.deepEqual({ ...result[1], xy: undefined }, { lotWf: "W1", device: "D1", mainSeq: "U%100", metSeq: "200", tkoutTime: "2026-11-20 10:00:00", rootLotId: "R1", slot: "", xy: undefined, clusters: [] })
+    assert.deepEqual({ ...result[1], xy: undefined }, { lotWf: "W1", device: "D1", mainSeq: "U%100", metSeq: "200", tkoutTime: "2026-11-20 10:00:00", rootLotId: "R1", lotId: "", unitId: "", slot: "", xy: undefined, clusters: [] })
   } finally {
     await rm(base, { recursive: true, force: true })
   }

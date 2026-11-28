@@ -39,7 +39,7 @@ test("빈 ALL·작은 표본·IQR 0·0과 음수에서도 유효한 범위와 NG
   assert.ok(negative.y[0] < -100 && negative.y[1] >= -90)
 })
 
-test("NG 판정과 동일 lot/wafer 보호를 적용하고 STEP 앞 두 글자 순서로 참조 팔레트를 배정한다", () => {
+test("NG는 점 자신의 판정만 보고(같은 lot/wafer로 번지지 않음) STEP 앞 두 글자 순서로 참조 팔레트를 배정한다", () => {
   const fail = [
     { eqp_ch: "A", final_decision: " Ｎ​Ｇ ", lot_id: "L", wafer_id: "W", fab_value: 100 },
     { eqp_ch: "A", final_decision: "OK", lot_id: "L", wafer_id: "W", fab_value: 200 },
@@ -47,7 +47,7 @@ test("NG 판정과 동일 lot/wafer 보호를 적용하고 STEP 앞 두 글자 �
     { eqp_ch: "A", fab_value: 4 },
   ]
   const series = buildDefectScatterSeries(fail, [{ eqp_ch: "X", step_seq: "20_a" }, { eqp_ch: "Y", step_seq: "10_b" }], "A")
-  assert.deepEqual(series.selected.map((point) => point.isNg), [true, true, false, false])
+  assert.deepEqual(series.selected.map((point) => point.isNg), [true, false, false, false])
   assert.deepEqual([...series.stepColors], [["10", "hsl(268 75% 52%)"], ["20", "hsl(204 94% 40%)"]])
   assert.equal(defectIsNg({ anomaly_type: "std", std_result: "NG" }), true)
   assert.equal(defectIsNg({ std_result: "NG", final_decision: "OK" }), false)

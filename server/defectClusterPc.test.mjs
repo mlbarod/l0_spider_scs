@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import test from "node:test"
 import { createClusterPcService, createDefectClusterPcHandler, DEFECT_CLUSTER_PC_CONFIG, MAX_WAFERS, clusterRows, sourcePath, metSeqNumber, NO_VALUE, packPoints, formatTkout, waferInfo, historySnapshots, historyCounts, uniqueHistoryRows, parseClusters, splitValues } from "./defectClusterPc.mjs"
-import { clusterFilterOptions, clusterLabel, eqpSpan, groupByEqp, groupByPrcEqp, splitEqpid } from "../src/features/fdc-trend/utils/defectClusterPc.mjs"
+import { clusterFilterOptions, clusterLabel, eqpSpan, groupByEqp, groupByHistory, groupByPrcEqp, groupByUnit, splitEqpid } from "../src/features/fdc-trend/utils/defectClusterPc.mjs"
 
 const url = (path) => new URL(`/api/defect-spider/cluster-pc/${path}`, "http://localhost")
 
@@ -35,20 +35,20 @@ test("좌표는 lot_wf가 같은 행만 0.1mm 정수로 묶고 숫자가 아닌 
   assert.deepEqual(packPoints(rows, "L1"), [123, -68, 0, 1500])
 })
 
-test("카드 상단 정보는 wafer의 가장 늦은 tkout_time과 root_lot_id를 쓰고 slot은 lot_wf의 _ 뒤 값이다", () => {
+test("카드 상단 정보는 wafer의 가장 늦은 tkout_time과 root_lot_id·lot_id·unit_id를 쓰고 slot은 lot_wf의 _ 뒤 값이다", () => {
   assert.equal(formatTkout(new Date("2026-10-01T02:03:04Z")), "2026-10-01 02:03:04")
   assert.equal(formatTkout("2026-10-01T02:03:04.123+09:00"), "2026-10-01 02:03:04")
   assert.equal(formatTkout("2026-10-01 02:03"), "2026-10-01 02:03:00")
   assert.equal(formatTkout(null), "")
   assert.equal(formatTkout("invalid"), "")
   const rows = [
-    { lot_wf: "L1_05", tkout_time: "2026-10-01 02:00:00", root_lot_id: "R1" },
-    { lot_wf: "L1_05", tkout_time: "2026-10-01 03:00:00", root_lot_id: "R1" },
+    { lot_wf: "L1_05", tkout_time: "2026-10-01 02:00:00", root_lot_id: "R1", lot_id: null, unit_id: null },
+    { lot_wf: "L1_05", tkout_time: "2026-10-01 03:00:00", root_lot_id: "R1", lot_id: ".J1", unit_id: "3" },
     { lot_wf: "L2_06", tkout_time: "2026-10-02 00:00:00", root_lot_id: "R2" },
   ]
-  assert.deepEqual(waferInfo(rows, "L1_05"), { tkoutTime: "2026-10-01 03:00:00", rootLotId: "R1", slot: "05" })
+  assert.deepEqual(waferInfo(rows, "L1_05"), { tkoutTime: "2026-10-01 03:00:00", rootLotId: "R1", lotId: ".J1", unitId: "3", slot: "05" })
   assert.equal(waferInfo([], "A_B.1_12").slot, "12")
-  assert.deepEqual(waferInfo([{ lot_wf: "L1" }], "L1"), { tkoutTime: "", rootLotId: "", slot: "" })
+  assert.deepEqual(waferInfo([{ lot_wf: "L1" }], "L1"), { tkoutTime: "", rootLotId: "", lotId: "", unitId: "", slot: "" })
 })
 
 test("catalog은 결과가 있는 가장 최근 폴더를 읽고 파일 경로는 보내지 않는다", async () => {
@@ -398,4 +398,14 @@ test("maps 이력 건수와 history 팝업은 2일치 중복 적재와 최신 �
     assert.equal(history.total, 2)
     assert.deepEqual(history.wafers.map((wafer) => [wafer.snapshot, wafer.lotWf]), [["2026-11-19 09:00", "H1_02"], ["2026-11-18 09:00", "H0_01"]])
   } finally { await rm(base, { recursive: true, force: true }) }
+})
+
+test("챔버 안 wafer는 unit_id 값별로 묶고, unit_id가 없는 wafer는 맨 뒤에 두며, 모두 없으면 묶지 않는다", () => {
+  const wafer = (lotWf, unitId) => ({ lotWf, eqpid: "E1_PM1", unitId })
+  assert.deepEqual(groupByUnit([wafer("W1", "10"), wafer("W2", ""), wafer("W3", "2"), wafer("W4", "10")])
+    .map((unit) => [unit.unit, unit.wafers.map((item) => item.lotWf)]), [["2", ["W3"]], ["10", ["W1", "W4"]], ["", ["W2"]]])
+  assert.deepEqual(groupByUnit([wafer("W1", ""), wafer("W2", undefined)]), [])
+  const wafers = [wafer("W1", "3"), wafer("W2", "")]
+  assert.deepEqual(groupByPrcEqp(wafers)[0][1][0].chambers[0].units.map((unit) => unit.unit), ["3", ""])
+  assert.deepEqual(groupByHistory(wafers)[0].chambers[0].units.map((unit) => unit.unit), ["3", ""])
 })
